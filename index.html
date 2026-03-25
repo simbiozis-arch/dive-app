@@ -1,26 +1,28 @@
-<!-- DIVE v1.1 -->
+<!-- DIVE v2.0 -->
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="theme-color" content="#051225">
+<meta name="theme-color" content="#070c15">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>DIVE — Breathe Like a Freediver</title>
+<title>DIVE</title>
 <link rel="manifest" href="manifest.json">
 <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@200;300;400;500;600&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@200;300;400;500;600&family=JetBrains+Mono:wght@300;400&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600&family=Noto+Sans+SC:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 html,body,#root { width:100%; height:100%; overflow:hidden; font-family:'DM Sans',sans-serif; }
+html[lang="ar"] body, html[lang="ar"] #root { font-family:'IBM Plex Sans Arabic','DM Sans',sans-serif; }
+html[lang="zh"] body, html[lang="zh"] #root { font-family:'Noto Sans SC','DM Sans',sans-serif; }
 :root {
   --bg-1:#070c15; --bg-2:#0c1322; --bg-3:#111b2e; --bg-4:#182640;
   --bg-start:#0c1322; --bg-mid:#0a1628; --bg-end:#070c15;
-  --accent:#5eaaa8; --accent-glow:rgba(94,170,168,0.12); --accent-text:#7ec8c8;
+  --accent:#5eaaa8; --accent-rgb:94,170,168; --accent-glow:rgba(94,170,168,0.12); --accent-text:#7ec8c8;
   --glow:rgba(94,170,168,0.12);
   --card:rgba(255,255,255,0.025); --text:rgba(220,225,235,0.92);
   --text-2:rgba(220,225,235,0.55); --text-3:rgba(220,225,235,0.30);
@@ -31,10 +33,14 @@ html,body,#root { width:100%; height:100%; overflow:hidden; font-family:'DM Sans
 @keyframes rays-appear { from{opacity:0} to{opacity:1} }
 @keyframes count-up { from{opacity:0} to{opacity:1} }
 @keyframes drift { 0%{transform:translateY(100vh);opacity:0} 5%{opacity:var(--peak-opacity)} 95%{opacity:var(--peak-opacity)} 100%{transform:translateY(-5vh);opacity:0} }
+@keyframes drift-h { 0%{transform:translateX(-10vw);opacity:0} 5%{opacity:var(--peak-opacity)} 95%{opacity:var(--peak-opacity)} 100%{transform:translateX(110vw);opacity:0} }
+@keyframes twinkle { 0%,100%{opacity:var(--base-opacity)} 50%{opacity:0.05} }
+@keyframes bokeh-drift { 0%{transform:translate(0,0)} 25%{transform:translate(10px,-15px)} 50%{transform:translate(-8px,12px)} 75%{transform:translate(15px,5px)} 100%{transform:translate(0,0)} }
+@keyframes caustic-drift { 0%{transform:translateX(0)} 100%{transform:translateX(30px)} }
 
 .font-display { font-family:'DM Sans',sans-serif; }
 .font-mono { font-family:'JetBrains Mono',monospace; font-variant-numeric:tabular-nums; }
-.font-body { font-family:'DM Sans',sans-serif; }
+.font-body { font-family:inherit; }
 
 .screen-transition { animation: fade-in 400ms ease-out; }
 .text-deblur { animation: deblur 500ms ease-out forwards; }
@@ -51,10 +57,9 @@ html,body,#root { width:100%; height:100%; overflow:hidden; font-family:'DM Sans
 .no-scrollbar::-webkit-scrollbar { display:none; }
 .no-scrollbar { -ms-overflow-style:none; scrollbar-width:none; }
 
-/* Single soft light spot per screen */
 .screen-glow {
   position:fixed; top:-20%; left:-10%; width:60%; height:50%;
-  background: radial-gradient(ellipse, rgba(94,170,168,0.04) 0%, transparent 70%);
+  background: radial-gradient(ellipse, rgba(var(--accent-rgb),0.04) 0%, transparent 70%);
   pointer-events:none; z-index:0;
 }
 </style>
@@ -62,13 +67,245 @@ html,body,#root { width:100%; height:100%; overflow:hidden; font-family:'DM Sans
 <body>
 <div id="root"></div>
 <script type="text/babel">
-const { useState, useEffect, useRef, useCallback, useMemo, useReducer } = React;
+const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
-// ===== WORLDS =====
-// SVG icon helper — thin line icons, 24x24, stroke-width 1.5
+// ===== LANG =====
+const LANG = {
+  en: {
+    appName:'DIVE',tagline:'Breathe. Dive. Perform.',chooseLanguage:'Choose language',chooseWorld:'Choose your world',
+    ocean:'Ocean',space:'Space',memory:'Memory',
+    home:'Home',explore:'Explore',programs:'Programs',profile:'Profile',settings:'Settings',
+    todaysDive:"Today's dive",quickDives:'Quick Dives',myPrograms:'My Programs',seeAll:'See all',
+    focus:'Focus',stress:'Stress',energy:'Energy',recovery:'Recovery',deep:'Deep',
+    beforeMeeting:'Before a big meeting',beforeSpeech:'Before a speech',beforeCall:'Before a tough call',
+    cantFocus:"Can't focus",beforeDecision:'Before a decision',afterToughDay:'After a tough day',
+    afterArgument:'After an argument',stuckInTraffic:'Stuck in traffic',deadlinePressure:'Deadline pressure',
+    infoOverload:'Info overload',morningStart:'Morning start',afternoonSlump:'Afternoon slump',
+    beforeWorkout:'Before a workout',quickReset:'Quick reset',afterWorkout:'After a workout',
+    cantSleep:"Can't sleep",anxiousMorning:'Anxious morning',betweenMeetings:'Between meetings',
+    justRelax:'Just relax',deepDive:'Deep dive',
+    min:'min',begin:'Begin',pause:'Pause',resume:'Resume',skip:'Skip',
+    exitSession:'Exit session?',exitConfirm:'Progress will be saved.',exitYes:'Exit',exitNo:'Stay',
+    inhale:'Inhale',exhale:'Exhale',hold:'Hold',holdPause:'Pause',belly:'Belly',ribs:'Ribs',chest:'Chest',inhale2:'+ Inhale',
+    subInhaleNose:'Through your nose, belly expands',subExhaleMouth:'Through your mouth, slow and steady',
+    subHoldStill:'Keep still, air stays inside',subEmptyPause:'Empty pause, just wait',
+    subBelly:'Fill your belly — one third',subRibs:'Expand your ribs — two thirds',
+    subChest:'Lift your chest — full',subReleaseAll:'Release everything, top to bottom',
+    subDoubleInhale:'Double inhale, then long exhale',subSharpExhale:'Sharp exhale — push it all out',
+    subOceanSound:'Throat slightly narrowed — ocean sound',
+    diaphragmatic:'Diaphragmatic',boxBreathing:'Box Breathing',segmented:'Segmented',
+    tidal:'Tidal',ujjayi:'Ocean Breath',recoveryBreath:'Recovery',physiologicalSigh:'Physiological Sigh',
+    diveComplete:'Dive complete',duration:'Duration',breathCycles:'Breath cycles',depth:'Depth',
+    repeat:'Repeat',newDive:'New dive',totalDepth:'Total depth',dayStreak:'day streak',
+    sessionHistory:'Session history',badges:'Badges',resetData:'Reset all data',
+    firstDive:'First Dive',firstDiveSub:'5 days · Learn the basics',
+    stressShield:'Stress Shield',stressShieldSub:'7 days · Build resilience',
+    deepFocus:'Deep Focus',deepFocusSub:'5 days · Sharpen your mind',
+    dayN:'Day',startDay:'Start',completed:'Completed',locked:'Locked',
+    videoComingSoon:'Video lessons from coach — coming soon',continueText:'Continue',
+    unlockAll:'Unlock everything',monthly:'$6.99/mo',yearly:'$49.99/yr',yearlySave:'Save 40%',
+    startTrial:'Start 7-day free trial',demoUnlock:'Unlock for demo',
+    voiceGuided:'Voice guided',
+    bodyScanFull:"Forehead — release all tension. Eyes — heavy lids. Jaw — slightly open, tongue resting free. Neck — long, relaxed. Shoulders — drop them away from your ears. Arms — heavy, warm. Chest — open. Belly — soft. Legs — heavy. Feet — warm.",
+    visOceanCalm:"You're floating in warm, clear water. Weightless. Supported on all sides. Sunlight filters through the surface. With every exhale, you sink deeper into stillness.",
+    visSpaceCalm:"You're in open space. Weightless. Silent. Below — Earth. Small, blue, slowly turning. Everything that weighs on you — on that tiny dot. You're here. In silence.",
+    visMemoryCalm:"Remember a place where you felt completely at peace. See it clearly. Feel the air. Hear the sounds. You're there again. Nothing owed. Nowhere to be. Just existing.",
+    sitDown:'Find a comfortable position. Back straight but relaxed. Close your eyes.',
+    openEyes:"Open your eyes. You're ready.",sleepEnd:"Keep breathing. Sleep will come.",
+    oceanDesc:'Deep ocean, bubbles, wave sounds',spaceDesc:'Infinite cosmos, stars, silence',memoryDesc:'Warm memories, bokeh, harmony',
+    canChangeLater:'You can change this later',quickStart:'Quick start',categories:'Categories',
+    back:'Back',close:'Close',done:'Done',sessions:'sessions',days:'days',
+    ambientSound:'Ambient sound',vibration:'Vibration',premium:'Premium',active:'Active',free:'Free',
+    history:'History',resetProgress:'Reset progress',resetConfirm:'Reset all progress?',
+    language:'Language',world:'World',voiceNarration:'Voice narration',
+    streakStart:'Start a streak',streakDays:'day streak',next:'Next',
+    onb1title:'DIVE',onb1sub:'Breathe like a freediver',onb1desc:'Anti-stress techniques from people who dive 130 meters on a single breath.',
+    onb2title:'7 techniques',onb2sub:'Proven by science and depth',onb2desc:'Diaphragmatic, box, ujjayi, physiological sigh — and three more.',
+    onb3title:'20 scenarios',onb3sub:'For every occasion',onb3desc:'Before a meeting, after a conflict, insomnia, morning anxiety — find the right one.',
+    onb4title:'3 programs',onb4sub:'Step-by-step learning',onb4desc:'First Dive. Stress Shield. Deep Focus. With video coaching.',
+    paywallFeatures:['20 scenarios for every situation','3 programs with video lessons','All 7 breathing techniques','3 visual worlds','No ads'],
+  },
+  ru: {
+    appName:'DIVE',tagline:'Дыши. Погружайся. Действуй.',chooseLanguage:'Выберите язык',chooseWorld:'Выберите мир',
+    ocean:'Океан',space:'Космос',memory:'Воспоминания',
+    home:'Главная',explore:'Обзор',programs:'Программы',profile:'Профиль',settings:'Настройки',
+    todaysDive:'Погружение дня',quickDives:'Быстрые практики',myPrograms:'Мои программы',seeAll:'Все',
+    focus:'Фокус',stress:'Стресс',energy:'Энергия',recovery:'Восстановление',deep:'Глубина',
+    beforeMeeting:'Перед важной встречей',beforeSpeech:'Перед выступлением',beforeCall:'Перед сложным звонком',
+    cantFocus:'Не могу сосредоточиться',beforeDecision:'Перед решением',afterToughDay:'После тяжёлого дня',
+    afterArgument:'После конфликта',stuckInTraffic:'В пробке',deadlinePressure:'Дедлайн давит',
+    infoOverload:'Перегруз информацией',morningStart:'Утренний старт',afternoonSlump:'Послеобеденный спад',
+    beforeWorkout:'Перед тренировкой',quickReset:'Быстрый сброс',afterWorkout:'После тренировки',
+    cantSleep:'Не могу уснуть',anxiousMorning:'Тревожное утро',betweenMeetings:'Между встречами',
+    justRelax:'Просто расслабиться',deepDive:'Глубокое погружение',
+    min:'мин',begin:'Начать',pause:'Пауза',resume:'Продолжить',skip:'Пропустить',
+    exitSession:'Выйти?',exitConfirm:'Прогресс сохранится.',exitYes:'Выйти',exitNo:'Остаться',
+    inhale:'Вдох',exhale:'Выдох',hold:'Задержка',holdPause:'Пауза',belly:'Живот',ribs:'Рёбра',chest:'Грудь',inhale2:'+ Вдох',
+    subInhaleNose:'Через нос, живот вперёд',subExhaleMouth:'Через рот, плавно',
+    subHoldStill:'Воздух внутри',subEmptyPause:'Пустая пауза',
+    subBelly:'Живот — треть',subRibs:'Рёбра — две трети',subChest:'Грудь — полностью',
+    subReleaseAll:'Сверху вниз, отпустите',subDoubleInhale:'Двойной вдох, длинный выдох',
+    subSharpExhale:'Резкий выдох',subOceanSound:'Горло сужено — звук океана',
+    diaphragmatic:'Диафрагмальное',boxBreathing:'Квадратное',segmented:'Трёхфазное',
+    tidal:'Приливное',ujjayi:'Океанское',recoveryBreath:'Восстановительное',physiologicalSigh:'Физиологический вздох',
+    diveComplete:'Погружение завершено',duration:'Длительность',breathCycles:'Циклов',depth:'Глубина',
+    repeat:'Повторить',newDive:'Новое погружение',totalDepth:'Общая глубина',dayStreak:'дней подряд',
+    sessionHistory:'История',badges:'Достижения',resetData:'Сбросить данные',
+    firstDive:'Первое погружение',firstDiveSub:'5 дней · Основы',
+    stressShield:'Стресс-щит',stressShieldSub:'7 дней · Устойчивость',
+    deepFocus:'Глубокий фокус',deepFocusSub:'5 дней · Острота ума',
+    dayN:'День',startDay:'Начать',completed:'Пройден',locked:'Заблокирован',
+    videoComingSoon:'Видеоуроки от тренера — скоро',continueText:'Продолжить',
+    unlockAll:'Разблокировать всё',monthly:'499 ₽/мес',yearly:'3490 ₽/год',yearlySave:'Экономия 40%',
+    startTrial:'7 дней бесплатно',demoUnlock:'Демо-доступ',voiceGuided:'С голосовым сопровождением',
+    bodyScanFull:'Лоб — отпустите. Глаза — тяжёлые. Челюсть — приоткрыта. Шея — расслаблена. Плечи — опустите. Руки — тяжёлые, тёплые. Грудь — открыта. Живот — мягкий. Ноги — тяжёлые. Ступни — тёплые.',
+    visOceanCalm:'Вы в тёплой воде. Невесомость. Свет сквозь поверхность. Каждый выдох — глубже в тишину.',
+    visSpaceCalm:'Космос. Невесомость. Тишина. Земля внизу — маленькая. Всё, что давит — там. Вы здесь. В покое.',
+    visMemoryCalm:'Вспомните место покоя. Увидьте. Почувствуйте воздух. Вы там. Ничего не должны. Просто есть.',
+    sitDown:'Сядьте удобно. Спина прямая. Закройте глаза.',
+    openEyes:'Откройте глаза. Вы готовы.',sleepEnd:'Продолжайте дышать. Сон придёт.',
+    oceanDesc:'Глубина океана, пузыри, звуки волн',spaceDesc:'Бесконечный космос, звёзды, тишина',memoryDesc:'Тёплые воспоминания, боке, гармония',
+    canChangeLater:'Можно сменить в настройках',quickStart:'Быстрый старт',categories:'Категории',
+    back:'Назад',close:'Закрыть',done:'Готово',sessions:'сессий',days:'дней',
+    ambientSound:'Ambient звук',vibration:'Вибрация',premium:'Premium',active:'Активен',free:'Бесплатно',
+    history:'История',resetProgress:'Сбросить прогресс',resetConfirm:'Сбросить весь прогресс?',
+    language:'Язык',world:'Мир',voiceNarration:'Голосовое сопровождение',
+    streakStart:'Начните серию сессий',streakDays:'дней подряд',next:'Далее',
+    onb1title:'DIVE',onb1sub:'Дыши как фридайвер',onb1desc:'Антистресс-техники от людей, которые ныряют на 130 метров на одном вдохе.',
+    onb2title:'7 техник',onb2sub:'Проверены наукой и глубиной',onb2desc:'Диафрагмальное, квадратное, ujjayi, физиологический вздох — и ещё три.',
+    onb3title:'20 сценариев',onb3sub:'На каждый случай',onb3desc:'Перед встречей, после конфликта, бессонница, утренняя тревога — найдётся нужный.',
+    onb4title:'3 программы',onb4sub:'Пошаговое обучение',onb4desc:'Первое погружение. Стресс-щит. Глубокий фокус. С видео-уроками тренера.',
+    paywallFeatures:['20 сценариев на все случаи жизни','3 программы с видео-уроками','Все 7 техник дыхания','3 визуальных мира','Без рекламы'],
+  },
+  zh: {
+    appName:'DIVE',tagline:'呼吸。沉浸。行动。',chooseLanguage:'选择语言',chooseWorld:'选择你的世界',
+    ocean:'海洋',space:'太空',memory:'回忆',
+    home:'首页',explore:'探索',programs:'课程',profile:'个人',settings:'设置',
+    todaysDive:'今日练习',quickDives:'快速练习',myPrograms:'我的课程',seeAll:'全部',
+    focus:'专注',stress:'减压',energy:'能量',recovery:'恢复',deep:'深度',
+    beforeMeeting:'重要会议前',beforeSpeech:'演讲前',beforeCall:'困难电话前',
+    cantFocus:'无法集中',beforeDecision:'做决定前',afterToughDay:'疲惫一天后',
+    afterArgument:'争吵之后',stuckInTraffic:'堵车时',deadlinePressure:'截止日期压力',
+    infoOverload:'信息过载',morningStart:'清晨启动',afternoonSlump:'午后困倦',
+    beforeWorkout:'运动前',quickReset:'快速重启',afterWorkout:'运动后',
+    cantSleep:'无法入睡',anxiousMorning:'焦虑的早晨',betweenMeetings:'会议间隙',
+    justRelax:'单纯放松',deepDive:'深度沉浸',
+    min:'分钟',begin:'开始',pause:'暂停',resume:'继续',skip:'跳过',
+    exitSession:'退出？',exitConfirm:'进度将保存。',exitYes:'退出',exitNo:'留下',
+    inhale:'吸气',exhale:'呼气',hold:'屏住',holdPause:'停顿',belly:'腹部',ribs:'肋骨',chest:'胸部',inhale2:'+ 吸气',
+    subInhaleNose:'鼻吸，腹部扩张',subExhaleMouth:'口呼，缓慢',subHoldStill:'保持不动',subEmptyPause:'空停顿',
+    subBelly:'腹部三分之一',subRibs:'肋骨三分之二',subChest:'胸部完全',subReleaseAll:'从上到下释放',
+    subDoubleInhale:'双重吸气，长呼气',subSharpExhale:'猛烈呼气',subOceanSound:'喉咙微收',
+    diaphragmatic:'腹式呼吸',boxBreathing:'方块呼吸',segmented:'分段呼吸',
+    tidal:'潮汐呼吸',ujjayi:'海洋呼吸',recoveryBreath:'恢复呼吸',physiologicalSigh:'生理叹息',
+    diveComplete:'完成',duration:'时长',breathCycles:'循环',depth:'深度',
+    repeat:'重复',newDive:'新练习',totalDepth:'总深度',dayStreak:'天连续',
+    sessionHistory:'记录',badges:'成就',resetData:'重置',
+    firstDive:'初次沉浸',firstDiveSub:'5天·基础',stressShield:'压力护盾',stressShieldSub:'7天·韧性',
+    deepFocus:'深度专注',deepFocusSub:'5天·心智',
+    dayN:'第',startDay:'开始',completed:'完成',locked:'锁定',
+    videoComingSoon:'教练视频即将推出',continueText:'继续',
+    unlockAll:'解锁全部',monthly:'¥45/月',yearly:'¥328/年',yearlySave:'省40%',
+    startTrial:'7天免费',demoUnlock:'演示',voiceGuided:'语音引导',
+    bodyScanFull:'额头放松。眼皮沉重。下巴微张。脖子放松。肩膀下沉。双臂温暖。胸部打开。腹部柔软。双腿沉重。双脚温暖。',
+    visOceanCalm:'漂浮在温暖水中。失重。阳光透过水面。每次呼气沉入宁静。',
+    visSpaceCalm:'太空。失重。寂静。地球在下方。所有压力在那小点上。你在寂静中。',
+    visMemoryCalm:'回忆平静的地方。看清它。感受空气。你又回到那里。只是存在。',
+    sitDown:'舒适坐下。背部挺直。闭眼。',openEyes:'睁眼。准备好了。',sleepEnd:'继续呼吸。睡眠会来。',
+    oceanDesc:'深海，气泡，波浪声',spaceDesc:'无限宇宙，星辰，寂静',memoryDesc:'温暖回忆，散景，和谐',
+    canChangeLater:'之后可以更改',quickStart:'快速开始',categories:'分类',
+    back:'返回',close:'关闭',done:'完成',sessions:'次',days:'天',
+    ambientSound:'环境音',vibration:'振动',premium:'Premium',active:'已激活',free:'免费',
+    history:'记录',resetProgress:'重置进度',resetConfirm:'重置所有进度？',
+    language:'语言',world:'世界',voiceNarration:'语音引导',
+    streakStart:'开始连续练习',streakDays:'天连续',next:'下一步',
+    onb1title:'DIVE',onb1sub:'像自由潜水员一样呼吸',onb1desc:'来自130米单次呼吸潜水者的减压技巧。',
+    onb2title:'7种技巧',onb2sub:'经科学和深度验证',onb2desc:'腹式、方块、海洋呼吸、生理叹息——还有三种。',
+    onb3title:'20种场景',onb3sub:'应对各种情况',onb3desc:'会议前、争吵后、失眠、早晨焦虑——总有适合的。',
+    onb4title:'3个课程',onb4sub:'循序渐进学习',onb4desc:'初次沉浸。压力护盾。深度专注。含教练视频。',
+    paywallFeatures:['20种场景','3个视频课程','全部7种呼吸技巧','3个视觉世界','无广告'],
+  },
+  ar: {
+    appName:'DIVE',tagline:'تنفّس. انغمس. انطلق.',chooseLanguage:'اختر اللغة',chooseWorld:'اختر عالمك',
+    ocean:'المحيط',space:'الفضاء',memory:'الذكريات',
+    home:'الرئيسية',explore:'استكشف',programs:'البرامج',profile:'الملف',settings:'الإعدادات',
+    todaysDive:'تمرين اليوم',quickDives:'تمارين سريعة',myPrograms:'برامجي',seeAll:'الكل',
+    focus:'تركيز',stress:'توتر',energy:'طاقة',recovery:'استعادة',deep:'عمق',
+    beforeMeeting:'قبل اجتماع مهم',beforeSpeech:'قبل خطاب',beforeCall:'قبل مكالمة صعبة',
+    cantFocus:'لا أستطيع التركيز',beforeDecision:'قبل قرار',afterToughDay:'بعد يوم صعب',
+    afterArgument:'بعد خلاف',stuckInTraffic:'في الزحام',deadlinePressure:'ضغط الموعد',
+    infoOverload:'حمل زائد',morningStart:'بداية الصباح',afternoonSlump:'خمول الظهر',
+    beforeWorkout:'قبل التمرين',quickReset:'إعادة ضبط',afterWorkout:'بعد التمرين',
+    cantSleep:'لا أستطيع النوم',anxiousMorning:'صباح قلق',betweenMeetings:'بين الاجتماعات',
+    justRelax:'استرخِ',deepDive:'غوص عميق',
+    min:'د',begin:'ابدأ',pause:'توقف',resume:'استمر',skip:'تخطّ',
+    exitSession:'خروج؟',exitConfirm:'سيُحفظ تقدمك.',exitYes:'خروج',exitNo:'ابقَ',
+    inhale:'شهيق',exhale:'زفير',hold:'احبس',holdPause:'توقف',belly:'البطن',ribs:'الأضلاع',chest:'الصدر',inhale2:'+ شهيق',
+    subInhaleNose:'الأنف، البطن يتمدد',subExhaleMouth:'الفم، ببطء',subHoldStill:'ثابت',subEmptyPause:'توقف فارغ',
+    subBelly:'البطن — الثلث',subRibs:'الأضلاع — الثلثين',subChest:'الصدر — بالكامل',subReleaseAll:'أطلق الكل',
+    subDoubleInhale:'شهيق مزدوج',subSharpExhale:'زفير حاد',subOceanSound:'صوت المحيط',
+    diaphragmatic:'بطني',boxBreathing:'مربع',segmented:'مقسّم',
+    tidal:'مدّي',ujjayi:'المحيط',recoveryBreath:'استعادة',physiologicalSigh:'تنهيدة',
+    diveComplete:'اكتملت',duration:'المدة',breathCycles:'الدورات',depth:'العمق',
+    repeat:'إعادة',newDive:'جديدة',totalDepth:'العمق الكلي',dayStreak:'يوم متتالي',
+    sessionHistory:'السجل',badges:'الإنجازات',resetData:'إعادة تعيين',
+    firstDive:'الغوصة الأولى',firstDiveSub:'٥ أيام',stressShield:'درع التوتر',stressShieldSub:'٧ أيام',
+    deepFocus:'تركيز عميق',deepFocusSub:'٥ أيام',
+    dayN:'اليوم',startDay:'ابدأ',completed:'مكتمل',locked:'مقفل',
+    videoComingSoon:'فيديو المدرب قريباً',continueText:'استمر',
+    unlockAll:'افتح الكل',monthly:'$6.99/شهر',yearly:'$49.99/سنة',yearlySave:'وفّر ٤٠٪',
+    startTrial:'٧ أيام مجاناً',demoUnlock:'تجريبي',voiceGuided:'بإرشاد صوتي',
+    bodyScanFull:'الجبين أرخِه. العينان ثقيلتان. الفك مفتوح. الرقبة مسترخية. الكتفان منخفضان. الذراعان دافئتان. الصدر مفتوح. البطن ناعم. الساقان ثقيلتان. القدمان دافئتان.',
+    visOceanCalm:'ماء دافئ. انعدام الوزن. ضوء عبر السطح. كل زفير أعمق في السكينة.',
+    visSpaceCalm:'الفضاء. صمت. الأرض صغيرة. كل ما يثقل على تلك النقطة. أنت في الصمت.',
+    visMemoryCalm:'تذكّر مكان السلام. شاهده. اشعر بالهواء. أنت هناك. فقط الوجود.',
+    sitDown:'اجلس مريحاً. ظهر مستقيم. أغلق عينيك.',openEyes:'افتح عينيك. جاهز.',sleepEnd:'واصل التنفس. النوم سيأتي.',
+    oceanDesc:'محيط عميق، فقاعات، أمواج',spaceDesc:'فضاء لا نهائي، نجوم، صمت',memoryDesc:'ذكريات دافئة، بوكيه، انسجام',
+    canChangeLater:'يمكنك التغيير لاحقاً',quickStart:'بداية سريعة',categories:'الفئات',
+    back:'رجوع',close:'إغلاق',done:'تم',sessions:'جلسات',days:'أيام',
+    ambientSound:'صوت محيطي',vibration:'اهتزاز',premium:'Premium',active:'فعّال',free:'مجاني',
+    history:'السجل',resetProgress:'إعادة تعيين',resetConfirm:'إعادة تعيين كل التقدم؟',
+    language:'اللغة',world:'العالم',voiceNarration:'الإرشاد الصوتي',
+    streakStart:'ابدأ سلسلة',streakDays:'يوم متتالي',next:'التالي',
+    onb1title:'DIVE',onb1sub:'تنفّس كالغواص الحر',onb1desc:'تقنيات من أشخاص يغوصون 130 متراً بنفس واحد.',
+    onb2title:'7 تقنيات',onb2sub:'مثبتة علمياً',onb2desc:'بطني، مربع، أوجاي، تنهيدة فسيولوجية — وثلاث أخرى.',
+    onb3title:'20 سيناريو',onb3sub:'لكل مناسبة',onb3desc:'قبل اجتماع، بعد خلاف، أرق، قلق صباحي — ستجد المناسب.',
+    onb4title:'3 برامج',onb4sub:'تعلّم خطوة بخطوة',onb4desc:'الغوصة الأولى. درع التوتر. تركيز عميق. مع فيديو المدرب.',
+    paywallFeatures:['20 سيناريو','3 برامج فيديو','كل التقنيات السبع','3 عوالم بصرية','بلا إعلانات'],
+  }
+};
+
+// Scenario key to LANG key mapping
+const SCENARIO_LANG_KEY = {
+  meeting:'beforeMeeting',presentation:'beforeSpeech',call:'beforeCall',cant_focus:'cantFocus',
+  decision:'beforeDecision',hard_day:'afterToughDay',conflict:'afterArgument',traffic:'stuckInTraffic',
+  deadline:'deadlinePressure',overload:'infoOverload',morning:'morningStart',afternoon:'afternoonSlump',
+  pre_workout:'beforeWorkout',quick_reset:'quickReset',post_workout:'afterWorkout',insomnia:'cantSleep',
+  anxious_wake:'anxiousMorning',between:'betweenMeetings',just_relax:'justRelax',deep_dive:'deepDive',
+};
+const CATEGORY_LANG_KEY = {focus:'focus',stress:'stress',energy:'energy',recovery:'recovery',deep:'deep'};
+const TECHNIQUE_LANG_KEY = {
+  tidal:'tidal',diaphragmatic:'diaphragmatic',box:'boxBreathing',segmented:'segmented',
+  ujjayi:'ujjayi',recovery:'recoveryBreath',physiological_sigh:'physiologicalSigh',
+};
+const PHASE_LANG_KEY = {
+  inhale:'inhale',exhale:'exhale',holdIn:'hold',holdOut:'holdPause',
+  belly:'belly',ribs:'ribs',chest:'chest',pause:'holdPause',
+  inhale1:'inhale',inhale2:'inhale2',
+};
+const PHASE_SUB_LANG_KEY = {
+  diaphragmatic: {inhale:'subInhaleNose',exhale:'subExhaleMouth'},
+  box: {inhale:'subInhaleNose',holdIn:'subHoldStill',exhale:'subExhaleMouth',holdOut:'subEmptyPause'},
+  segmented: {belly:'subBelly',ribs:'subRibs',chest:'subChest',exhale:'subReleaseAll'},
+  ujjayi: {inhale:'subOceanSound',exhale:'subOceanSound'},
+  recovery: {inhale:'subSharpExhale',holdIn:'subHoldStill',exhale:'subSharpExhale'},
+  physiological_sigh: {inhale1:'subDoubleInhale',inhale2:'subDoubleInhale',exhale:'subExhaleMouth'},
+  tidal: {inhale:'subInhaleNose',exhale:'subExhaleMouth',pause:'subEmptyPause'},
+};
+
+// ===== SVG ICON HELPER =====
 const I = (d, size=24) => React.createElement('svg', {width:size,height:size,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:1.5,strokeLinecap:'round',strokeLinejoin:'round'}, ...(Array.isArray(d)?d:[d]).map(p=>React.createElement('path',{d:p,key:p})));
 const ICONS = {
-  // Scenarios
   meeting: (s) => I(['M12 12m-2 0a2 2 0 1 0 4 0a2 2 0 1 0-4 0','M12 2v4','M12 18v4','M2 12h4','M18 12h4'],s),
   presentation: (s) => I(['M4 20h16','M8 20V10h8v10','M12 10V6'],s),
   call: (s) => I(['M5 4h4l2 5l-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2'],s),
@@ -89,18 +326,15 @@ const ICONS = {
   between: (s) => I(['M1 4v6h6','M23 20v-6h-6','M20.49 9A9 9 0 0 0 5.64 5.64L1 10','M23 14l-4.64 4.36A9 9 0 0 1 3.51 15'],s),
   just_relax: (s) => I(['M2 12c2-4 4-6 6-6s4 6 6 6s4-6 6-6s4 2 6 6'],s),
   deep_dive: (s) => I(['M12 2v20','M2 12c2-3 4-5 6-5s4 5 6 5','M22 12c-2-3-4-5-6-5s-4 5-6 5'],s),
-  // Categories
   focus: (s) => I(['M12 12m-10 0a10 10 0 1 0 20 0a10 10 0 1 0-20 0','M12 12m-6 0a6 6 0 1 0 12 0a6 6 0 1 0-12 0','M12 12m-2 0a2 2 0 1 0 4 0a2 2 0 1 0-4 0'],s),
   stress: (s) => I(['M2 12c2 4 6 6 10 2s8-6 10-2'],s),
   energy: (s) => I(['M13 2L3 14h9l-1 8l10-12h-9l1-8'],s),
   recovery: (s) => I(['M21 12.79A9 9 0 1 1 11.21 3A7 7 0 0 0 21 12.79z'],s),
   deep: (s) => I(['M18.178 8c5.096 0 5.096 8 0 8s-5.096 8-10.178 8c-5.096 0-5.096-8 0-8s5.096-8 10.178-8'],s),
-  // Tabs
   home: (s) => I(['M3 12l9-8l9 8','M5 10v10h14V10'],s),
   quick: (s) => I(['M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2S2 6.477 2 12','M12 6v6l4 2'],s),
   programs: (s) => I(['M4 19.5A2.5 2.5 0 0 1 6.5 17H20','M4 4h16v13H6.5A2.5 2.5 0 0 0 4 19.5V4z'],s),
   profile: (s) => I(['M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2','M12 3a4 4 0 1 0 0 8a4 4 0 1 0 0-8'],s),
-  // Misc
   lock: (s) => I(['M5 11h14v10H5z','M7 11V7a5 5 0 0 1 10 0v4'],s),
   back: (s) => I(['M19 12H5','M12 19l-7-7l7-7'],s),
   close: (s) => I(['M18 6L6 18','M6 6l12 12'],s),
@@ -114,32 +348,38 @@ const ICONS = {
   prog_bubble: (s) => I(['M12 16a4 4 0 1 0 0-8a4 4 0 1 0 0 8','M7 6a2 2 0 1 0 0-4a2 2 0 1 0 0 4','M17 8a1.5 1.5 0 1 0 0-3a1.5 1.5 0 1 0 0 3'],s),
   prog_shield: (s) => I(['M12 22s8-4 8-10V5l-8-3l-8 3v7c0 6 8 10 8 10z'],s),
   prog_target: (s) => I(['M12 12m-10 0a10 10 0 1 0 20 0a10 10 0 1 0-20 0','M12 12m-6 0a6 6 0 1 0 12 0a6 6 0 1 0-12 0','M12 12m-2 0a2 2 0 1 0 4 0a2 2 0 1 0-4 0'],s),
+  mic: (s) => I(['M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z','M19 10v2a7 7 0 0 1-14 0v-2','M12 19v4','M8 23h8'],s),
+  mic_off: (s) => I(['M1 1l22 22','M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6','M17 16.95A7 7 0 0 1 5 12v-2m14 0v2c0 .76-.13 1.49-.35 2.17','M12 19v4','M8 23h8'],s),
+  play_circle: (s) => I(['M12 12m-10 0a10 10 0 1 0 20 0a10 10 0 1 0-20 0','M10 8l6 4l-6 4V8z'],s),
 };
-// Render icon by key
 const Icon = ({name, size=24, style={}}) => {
   const fn = ICONS[name];
   return fn ? React.createElement('span', {style:{display:'inline-flex',color:'currentColor',...style}}, fn(size)) : null;
 };
 
+// ===== WORLDS =====
 const WORLDS = {
   ocean: {
-    name: 'Ocean', icon: 'world',
-    palette: { bgStart:'#0e1f2f', bgMid:'#0a1628', bgEnd:'#070c15', accent:'#5eaaa8', glow:'rgba(94,170,168,0.12)', card:'rgba(255,255,255,0.025)', text:'rgba(220,225,235,0.92)' },
-    particles: { type:'bubbles', count:8, speed:[15,30], opacity:[0.04,0.08] },
+    icon: 'world',
+    palette: { accent:'#5eaaa8', accentRgb:'94,170,168', glow:'rgba(94,170,168,0.12)', card:'rgba(255,255,255,0.025)', text:'rgba(220,225,235,0.92)' },
+    bgGradient: 'linear-gradient(180deg, #0e3d5c 0%, #082a42 33%, #041520 66%, #020a10 100%)',
+    particles: { type:'bubbles', count:8, speed:[12,25], opacity:[0.04,0.10] },
     ambient: { baseFreq:65, filterFreq:300, lfoRate:0.08 },
     depthUnit:'m', depthLabel:'depth'
   },
   space: {
-    name: 'Space', icon: 'world',
-    palette: { bgStart:'#0f0f1e', bgMid:'#0c1322', bgEnd:'#070c15', accent:'#8b7ec8', glow:'rgba(139,126,200,0.12)', card:'rgba(255,255,255,0.025)', text:'rgba(220,225,235,0.92)' },
-    particles: { type:'stars', count:8, speed:[18,35], opacity:[0.04,0.08] },
+    icon: 'world',
+    palette: { accent:'#8b7ec8', accentRgb:'139,126,200', glow:'rgba(139,126,200,0.12)', card:'rgba(255,255,255,0.025)', text:'rgba(220,225,235,0.92)' },
+    bgGradient: 'radial-gradient(ellipse at 30% 20%, rgba(90,60,150,0.06) 0%, transparent 50%), radial-gradient(ellipse at 70% 80%, rgba(60,90,180,0.05) 0%, transparent 50%), #0d0b1a',
+    particles: { type:'stars', count:6, speed:[20,40], opacity:[0.03,0.08] },
     ambient: { baseFreq:45, filterFreq:200, lfoRate:0.04 },
     depthUnit:'km', depthLabel:'distance'
   },
   memory: {
-    name: 'Memory', icon: 'world',
-    palette: { bgStart:'#1a1510', bgMid:'#12100c', bgEnd:'#0a0806', accent:'#b09060', glow:'rgba(176,144,96,0.12)', card:'rgba(255,255,255,0.025)', text:'rgba(220,225,235,0.92)' },
-    particles: { type:'bokeh', count:6, speed:[22,35], opacity:[0.03,0.07] },
+    icon: 'world',
+    palette: { accent:'#c4956a', accentRgb:'196,149,106', glow:'rgba(196,149,106,0.12)', card:'rgba(255,255,255,0.025)', text:'rgba(220,225,235,0.92)' },
+    bgGradient: 'radial-gradient(ellipse at 50% 10%, rgba(255,200,120,0.05) 0%, transparent 60%), #1a1510',
+    particles: { type:'bokeh', count:0, speed:[25,40], opacity:[0.04,0.08] },
     ambient: { baseFreq:82, filterFreq:500, lfoRate:0.06 },
     depthUnit:'min', depthLabel:'stillness'
   }
@@ -147,95 +387,49 @@ const WORLDS = {
 
 // ===== TECHNIQUES =====
 const TECHNIQUES = {
-  tidal:              { phases:['inhale','exhale','pause'],           defaults:{inhale:4,exhale:6,pause:2},                   multiplier:1.0, color:'#68d391', name:'Tidal Breathing' },
-  diaphragmatic:      { phases:['inhale','exhale'],                   defaults:{inhale:5,exhale:10},                          multiplier:1.2, color:'#4fd1c5', name:'Diaphragmatic' },
-  box:                { phases:['inhale','holdIn','exhale','holdOut'], defaults:{inhale:4,holdIn:4,exhale:4,holdOut:4},        multiplier:1.5, color:'#63b3ed', name:'Box Breathing' },
-  segmented:          { phases:['belly','ribs','chest','exhale'],     defaults:{belly:3,ribs:3,chest:3,exhale:8},             multiplier:1.5, color:'#9f7aea', name:'Segmented' },
-  ujjayi:             { phases:['inhale','exhale'],                   defaults:{inhale:5,exhale:8},                           multiplier:2.0, color:'#4299e1', name:'Ujjayi' },
-  recovery:           { phases:['inhale','holdIn','exhale'],          defaults:{inhale:3,holdIn:1,exhale:2},                  multiplier:1.0, color:'#fc8181', name:'Recovery' },
-  physiological_sigh: { phases:['inhale1','inhale2','exhale'],        defaults:{inhale1:2,inhale2:1,exhale:7},                multiplier:1.8, color:'#f6ad55', name:'Physiological Sigh' },
-};
-
-const PHASE_LABELS = {
-  inhale:'Вдох', exhale:'Выдох', holdIn:'Задержите', holdOut:'Пауза',
-  belly:'Живот', ribs:'Рёбра', chest:'Грудь', pause:'Пауза',
-  inhale1:'Вдох', inhale2:'+ вдох',
-};
-
-// Concrete sub-instructions per technique per phase
-const PHASE_SUBS = {
-  diaphragmatic: {
-    inhale: 'через нос, живот вперёд на 70-80%',
-    exhale: 'через рот, губы сжаты, живот внутрь до конца',
-  },
-  box: {
-    inhale: 'через нос, равномерно, как воду в стакан',
-    holdIn: 'не зажимайте горло — просто остановите поток',
-    exhale: 'через рот, ровный, отпускайте',
-    holdOut: 'расслабьтесь, просто ждите',
-  },
-  segmented: {
-    belly: 'воздух в живот — расширяется вперёд и в стороны',
-    ribs: 'рёбра расходятся в стороны, не вверх',
-    chest: 'минимальное движение, ключицы приподнимаются',
-    exhale: 'одним потоком сверху вниз, как сдувающийся шар',
-  },
-  ujjayi: {
-    inhale: 'через нос, горло сужено — тихий шипящий звук',
-    exhale: 'через нос, тот же звук — ровный, как шум волн',
-  },
-  recovery: {
-    inhale: 'резкий вдох через рот, лёгкие на 100%',
-    holdIn: 'создайте давление, как перед звуком «П»',
-    exhale: 'резкий выдох «ПХА!» — весь воздух за полсекунды',
-  },
-  physiological_sigh: {
-    inhale1: 'короткий вдох через нос — лёгкие на 60%',
-    inhale2: 'ещё один поверх — до 90%, без паузы',
-    exhale: 'длинный медленный выдох через рот, до конца',
-  },
-  tidal: {
-    inhale: 'мягкий вдох через нос, лёгкие на 40-50%',
-    exhale: 'свободный выдох, просто отпустите',
-    pause: 'естественная пауза, тело само остановится',
-  },
+  tidal:              { phases:['inhale','exhale','pause'],           defaults:{inhale:4,exhale:6,pause:2},                   multiplier:1.0 },
+  diaphragmatic:      { phases:['inhale','exhale'],                   defaults:{inhale:5,exhale:10},                          multiplier:1.2 },
+  box:                { phases:['inhale','holdIn','exhale','holdOut'], defaults:{inhale:4,holdIn:4,exhale:4,holdOut:4},        multiplier:1.5 },
+  segmented:          { phases:['belly','ribs','chest','exhale'],     defaults:{belly:3,ribs:3,chest:3,exhale:8},             multiplier:1.5 },
+  ujjayi:             { phases:['inhale','exhale'],                   defaults:{inhale:5,exhale:8},                           multiplier:2.0 },
+  recovery:           { phases:['inhale','holdIn','exhale'],          defaults:{inhale:3,holdIn:1,exhale:2},                  multiplier:1.0 },
+  physiological_sigh: { phases:['inhale1','inhale2','exhale'],        defaults:{inhale1:2,inhale2:1,exhale:7},                multiplier:1.8 },
 };
 
 // ===== SCENARIOS =====
 const SCENARIOS = {
-  meeting:      { cat:'focus', name:'Перед встречей', svgIcon:'meeting', free:true, durations:[5,10] },
-  presentation: { cat:'focus', name:'Перед выступлением', svgIcon:'presentation', free:false, durations:[5,10] },
-  call:         { cat:'focus', name:'Перед сложным звонком', svgIcon:'call', free:false, durations:[3] },
-  cant_focus:   { cat:'focus', name:'Не могу сосредоточиться', svgIcon:'cant_focus', free:true, durations:[5] },
-  decision:     { cat:'focus', name:'Перед решением', svgIcon:'decision', free:false, durations:[5] },
-  hard_day:     { cat:'stress', name:'После тяжёлого дня', svgIcon:'hard_day', free:true, durations:[5,10] },
-  conflict:     { cat:'stress', name:'После конфликта', svgIcon:'conflict', free:false, durations:[5] },
-  traffic:      { cat:'stress', name:'В пробке', svgIcon:'traffic', free:false, durations:[5], audioOnly:true },
-  deadline:     { cat:'stress', name:'Дедлайн давит', svgIcon:'deadline', free:false, durations:[3] },
-  overload:     { cat:'stress', name:'Перегруз информацией', svgIcon:'overload', free:false, durations:[5] },
-  morning:      { cat:'energy', name:'Утренний старт', svgIcon:'morning', free:true, durations:[5] },
-  afternoon:    { cat:'energy', name:'Послеобеденный спад', svgIcon:'afternoon', free:false, durations:[3] },
-  pre_workout:  { cat:'energy', name:'Перед тренировкой', svgIcon:'pre_workout', free:false, durations:[5] },
-  quick_reset:  { cat:'energy', name:'Быстро собраться', svgIcon:'quick_reset', free:false, durations:[3] },
-  post_workout: { cat:'recovery', name:'После тренировки', svgIcon:'post_workout', free:false, durations:[5] },
-  insomnia:     { cat:'recovery', name:'Не могу уснуть', svgIcon:'insomnia', free:true, durations:[10] },
-  anxious_wake: { cat:'recovery', name:'Тревожное утро', svgIcon:'anxious_wake', free:false, durations:[5] },
-  between:      { cat:'recovery', name:'Между встречами', svgIcon:'between', free:false, durations:[3] },
-  just_relax:   { cat:'deep', name:'Просто расслабиться', svgIcon:'just_relax', free:false, durations:[10] },
-  deep_dive:    { cat:'deep', name:'Глубокое погружение', svgIcon:'deep_dive', free:false, durations:[10] },
+  meeting:      { cat:'focus', svgIcon:'meeting', free:true, durations:[5,10] },
+  presentation: { cat:'focus', svgIcon:'presentation', free:false, durations:[5,10] },
+  call:         { cat:'focus', svgIcon:'call', free:false, durations:[3] },
+  cant_focus:   { cat:'focus', svgIcon:'cant_focus', free:true, durations:[5] },
+  decision:     { cat:'focus', svgIcon:'decision', free:false, durations:[5] },
+  hard_day:     { cat:'stress', svgIcon:'hard_day', free:true, durations:[5,10] },
+  conflict:     { cat:'stress', svgIcon:'conflict', free:false, durations:[5] },
+  traffic:      { cat:'stress', svgIcon:'traffic', free:false, durations:[5], audioOnly:true },
+  deadline:     { cat:'stress', svgIcon:'deadline', free:false, durations:[3] },
+  overload:     { cat:'stress', svgIcon:'overload', free:false, durations:[5] },
+  morning:      { cat:'energy', svgIcon:'morning', free:true, durations:[5] },
+  afternoon:    { cat:'energy', svgIcon:'afternoon', free:false, durations:[3] },
+  pre_workout:  { cat:'energy', svgIcon:'pre_workout', free:false, durations:[5] },
+  quick_reset:  { cat:'energy', svgIcon:'quick_reset', free:false, durations:[3] },
+  post_workout: { cat:'recovery', svgIcon:'post_workout', free:false, durations:[5] },
+  insomnia:     { cat:'recovery', svgIcon:'insomnia', free:true, durations:[10] },
+  anxious_wake: { cat:'recovery', svgIcon:'anxious_wake', free:false, durations:[5] },
+  between:      { cat:'recovery', svgIcon:'between', free:false, durations:[3] },
+  just_relax:   { cat:'deep', svgIcon:'just_relax', free:false, durations:[10] },
+  deep_dive:    { cat:'deep', svgIcon:'deep_dive', free:false, durations:[10] },
 };
 
 const CATEGORIES = {
-  focus:    { name:'Фокус', svgIcon:'focus', color:'#5eaaa8' },
-  stress:   { name:'Стресс', svgIcon:'stress', color:'#5eaaa8' },
-  energy:   { name:'Энергия', svgIcon:'energy', color:'#5eaaa8' },
-  recovery: { name:'Восстановление', svgIcon:'recovery', color:'#5eaaa8' },
-  deep:     { name:'Глубокая практика', svgIcon:'deep', color:'#5eaaa8' },
+  focus:    { svgIcon:'focus', color:'#5eaaa8' },
+  stress:   { svgIcon:'stress', color:'#5eaaa8' },
+  energy:   { svgIcon:'energy', color:'#5eaaa8' },
+  recovery: { svgIcon:'recovery', color:'#5eaaa8' },
+  deep:     { svgIcon:'deep', color:'#5eaaa8' },
 };
 
-// ===== SESSION CONTENT =====
+// ===== SESSION CONTENT (Russian meditation scripts preserved exactly) =====
 const SESSION_CONTENT = {
-  // FOCUS
   meeting: {
     5: [
       { type:'text', duration:10, text:'Сядьте. Спина ровная. Руки на коленях. Закройте глаза.' },
@@ -302,7 +496,6 @@ const SESSION_CONTENT = {
       { type:'text', duration:5, text:'Решайте.' },
     ]
   },
-  // STRESS
   hard_day: {
     5: [
       { type:'text', duration:10, text:'День закончен. Всё, что нужно было сделать — сделано или подождёт. Сейчас — только вы.' },
@@ -354,7 +547,6 @@ const SESSION_CONTENT = {
       { type:'text', duration:10, text:'Ваш мозг обработает информацию фоном. Ему просто нужна была пауза.' },
     ]
   },
-  // ENERGY
   morning: {
     5: [
       { type:'text', duration:10, text:'Доброе утро. Перед кофе — 5 минут дыхания. Тело проснётся быстрее.' },
@@ -393,7 +585,6 @@ const SESSION_CONTENT = {
       { type:'text', duration:8, text:'Собрались.' },
     ]
   },
-  // RECOVERY
   post_workout: {
     5: [
       { type:'text', duration:10, text:'Тренировка окончена. Переключаем тело в режим восстановления.' },
@@ -436,7 +627,6 @@ const SESSION_CONTENT = {
       { type:'text', duration:8, text:'Reset complete. Следующая встреча — с чистой головой.' },
     ]
   },
-  // DEEP
   just_relax: {
     10: [
       { type:'text', duration:15, text:'Нет цели. Нет задачи. Просто — дышать.' },
@@ -470,25 +660,21 @@ const SESSION_CONTENT = {
   },
 };
 
-// ===== PROGRAMS =====
+// ===== PROGRAMS (preserved exactly) =====
 const PROGRAMS = {
   first_dive: {
-    id: 'first_dive',
-    name: 'Первое погружение', subtitle: '5 дней · Основы дыхания',
-    days: 5, free: false, trialDay: 1, icon: '🫧',
+    id: 'first_dive', days: 5, free: false, trialDay: 1,
     sessions: [
-      // Day 1
       [
-        { type:'video', duration:60, videoId:'day1_intro', placeholder:'Видео тренера: Дмитрий Власов — Диафрагмальное дыхание' },
+        { type:'video', duration:60, src:'', placeholder:'Видео тренера: Дмитрий Власов — Диафрагмальное дыхание' },
         { type:'text', duration:15, text:'Сядьте удобно. Спина прямая, но без напряжения. Положите одну руку на живот, другую на грудь.' },
         { type:'breathing', technique:'diaphragmatic', duration:90, params:{inhale:4,exhale:8}, hint:'Вдох — живот идёт вперёд. Выдох — живот мягко внутрь.' },
         { type:'text', duration:15, text:'Обратите внимание: грудь почти не двигается. Всю работу делает диафрагма — мышца под лёгкими.' },
         { type:'breathing', technique:'diaphragmatic', duration:120, params:{inhale:5,exhale:10}, hint:'Выдох в два раза длиннее вдоха. Не торопите. Просто отпускайте воздух.' },
         { type:'text', duration:10, text:'Отлично. Первое погружение завершено. Завтра — квадратное дыхание.' },
       ],
-      // Day 2
       [
-        { type:'video', duration:50, videoId:'day2_intro', placeholder:'Видео тренера: Box Breathing — техника Navy SEALs' },
+        { type:'video', duration:50, src:'', placeholder:'Видео тренера: Box Breathing — техника Navy SEALs' },
         { type:'text', duration:10, text:'Найдите удобное положение. Закройте глаза.' },
         { type:'breathing', technique:'tidal', duration:60, params:{inhale:4,exhale:5,pause:2}, hint:'Начнём с обычного спокойного дыхания. Настраиваемся.' },
         { type:'breathing', technique:'box', duration:160, params:{inhale:4,holdIn:4,exhale:4,holdOut:4}, hint:'Вдох на 4 — задержите на 4 — выдох на 4 — пауза на 4. Рисуете квадрат дыханием.' },
@@ -496,18 +682,16 @@ const PROGRAMS = {
         { type:'breathing', technique:'box', duration:80, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
         { type:'text', duration:10, text:'Квадрат освоен. Завтра — трёхфазное дыхание.' },
       ],
-      // Day 3
       [
-        { type:'video', duration:60, videoId:'day3_intro', placeholder:'Видео тренера: Трёхфазное дыхание фридайверов' },
+        { type:'video', duration:60, src:'', placeholder:'Видео тренера: Трёхфазное дыхание фридайверов' },
         { type:'text', duration:10, text:'Сядьте прямо. Руки свободно на коленях.' },
         { type:'breathing', technique:'segmented', duration:120, params:{belly:3,ribs:3,chest:3,exhale:8}, hint:'Живот... рёбра... грудь... и мягкий длинный выдох. Три этажа вверх, лифт вниз.' },
         { type:'text', duration:20, text:'Не форсируйте. Если грудной отдел «не хочет» — ничего страшного. Гибкость придёт с практикой.' },
         { type:'breathing', technique:'segmented', duration:120, params:{belly:4,ribs:3,chest:3,exhale:10} },
         { type:'text', duration:10, text:'Три этажа освоены. Завтра — океанское дыхание.' },
       ],
-      // Day 4
       [
-        { type:'video', duration:60, videoId:'day4_intro', placeholder:'Видео тренера: Ujjayi — океанское дыхание' },
+        { type:'video', duration:60, src:'', placeholder:'Видео тренера: Ujjayi — океанское дыхание' },
         { type:'text', duration:15, text:'Попробуйте: откройте рот и выдохните — «хааа». Теперь закройте рот и сделайте то же через нос. Слышите мягкий звук?' },
         { type:'breathing', technique:'ujjayi', duration:120, params:{inhale:5,exhale:8}, hint:'Вдох через нос — звук океана. Выдох через нос — звук прибоя.' },
         { type:'bodyscan', duration:60, parts:[
@@ -516,9 +700,8 @@ const PROGRAMS = {
         { type:'breathing', technique:'ujjayi', duration:150, params:{inhale:6,exhale:10} },
         { type:'text', duration:10, text:'Вы слышите свой внутренний океан. Завтра — финальное погружение.' },
       ],
-      // Day 5
       [
-        { type:'video', duration:50, videoId:'day5_intro', placeholder:'Видео тренера: Финальное погружение — все техники' },
+        { type:'video', duration:50, src:'', placeholder:'Видео тренера: Финальное погружение — все техники' },
         { type:'text', duration:10, text:'Закройте глаза. Расслабьте лицо. Отпустите плечи.' },
         { type:'breathing', technique:'diaphragmatic', duration:60, params:{inhale:4,exhale:8} },
         { type:'breathing', technique:'box', duration:96, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
@@ -534,47 +717,40 @@ const PROGRAMS = {
     ]
   },
   stress_shield: {
-    id: 'stress_shield',
-    name: 'Стресс-щит', subtitle: '7 дней · Антистресс-ритуал',
-    days: 7, free: false, trialDay: 1, icon: '🛡️',
+    id: 'stress_shield', days: 7, free: false, trialDay: 1,
     sessions: [
-      // Day 1
       [
-        { type:'video', duration:40, videoId:'ss_day1', placeholder:'Видео: Стресс — это про тело. Физиологический вздох.' },
+        { type:'video', duration:40, src:'', placeholder:'Видео: Стресс — это про тело. Физиологический вздох.' },
         { type:'breathing', technique:'physiological_sigh', duration:90, params:{inhale1:2,inhale2:1,exhale:7} },
         { type:'breathing', technique:'diaphragmatic', duration:120, params:{inhale:5,exhale:10} },
         { type:'bodyscan', duration:60, parts:[
           {text:'Лоб — расслабьте',hold:8},{text:'Глаза — тяжёлые',hold:7},{text:'Челюсть — свободна',hold:7},{text:'Плечи — опустите',hold:8},{text:'Руки — тяжёлые',hold:7},{text:'Живот — мягкий',hold:7},{text:'Ноги — тёплые',hold:7}
         ]},
       ],
-      // Day 2
       [
-        { type:'video', duration:40, videoId:'ss_day2', placeholder:'Видео: Учимся замедляться' },
+        { type:'video', duration:40, src:'', placeholder:'Видео: Учимся замедляться' },
         { type:'breathing', technique:'tidal', duration:90, params:{inhale:4,exhale:6,pause:2} },
         { type:'breathing', technique:'diaphragmatic', duration:120, params:{inhale:4,exhale:12} },
         { type:'bodyscan', duration:90, parts:[
           {text:'Макушка — тепло',hold:9},{text:'Лоб — гладкий',hold:9},{text:'Глаза — тяжёлые',hold:9},{text:'Челюсть — свободна',hold:9},{text:'Шея — длинная',hold:9},{text:'Плечи — вниз',hold:9},{text:'Руки — тёплые',hold:9},{text:'Живот — мягкий',hold:9},{text:'Ноги — тяжёлые',hold:9},{text:'Ступни — расслаблены',hold:9}
         ]},
       ],
-      // Day 3
       [
-        { type:'video', duration:40, videoId:'ss_day3', placeholder:'Видео: Контроль в дискомфорте' },
+        { type:'video', duration:40, src:'', placeholder:'Видео: Контроль в дискомфорте' },
         { type:'breathing', technique:'tidal', duration:60, params:{inhale:4,exhale:6,pause:2} },
         { type:'breathing', technique:'box', duration:120, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
         { type:'breathing', technique:'box', duration:120, params:{inhale:4,holdIn:6,exhale:4,holdOut:6} },
       ],
-      // Day 4
       [
-        { type:'video', duration:40, videoId:'ss_day4', placeholder:'Видео: Блуждающий нерв — ваш антистресс' },
+        { type:'video', duration:40, src:'', placeholder:'Видео: Блуждающий нерв — ваш антистресс' },
         { type:'breathing', technique:'diaphragmatic', duration:60, params:{inhale:5,exhale:10} },
         { type:'breathing', technique:'ujjayi', duration:180, params:{inhale:5,exhale:8} },
         { type:'bodyscan', duration:60, parts:[
           {text:'Лоб — расслабьте',hold:8},{text:'Глаза — мягко',hold:7},{text:'Челюсть — приоткрыта',hold:7},{text:'Плечи — тяжёлые',hold:8},{text:'Руки — тёплые',hold:7},{text:'Живот — свободный',hold:7},{text:'Ноги — расслаблены',hold:7}
         ]},
       ],
-      // Day 5
       [
-        { type:'video', duration:40, videoId:'ss_day5', placeholder:'Видео: Визуальная броня' },
+        { type:'video', duration:40, src:'', placeholder:'Видео: Визуальная броня' },
         { type:'breathing', technique:'box', duration:90, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
         { type:'visualization', duration:40, texts:{
           ocean:'Представьте ситуацию стресса. Увидьте её чётко. Вы наблюдаете со стороны. Как фридайвер смотрит на глубину перед нырком — спокойно.',
@@ -584,9 +760,8 @@ const PROGRAMS = {
         { type:'breathing', technique:'ujjayi', duration:120, params:{inhale:5,exhale:8} },
         { type:'text', duration:10, text:'Стресс не исчез. Но вы выбрали, как на него реагировать.' },
       ],
-      // Day 6
       [
-        { type:'video', duration:40, videoId:'ss_day6', placeholder:'Видео: Полный антистресс-протокол' },
+        { type:'video', duration:40, src:'', placeholder:'Видео: Полный антистресс-протокол' },
         { type:'breathing', technique:'physiological_sigh', duration:60, params:{inhale1:2,inhale2:1,exhale:7} },
         { type:'breathing', technique:'diaphragmatic', duration:90, params:{inhale:5,exhale:10} },
         { type:'breathing', technique:'box', duration:90, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
@@ -595,9 +770,8 @@ const PROGRAMS = {
           {text:'Лоб',hold:7},{text:'Глаза',hold:7},{text:'Челюсть',hold:7},{text:'Плечи',hold:7},{text:'Руки',hold:7},{text:'Живот',hold:7},{text:'Ноги',hold:7},{text:'Ступни',hold:7}
         ]},
       ],
-      // Day 7
       [
-        { type:'video', duration:40, videoId:'ss_day7', placeholder:'Видео: Щит на автомате — без подсказок' },
+        { type:'video', duration:40, src:'', placeholder:'Видео: Щит на автомате — без подсказок' },
         { type:'breathing', technique:'tidal', duration:60, params:{inhale:4,exhale:6,pause:2} },
         { type:'breathing', technique:'physiological_sigh', duration:60, params:{inhale1:2,inhale2:1,exhale:7} },
         { type:'breathing', technique:'diaphragmatic', duration:90, params:{inhale:5,exhale:10} },
@@ -610,40 +784,33 @@ const PROGRAMS = {
     ]
   },
   deep_focus: {
-    id: 'deep_focus',
-    name: 'Глубокий фокус', subtitle: '5 дней · Концентрация',
-    days: 5, free: false, trialDay: 1, icon: '🎯',
+    id: 'deep_focus', days: 5, free: false, trialDay: 1,
     sessions: [
-      // Day 1
       [
-        { type:'video', duration:40, videoId:'df_day1', placeholder:'Видео: Фокус начинается с внимания' },
+        { type:'video', duration:40, src:'', placeholder:'Видео: Фокус начинается с внимания' },
         { type:'breathing', technique:'tidal', duration:180, params:{inhale:4,exhale:6,pause:2}, hint:'Считайте вдохи от 1 до 10, потом сначала.' },
         { type:'breathing', technique:'box', duration:90, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
       ],
-      // Day 2
       [
-        { type:'video', duration:40, videoId:'df_day2', placeholder:'Видео: Box breathing — тренажёр внимания' },
+        { type:'video', duration:40, src:'', placeholder:'Видео: Box breathing — тренажёр внимания' },
         { type:'breathing', technique:'box', duration:120, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
         { type:'breathing', technique:'box', duration:120, params:{inhale:5,holdIn:5,exhale:5,holdOut:5} },
         { type:'text', duration:20, text:'Когда ум отвлекается — вы теряете счёт. Когда вы в фокусе — счёт идёт автоматически.' },
       ],
-      // Day 3
       [
-        { type:'video', duration:40, videoId:'df_day3', placeholder:'Видео: Сегментированное дыхание — максимальная осознанность' },
+        { type:'video', duration:40, src:'', placeholder:'Видео: Сегментированное дыхание — максимальная осознанность' },
         { type:'breathing', technique:'segmented', duration:180, params:{belly:3,ribs:3,chest:3,exhale:8} },
         { type:'breathing', technique:'diaphragmatic', duration:90, params:{inhale:5,exhale:10} },
         { type:'text', duration:20, text:'Способность изолировать внимание на одной зоне тела переносится на способность изолировать внимание на одной задаче.' },
       ],
-      // Day 4
       [
-        { type:'video', duration:40, videoId:'df_day4', placeholder:'Видео: Фокус под давлением — удлинённые задержки' },
+        { type:'video', duration:40, src:'', placeholder:'Видео: Фокус под давлением — удлинённые задержки' },
         { type:'breathing', technique:'box', duration:120, params:{inhale:4,holdIn:6,exhale:4,holdOut:6} },
         { type:'breathing', technique:'box', duration:120, params:{inhale:4,holdIn:8,exhale:4,holdOut:8} },
         { type:'breathing', technique:'ujjayi', duration:90, params:{inhale:5,exhale:8} },
       ],
-      // Day 5
       [
-        { type:'video', duration:40, videoId:'df_day5', placeholder:'Видео: Состояние потока' },
+        { type:'video', duration:40, src:'', placeholder:'Видео: Состояние потока' },
         { type:'breathing', technique:'tidal', duration:60, params:{inhale:4,exhale:6,pause:2} },
         { type:'breathing', technique:'segmented', duration:90, params:{belly:3,ribs:3,chest:3,exhale:8} },
         { type:'breathing', technique:'ujjayi', duration:180, params:{inhale:6,exhale:12} },
@@ -660,44 +827,35 @@ const PROGRAMS = {
 
 // ===== BADGES =====
 const BADGES = [
-  { id:'first_dive', name:'First Dive', desc:'Первая сессия', icon:'🫧', condition: s => s.totalSessions >= 1 },
-  { id:'week_streak', name:'Weekly Flow', desc:'7 дней подряд', icon:'🔥', condition: s => s.streak >= 7 },
-  { id:'month_streak', name:'Deep Habit', desc:'30 дней подряд', icon:'💎', condition: s => s.streak >= 30 },
-  { id:'all_techniques', name:'Technique Master', desc:'Все 7 техник', icon:'🎓', condition: s => (s.techniquesUsed||[]).length >= 7 },
-  { id:'all_categories', name:'Explorer', desc:'Все 5 категорий', icon:'🗺️', condition: s => (s.categoriesUsed||[]).length >= 5 },
-  { id:'depth_50', name:'Deep Explorer', desc:'Глубина 50м', icon:'🐠', condition: s => s.totalDepth >= 50 },
-  { id:'depth_130', name:'Record Depth', desc:'Глубина 130м', icon:'🏆', condition: s => s.totalDepth >= 130 },
-  { id:'night_5', name:'Night Owl', desc:'5 вечерних сессий', icon:'🦉', condition: s => s.nightSessions >= 5 },
-  { id:'morning_5', name:'Early Riser', desc:'5 утренних сессий', icon:'🌅', condition: s => s.morningSessions >= 5 },
-  { id:'program_done', name:'Course Graduate', desc:'Завершить программу', icon:'📜', condition: s => s.programsCompleted >= 1 },
-  { id:'ten_sessions', name:'Dedicated', desc:'10 сессий', icon:'🎯', condition: s => s.totalSessions >= 10 },
-  { id:'fifty_sessions', name:'Freediver', desc:'50 сессий', icon:'🌊', condition: s => s.totalSessions >= 50 },
+  { id:'first_dive', nameKey:'firstDive', condition: s => s.totalSessions >= 1 },
+  { id:'week_streak', nameKey:'badges', condition: s => s.streak >= 7 },
+  { id:'month_streak', nameKey:'badges', condition: s => s.streak >= 30 },
+  { id:'all_techniques', nameKey:'badges', condition: s => (s.techniquesUsed||[]).length >= 7 },
+  { id:'all_categories', nameKey:'badges', condition: s => (s.categoriesUsed||[]).length >= 5 },
+  { id:'depth_50', nameKey:'badges', condition: s => s.totalDepth >= 50 },
+  { id:'depth_130', nameKey:'badges', condition: s => s.totalDepth >= 130 },
+  { id:'night_5', nameKey:'badges', condition: s => s.nightSessions >= 5 },
+  { id:'morning_5', nameKey:'badges', condition: s => s.morningSessions >= 5 },
+  { id:'program_done', nameKey:'badges', condition: s => s.programsCompleted >= 1 },
+  { id:'ten_sessions', nameKey:'badges', condition: s => s.totalSessions >= 10 },
+  { id:'fifty_sessions', nameKey:'badges', condition: s => s.totalSessions >= 50 },
 ];
+const BADGE_NAMES = {
+  first_dive:'First Dive',week_streak:'Weekly Flow',month_streak:'Deep Habit',
+  all_techniques:'Technique Master',all_categories:'Explorer',depth_50:'Deep Explorer',
+  depth_130:'Record Depth',night_5:'Night Owl',morning_5:'Early Riser',
+  program_done:'Course Graduate',ten_sessions:'Dedicated',fifty_sessions:'Freediver',
+};
 
-// ===== ONBOARDING =====
-const ONBOARDING_STEPS = [
-  { title:'DIVE', sub:'Дыши как фридайвер', desc:'Антистресс-техники от людей, которые ныряют на 130 метров на одном вдохе.' },
-  { title:'7 техник', sub:'Проверены наукой и глубиной', desc:'Диафрагмальное, квадратное, ujjayi, физиологический вздох — и ещё три.' },
-  { title:'20 сценариев', sub:'На каждый случай', desc:'Перед встречей, после конфликта, бессонница, утренняя тревога — найдётся нужный.' },
-  { title:'3 программы', sub:'Пошаговое обучение', desc:'Первое погружение. Стресс-щит. Глубокий фокус. С видео-уроками тренера.' },
-];
-
-// ===== STORAGE HELPERS =====
+// ===== STORAGE =====
 const STORAGE_KEY = 'dive_app_data';
-function loadData() {
-  try {
-    const raw = window.localStorage?.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
-}
-function saveData(data) {
-  try { window.localStorage?.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {}
-}
+function loadData() { try { const r = window.localStorage?.getItem(STORAGE_KEY); return r ? JSON.parse(r) : null; } catch { return null; } }
+function saveData(data) { try { window.localStorage?.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {} }
 const defaultStats = () => ({
   totalSessions:0, streak:0, lastSessionDate:null, totalDepth:0, totalMinutes:0,
   techniquesUsed:[], categoriesUsed:[], nightSessions:0, morningSessions:0, programsCompleted:0,
   history:[], world:'ocean', onboarded:false, isPremium:false, programProgress:{},
-  soundEnabled:true, vibrateEnabled:true,
+  soundEnabled:true, vibrateEnabled:true, voiceEnabled:true,
 });
 
 // ===== AMBIENT ENGINE =====
@@ -710,7 +868,6 @@ class AmbientEngine {
       this.masterGain = this.ctx.createGain();
       this.masterGain.gain.value = 0;
       this.masterGain.connect(this.ctx.destination);
-      // Bass drone
       this.osc = this.ctx.createOscillator();
       this.osc.type = 'sine';
       this.osc.frequency.value = worldConfig.baseFreq;
@@ -718,7 +875,6 @@ class AmbientEngine {
       oscGain.gain.value = 0.12;
       this.osc.connect(oscGain);
       oscGain.connect(this.masterGain);
-      // Noise
       const bufSize = this.ctx.sampleRate * 2;
       const buf = this.ctx.createBuffer(1, bufSize, this.ctx.sampleRate);
       const d = buf.getChannelData(0);
@@ -734,14 +890,12 @@ class AmbientEngine {
       this.noiseSrc.connect(this.filter);
       this.filter.connect(noiseGain);
       noiseGain.connect(this.masterGain);
-      // LFO
       this.lfo = this.ctx.createOscillator();
       this.lfo.frequency.value = worldConfig.lfoRate;
       const lfoGain = this.ctx.createGain();
       lfoGain.gain.value = 3;
       this.lfo.connect(lfoGain);
       lfoGain.connect(this.osc.frequency);
-      // Harmony for memory world
       if (worldConfig.baseFreq === 82) {
         this.osc2 = this.ctx.createOscillator();
         this.osc2.type = 'sine';
@@ -752,54 +906,65 @@ class AmbientEngine {
         osc2Gain.connect(this.masterGain);
         this.osc2.start();
       }
-      this.osc.start();
-      this.noiseSrc.start();
-      this.lfo.start();
+      this.osc.start(); this.noiseSrc.start(); this.lfo.start();
       this.running = true;
     } catch(e) { console.warn('Audio init failed', e); }
   }
-  fadeIn(dur = 3) {
-    if (!this.ctx || !this.masterGain) return;
-    if (this.ctx.state === 'suspended') this.ctx.resume();
-    this.masterGain.gain.cancelScheduledValues(this.ctx.currentTime);
-    this.masterGain.gain.setValueAtTime(this.masterGain.gain.value, this.ctx.currentTime);
-    this.masterGain.gain.linearRampToValueAtTime(0.15, this.ctx.currentTime + dur);
-  }
-  fadeOut(dur = 2) {
-    if (!this.ctx || !this.masterGain) return;
-    this.masterGain.gain.cancelScheduledValues(this.ctx.currentTime);
-    this.masterGain.gain.setValueAtTime(this.masterGain.gain.value, this.ctx.currentTime);
-    this.masterGain.gain.linearRampToValueAtTime(0, this.ctx.currentTime + dur);
-  }
-  destroy() {
-    this.fadeOut(0.5);
-    setTimeout(() => {
-      try { this.ctx?.close(); } catch {}
-      this.ctx = null; this.running = false;
-    }, 600);
-  }
+  duck(dur=0.5) { if (!this.ctx||!this.masterGain) return; this.masterGain.gain.cancelScheduledValues(this.ctx.currentTime); this.masterGain.gain.setValueAtTime(this.masterGain.gain.value,this.ctx.currentTime); this.masterGain.gain.linearRampToValueAtTime(0.06,this.ctx.currentTime+dur); }
+  unduck(dur=2) { if (!this.ctx||!this.masterGain) return; this.masterGain.gain.cancelScheduledValues(this.ctx.currentTime); this.masterGain.gain.setValueAtTime(this.masterGain.gain.value,this.ctx.currentTime); this.masterGain.gain.linearRampToValueAtTime(0.15,this.ctx.currentTime+dur); }
+  fadeIn(dur=3) { if (!this.ctx||!this.masterGain) return; if (this.ctx.state==='suspended') this.ctx.resume(); this.masterGain.gain.cancelScheduledValues(this.ctx.currentTime); this.masterGain.gain.setValueAtTime(this.masterGain.gain.value,this.ctx.currentTime); this.masterGain.gain.linearRampToValueAtTime(0.15,this.ctx.currentTime+dur); }
+  fadeOut(dur=2) { if (!this.ctx||!this.masterGain) return; this.masterGain.gain.cancelScheduledValues(this.ctx.currentTime); this.masterGain.gain.setValueAtTime(this.masterGain.gain.value,this.ctx.currentTime); this.masterGain.gain.linearRampToValueAtTime(0,this.ctx.currentTime+dur); }
+  destroy() { this.fadeOut(0.5); setTimeout(() => { try { this.ctx?.close(); } catch {} this.ctx = null; this.running = false; }, 600); }
 }
 
-// ===== PARTICLES COMPONENT =====
-function Particles({ world }) {
-  const w = WORLDS[world];
-  const p = w.particles;
+// ===== VOICE AUDIO SYSTEM =====
+function useVoiceAudio(seg, segElapsed, voiceEnabled, ambientRef) {
+  const audioRef = useRef(null);
+  const playedRef = useRef(false);
+  useEffect(() => {
+    playedRef.current = false;
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+  }, [seg]);
+  useEffect(() => {
+    if (!voiceEnabled || !seg?.audio?.src || playedRef.current) return;
+    const startAt = seg.audio.startAt || 0;
+    if (segElapsed >= startAt && !playedRef.current) {
+      playedRef.current = true;
+      const a = new Audio(seg.audio.src);
+      a.volume = seg.audio.volume || 0.8;
+      audioRef.current = a;
+      ambientRef.current?.duck();
+      a.play().catch(() => {});
+      a.onended = () => { ambientRef.current?.unduck(); };
+      a.onerror = () => { ambientRef.current?.unduck(); };
+    }
+  }, [segElapsed, seg, voiceEnabled]);
+  useEffect(() => { return () => { if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; } }; }, []);
+}
+
+// ===== PARTICLES =====
+function OceanParticles({ world, diveProgress }) {
   const particles = useMemo(() => {
-    return Array.from({length: p.count}, (_, i) => ({
+    return Array.from({length: 8}, (_, i) => ({
       id: i, left: Math.random() * 100,
       delay: Math.random() * 15,
-      duration: p.speed[0] + Math.random() * (p.speed[1] - p.speed[0]),
-      opacity: p.opacity[0] + Math.random() * (p.opacity[1] - p.opacity[0]),
+      duration: 12 + Math.random() * 13,
+      size: 2 + Math.random() * 2,
+      opacity: 0.04 + Math.random() * 0.06,
     }));
-  }, [world]);
-
-  // All particle types: 2px dots, barely visible, drifting upward
+  }, []);
+  const dimFactor = 1 - diveProgress * 0.7;
   return <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+    {/* Caustics at top */}
+    <div style={{position:'absolute',top:0,left:0,right:0,height:'40%',
+      background:'repeating-linear-gradient(0deg, rgba(94,170,168,0.02) 0px, transparent 2px, transparent 8px)',
+      animation:'caustic-drift 8s ease-in-out alternate infinite',
+      opacity: 0.5 * dimFactor, pointerEvents:'none'}} />
     {particles.map(b => (
       <div key={b.id} className="absolute rounded-full" style={{
-        left: b.left + '%', bottom: '-10px', width: 2, height: 2,
-        background: `rgba(94,170,168,0.08)`,
-        '--peak-opacity': b.opacity,
+        left: b.left + '%', bottom: '-10px', width: b.size, height: b.size,
+        background: `rgba(94,170,168,${b.opacity * dimFactor})`,
+        '--peak-opacity': b.opacity * dimFactor,
         animation: `drift ${b.duration}s ${b.delay}s infinite linear`,
         opacity: 0,
       }} />
@@ -807,20 +972,85 @@ function Particles({ world }) {
   </div>;
 }
 
+function SpaceParticles({ diveProgress }) {
+  const stars = useMemo(() => {
+    return Array.from({length: 60}, (_, i) => ({
+      id: i, left: Math.random() * 100, top: Math.random() * 100,
+      size: 1 + Math.random(),
+      opacity: 0.15 + Math.random() * 0.35,
+      twinkle: i < 15,
+      twinkleDur: 3 + Math.random() * 5,
+    }));
+  }, []);
+  const dust = useMemo(() => {
+    return Array.from({length: 6}, (_, i) => ({
+      id: i, top: 10 + Math.random() * 80,
+      delay: Math.random() * 20,
+      duration: 20 + Math.random() * 20,
+      opacity: 0.03 + Math.random() * 0.05,
+    }));
+  }, []);
+  const dimFactor = 1 - diveProgress * 0.8;
+  return <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+    {stars.map(s => (
+      <div key={s.id} className="absolute rounded-full" style={{
+        left: s.left + '%', top: s.top + '%',
+        width: s.size, height: s.size,
+        background: `rgba(255,255,255,${s.opacity * dimFactor})`,
+        '--base-opacity': s.opacity * dimFactor,
+        animation: s.twinkle ? `twinkle ${s.twinkleDur}s ease-in-out infinite` : 'none',
+      }} />
+    ))}
+    {dust.map(d => (
+      <div key={'d'+d.id} className="absolute" style={{
+        top: d.top + '%', left: '-5%', width: 2, height: 1,
+        background: `rgba(139,126,200,${d.opacity * dimFactor})`,
+        '--peak-opacity': d.opacity * dimFactor,
+        animation: `drift-h ${d.duration}s ${d.delay}s infinite linear`,
+        opacity: 0,
+      }} />
+    ))}
+  </div>;
+}
+
+function MemoryParticles({ diveProgress }) {
+  const bokeh = useMemo(() => {
+    return Array.from({length: 6}, (_, i) => ({
+      id: i, left: 10 + Math.random() * 80, top: 10 + Math.random() * 80,
+      size: 30 + Math.random() * 30,
+      opacity: 0.04 + Math.random() * 0.04,
+      duration: 25 + Math.random() * 15,
+      delay: Math.random() * 10,
+    }));
+  }, []);
+  const dimFactor = 1 - diveProgress * 0.6;
+  return <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+    {bokeh.map(b => (
+      <div key={b.id} className="absolute rounded-full" style={{
+        left: b.left + '%', top: b.top + '%',
+        width: b.size, height: b.size,
+        background: `radial-gradient(circle, rgba(255,200,120,${b.opacity * dimFactor}) 0%, transparent 70%)`,
+        filter: 'blur(8px)',
+        animation: `bokeh-drift ${b.duration}s ${b.delay}s ease-in-out infinite`,
+      }} />
+    ))}
+  </div>;
+}
+
+function Particles({ world, diveProgress = 0 }) {
+  if (world === 'space') return <SpaceParticles diveProgress={diveProgress} />;
+  if (world === 'memory') return <MemoryParticles diveProgress={diveProgress} />;
+  return <OceanParticles world={world} diveProgress={diveProgress} />;
+}
+
 // ===== BREATHING CIRCLE =====
-function BreathingCircle({ technique, params, elapsed, phaseName, phaseTime, phaseRemaining }) {
+function BreathingCircle({ technique, params, elapsed, phaseName, phaseTime, phaseRemaining, t, accentRgb }) {
   const tech = TECHNIQUES[technique];
   if (!tech) return null;
-  const phases = tech.phases;
-  const totalCycle = phases.reduce((s, p) => s + (params[p] || tech.defaults[p] || 4), 0);
-
-  // Determine current phase and scale
   let scale = 1.0;
   const isInhale = ['inhale','inhale1','inhale2','belly','ribs','chest'].includes(phaseName);
   const isHold = ['holdIn'].includes(phaseName);
   const isExhale = ['exhale'].includes(phaseName);
-  const isPause = ['holdOut','pause'].includes(phaseName);
-
   const phaseDuration = params[phaseName] || tech.defaults[phaseName] || 4;
   const progress = phaseDuration > 0 ? Math.min(1, (phaseDuration - phaseRemaining) / phaseDuration) : 0;
 
@@ -828,7 +1058,7 @@ function BreathingCircle({ technique, params, elapsed, phaseName, phaseTime, pha
     if (phaseName === 'belly') scale = 1.0 + 0.15 * progress;
     else if (phaseName === 'ribs') scale = 1.15 + 0.15 * progress;
     else if (phaseName === 'chest') scale = 1.3 + 0.2 * progress;
-    else scale = 1.5 - 0.5 * progress; // exhale
+    else scale = 1.5 - 0.5 * progress;
   } else if (technique === 'physiological_sigh') {
     if (phaseName === 'inhale1') scale = 1.0 + 0.3 * progress;
     else if (phaseName === 'inhale2') scale = 1.3 + 0.2 * progress;
@@ -840,29 +1070,26 @@ function BreathingCircle({ technique, params, elapsed, phaseName, phaseTime, pha
     else scale = 1.0;
   }
 
-  // Muted glow — no bright colors
-  const accentRgb = '94,170,168';
+  const rgb = accentRgb || '94,170,168';
+  const phaseLabel = t[PHASE_LANG_KEY[phaseName]] || phaseName;
+  const techLabel = t[TECHNIQUE_LANG_KEY[technique]] || technique;
 
   return (
     <div className="flex flex-col items-center justify-center">
       <div style={{position:'relative', width:'min(60vw, 240px)', aspectRatio:'1'}}>
-        {/* Static thin ring — NOT rotating */}
-        <div style={{
-          position:'absolute', inset:'-6px', borderRadius:'50%',
-          border:`1px solid rgba(${accentRgb},0.12)`,
-        }} />
+        <div style={{position:'absolute', inset:'-6px', borderRadius:'50%', border:`1px solid rgba(${rgb},0.12)`}} />
         <div style={{
           width:'100%', height:'100%', borderRadius:'50%',
-          background: `radial-gradient(circle at 40% 35%, rgba(${accentRgb},0.25) 0%, rgba(${accentRgb},0.08) 40%, rgba(12,19,34,0.9) 80%)`,
+          background: `radial-gradient(circle at 40% 35%, rgba(${rgb},0.25) 0%, rgba(${rgb},0.08) 40%, rgba(12,19,34,0.9) 80%)`,
           boxShadow: isHold
-            ? `0 0 100px rgba(${accentRgb},0.18), 0 0 200px rgba(${accentRgb},0.08)`
-            : `0 0 80px rgba(${accentRgb},0.10), 0 0 160px rgba(${accentRgb},0.05)`,
+            ? `0 0 100px rgba(${rgb},0.18), 0 0 200px rgba(${rgb},0.08)`
+            : `0 0 80px rgba(${rgb},0.10), 0 0 160px rgba(${rgb},0.05)`,
           transform: `scale(${Math.min(scale, 1.45)})`,
           transition: `transform 0.3s cubic-bezier(0.4,0,0.2,1), box-shadow 0.5s ease`,
           display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
         }}>
           <div className="font-body" style={{fontSize:16, fontWeight:500, letterSpacing:'0.08em', textTransform:'uppercase', color:'rgba(255,255,255,0.9)'}}>
-            {PHASE_LABELS[phaseName] || phaseName}
+            {phaseLabel}
           </div>
           <div className="font-mono" style={{fontSize:36, fontWeight:300, color:'rgba(255,255,255,0.75)', marginTop:4}}>
             {Math.ceil(phaseRemaining)}
@@ -870,20 +1097,21 @@ function BreathingCircle({ technique, params, elapsed, phaseName, phaseTime, pha
         </div>
       </div>
       <div className="font-body mt-5" style={{fontSize:13, fontWeight:400, color:'var(--text-2)'}}>
-        {tech.name}
+        {techLabel}
       </div>
     </div>
   );
 }
 
 // ===== SESSION PLAYER =====
-function SessionPlayer({ segments, world, onComplete, onExit }) {
+function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, ambientRef }) {
   const [segIdx, setSegIdx] = useState(0);
   const [segElapsed, setSegElapsed] = useState(0);
   const [totalElapsed, setTotalElapsed] = useState(0);
   const [paused, setPaused] = useState(false);
   const [phaseName, setPhaseName] = useState('');
   const [phaseRemaining, setPhaseRemaining] = useState(0);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
   const rafRef = useRef(null);
   const lastTimeRef = useRef(null);
 
@@ -891,22 +1119,26 @@ function SessionPlayer({ segments, world, onComplete, onExit }) {
   const seg = segments[segIdx];
   const w = WORLDS[world];
   const palette = w.palette;
+  const accentRgb = palette.accentRgb;
 
-  // Gradient depth effect
   const depthProgress = totalDuration > 0 ? totalElapsed / totalDuration : 0;
-  const bgColor = useMemo(() => {
-    const lerp = (a, b, t) => {
-      const ah = parseInt(a.slice(1), 16), bh = parseInt(b.slice(1), 16);
-      const ar = (ah >> 16)&0xff, ag = (ah >> 8)&0xff, ab = ah&0xff;
-      const br = (bh >> 16)&0xff, bg_ = (bh >> 8)&0xff, bb = bh&0xff;
-      const r = Math.round(ar + (br-ar)*t), g = Math.round(ag + (bg_-ag)*t), b_ = Math.round(ab + (bb-ab)*t);
-      return `rgb(${r},${g},${b_})`;
-    };
-    if (depthProgress < 0.5) return lerp(palette.bgStart, palette.bgMid, depthProgress * 2);
-    return lerp(palette.bgMid, palette.bgEnd, (depthProgress - 0.5) * 2);
-  }, [depthProgress, palette]);
 
-  // Compute current phase for breathing segments
+  // Dive darkening background
+  const bgStyle = useMemo(() => {
+    const darken = depthProgress;
+    if (world === 'ocean') {
+      // From teal surface to black abyss
+      return { background: `linear-gradient(180deg, rgba(14,61,92,${1-darken*0.8}) 0%, rgba(2,10,16,${0.8+darken*0.2}) 100%)` };
+    } else if (world === 'space') {
+      return { background: `rgba(13,11,26,${0.7+darken*0.3})` };
+    } else {
+      return { background: `rgba(26,21,16,${0.7+darken*0.3})` };
+    }
+  }, [depthProgress, world]);
+
+  useVoiceAudio(seg, segElapsed, voiceEnabled, ambientRef);
+
+  // Phase computation
   useEffect(() => {
     if (!seg || seg.type !== 'breathing') return;
     const tech = TECHNIQUES[seg.technique];
@@ -918,26 +1150,18 @@ function SessionPlayer({ segments, world, onComplete, onExit }) {
     let acc = 0;
     for (const ph of phases) {
       const dur = p[ph] || tech.defaults[ph] || 4;
-      if (cyclePos < acc + dur) {
-        setPhaseName(ph);
-        setPhaseRemaining(dur - (cyclePos - acc));
-        return;
-      }
+      if (cyclePos < acc + dur) { setPhaseName(ph); setPhaseRemaining(dur - (cyclePos - acc)); return; }
       acc += dur;
     }
     setPhaseName(phases[0]);
     setPhaseRemaining(p[phases[0]] || tech.defaults[phases[0]] || 4);
   }, [segElapsed, seg]);
 
-  // Body scan part tracking
   const [bodyScanIdx, setBodyScanIdx] = useState(0);
   useEffect(() => {
     if (!seg || seg.type !== 'bodyscan') return;
     let acc = 0;
-    for (let i = 0; i < seg.parts.length; i++) {
-      acc += seg.parts[i].hold;
-      if (segElapsed < acc) { setBodyScanIdx(i); return; }
-    }
+    for (let i = 0; i < seg.parts.length; i++) { acc += seg.parts[i].hold; if (segElapsed < acc) { setBodyScanIdx(i); return; } }
     setBodyScanIdx(seg.parts.length - 1);
   }, [segElapsed, seg]);
 
@@ -951,14 +1175,8 @@ function SessionPlayer({ segments, world, onComplete, onExit }) {
       setSegElapsed(prev => {
         const next = prev + dt;
         if (next >= seg.duration) {
-          if (segIdx < segments.length - 1) {
-            setSegIdx(si => si + 1);
-            setBodyScanIdx(0);
-            return 0;
-          } else {
-            onComplete();
-            return prev;
-          }
+          if (segIdx < segments.length - 1) { setSegIdx(si => si + 1); setBodyScanIdx(0); return 0; }
+          else { onComplete(); return prev; }
         }
         return next;
       });
@@ -969,33 +1187,24 @@ function SessionPlayer({ segments, world, onComplete, onExit }) {
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
   }, [paused, segIdx, seg, segments.length]);
 
-  // Vibrate on phase change
   useEffect(() => {
-    if (seg?.type === 'breathing' && navigator.vibrate) {
-      try { navigator.vibrate(30); } catch {}
-    }
+    if (seg?.type === 'breathing' && navigator.vibrate) { try { navigator.vibrate(30); } catch {} }
   }, [phaseName]);
 
-  // Progress bar segments
   const progressSegments = useMemo(() => {
     let acc = 0;
-    return segments.map((s, i) => {
-      const start = acc / totalDuration * 100;
-      const width = s.duration / totalDuration * 100;
-      acc += s.duration;
-      return { start, width, type: s.type };
-    });
+    return segments.map((s, i) => { const start = acc / totalDuration * 100; const width = s.duration / totalDuration * 100; acc += s.duration; return { start, width, type: s.type }; });
   }, [segments, totalDuration]);
+
+  const subInstruction = seg?.type === 'breathing' ? (t[PHASE_SUB_LANG_KEY[seg.technique]?.[phaseName]] || '') : '';
 
   const renderSegment = () => {
     if (!seg) return null;
     switch (seg.type) {
       case 'breathing':
-        const subInstruction = PHASE_SUBS[seg.technique]?.[phaseName] || '';
         return (
           <div className="flex-1 flex flex-col items-center justify-center">
-            <div className="font-body mb-4" style={{fontSize:13,fontWeight:400,color:'var(--text-2)'}}>{TECHNIQUES[seg.technique]?.name}</div>
-            <BreathingCircle technique={seg.technique} params={seg.params || TECHNIQUES[seg.technique]?.defaults} elapsed={segElapsed} phaseName={phaseName} phaseTime={0} phaseRemaining={phaseRemaining} />
+            <BreathingCircle technique={seg.technique} params={seg.params || TECHNIQUES[seg.technique]?.defaults} elapsed={segElapsed} phaseName={phaseName} phaseTime={0} phaseRemaining={phaseRemaining} t={t} accentRgb={accentRgb} />
             {subInstruction && (
               <div className="font-body text-center mt-5 px-8" style={{fontSize:13,fontWeight:300,color:'var(--text-2)',maxWidth:280,lineHeight:1.6}}>
                 {subInstruction}
@@ -1035,13 +1244,20 @@ function SessionPlayer({ segments, world, onComplete, onExit }) {
           </div>
         );
       case 'video':
+        // Video placeholder (no real videos yet)
         return (
           <div className="flex-1 flex flex-col items-center justify-center px-8">
             <div className="glass p-8 text-center screen-transition" style={{maxWidth:300}}>
-              <div style={{marginBottom:16, color:'var(--accent-text)', opacity:0.3}}><Icon name="video" size={32}/></div>
-              <div className="font-body mb-2" style={{fontWeight:500, fontSize:14, color:'rgba(226,232,240,0.85)'}}>Video Placeholder</div>
-              <div className="font-body" style={{fontSize:12, fontWeight:400, color:'var(--text-3)', lineHeight:1.5}}>{seg.placeholder}</div>
-              <div className="font-mono mt-4" style={{fontSize:12, fontWeight:300, color:palette.accent, opacity:0.8}}>{Math.ceil(seg.duration - segElapsed)}s</div>
+              <div style={{marginBottom:16, color:palette.accent, opacity:0.4}}><Icon name="play_circle" size={48}/></div>
+              <div className="font-body mb-4" style={{fontWeight:400, fontSize:14, color:'var(--text-2)', lineHeight:1.5}}>{t.videoComingSoon}</div>
+              <button className="px-8 py-3 rounded-full font-body"
+                style={{fontWeight:500, fontSize:14, background:`rgba(${accentRgb},0.12)`, border:`1px solid rgba(${accentRgb},0.25)`, color:palette.accent}}
+                onClick={() => {
+                  if (segIdx < segments.length - 1) { setSegIdx(si => si + 1); setSegElapsed(0); setBodyScanIdx(0); }
+                  else onComplete();
+                }}>
+                {t.continueText}
+              </button>
             </div>
           </div>
         );
@@ -1050,103 +1266,116 @@ function SessionPlayer({ segments, world, onComplete, onExit }) {
   };
 
   return (
-    <div className="fixed inset-0 flex flex-col z-50" style={{background:bgColor, transition:'background 2s ease'}}>
-      {/* Top bar */}
-      <div className="flex items-center justify-between px-6" style={{paddingTop:'env(safe-area-inset-top, 48px)', paddingBottom:8}}>
-        <button onClick={onExit} className="flex items-center justify-center rounded-full" style={{width:44,height:44,background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.08)',backdropFilter:'blur(4px)'}}>
-          <Icon name="close" size={18}/>
-        </button>
-        <div className="font-mono" style={{fontSize:13, fontWeight:300, color:'rgba(226,232,240,0.5)'}}>
-          {Math.floor(totalElapsed / 60)}:{String(Math.floor(totalElapsed % 60)).padStart(2,'0')} / {Math.floor(totalDuration / 60)}:{String(Math.floor(totalDuration % 60)).padStart(2,'0')}
-        </div>
-        <button onClick={() => setPaused(!paused)} className="flex items-center justify-center rounded-full" style={{width:44,height:44,background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.08)',backdropFilter:'blur(4px)'}}>
-          <Icon name={paused ? 'play' : 'pause'} size={16}/>
-        </button>
-      </div>
-
-      {/* Progress bar — 2px thin, premium */}
-      <div className="relative" style={{height:2, borderRadius:1, background:'rgba(255,255,255,0.06)', margin:'0 24px 8px'}}>
-        {progressSegments.map((ps, i) => (
-          <React.Fragment key={i}>
-            <div className="absolute top-0 h-full" style={{left:ps.start+'%', width:ps.width+'%'}}>
-              {i <= segIdx && (
-                <div className="h-full" style={{
-                  width: i < segIdx ? '100%' : `${(segElapsed / seg.duration) * 100}%`,
-                  borderRadius:1,
-                  background: `linear-gradient(90deg, ${seg.type === 'breathing' ? (TECHNIQUES[seg.technique]?.color || palette.accent) : palette.accent}, rgba(255,255,255,0.3))`,
-                  transition: 'width 1s linear',
-                }} />
-              )}
-            </div>
-            {i < progressSegments.length-1 && (
-              <div className="absolute" style={{left: (ps.start+ps.width)+'%', top:-2, width:1, height:6, background:'rgba(255,255,255,0.12)'}} />
-            )}
-          </React.Fragment>
-        ))}
-      </div>
-
-      {/* Content */}
-      {renderSegment()}
-
-      {/* Pause overlay */}
-      {paused && (
-        <div className="absolute inset-0 flex items-center justify-center z-60" style={{background:'rgba(0,0,0,0.6)', backdropFilter:'blur(12px)'}}>
-          <div className="text-center screen-transition">
-            <div className="font-body mb-6" style={{fontSize:32, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.1em'}}>Пауза</div>
-            <button onClick={() => setPaused(false)} className="px-8 py-3 rounded-full font-body" style={{fontWeight:500, background:'rgba(79,209,197,0.15)', border:'1px solid rgba(79,209,197,0.3)', color:'#4fd1c5', backdropFilter:'blur(8px)'}}>
-              Продолжить
-            </button>
+    <div className="fixed inset-0 flex flex-col z-50" style={{...bgStyle, transition:'background 2s ease'}}>
+      <Particles world={world} diveProgress={depthProgress} />
+      <div className="relative z-10 flex flex-col h-full">
+        {/* Top bar */}
+        <div className="flex items-center justify-between px-6" style={{paddingTop:'env(safe-area-inset-top, 48px)', paddingBottom:8}}>
+          <button onClick={() => setShowExitConfirm(true)} className="flex items-center justify-center rounded-full" style={{width:44,height:44,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.06)'}}>
+            <Icon name="close" size={18}/>
+          </button>
+          <div className="font-mono" style={{fontSize:13, fontWeight:300, color:'rgba(226,232,240,0.5)'}}>
+            {Math.floor(totalElapsed / 60)}:{String(Math.floor(totalElapsed % 60)).padStart(2,'0')} / {Math.floor(totalDuration / 60)}:{String(Math.floor(totalDuration % 60)).padStart(2,'0')}
           </div>
+          <button onClick={() => setPaused(!paused)} className="flex items-center justify-center rounded-full" style={{width:44,height:44,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.06)'}}>
+            <Icon name={paused ? 'play' : 'pause'} size={16}/>
+          </button>
         </div>
-      )}
+
+        {/* Progress bar */}
+        <div className="relative" style={{height:2, borderRadius:1, background:'rgba(255,255,255,0.04)', margin:'0 24px 8px'}}>
+          <div className="absolute top-0 h-full" style={{width:`${(totalElapsed/totalDuration)*100}%`, borderRadius:1, background:`rgba(${accentRgb},0.6)`, transition:'width 1s linear'}} />
+        </div>
+
+        {renderSegment()}
+
+        {/* Exit confirm */}
+        {showExitConfirm && (
+          <div className="absolute inset-0 flex items-center justify-center z-60" style={{background:'rgba(0,0,0,0.6)', backdropFilter:'blur(12px)'}}>
+            <div className="text-center screen-transition">
+              <div className="font-body mb-2" style={{fontSize:20, fontWeight:400, color:'rgba(226,232,240,0.95)'}}>{t.exitSession}</div>
+              <div className="font-body mb-6" style={{fontSize:14, fontWeight:300, color:'var(--text-2)'}}>{t.exitConfirm}</div>
+              <div className="flex gap-3 justify-center">
+                <button onClick={() => { setShowExitConfirm(false); onExit(); }} className="px-6 py-3 rounded-full font-body" style={{fontWeight:500, background:'rgba(255,255,255,0.08)', border:'1px solid rgba(255,255,255,0.1)', color:'var(--text)'}}>{t.exitYes}</button>
+                <button onClick={() => setShowExitConfirm(false)} className="px-6 py-3 rounded-full font-body" style={{fontWeight:500, background:`rgba(${accentRgb},0.12)`, border:`1px solid rgba(${accentRgb},0.25)`, color:palette.accent}}>{t.exitNo}</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Pause overlay */}
+        {paused && !showExitConfirm && (
+          <div className="absolute inset-0 flex items-center justify-center z-60" style={{background:'rgba(0,0,0,0.6)', backdropFilter:'blur(12px)'}}>
+            <div className="text-center screen-transition">
+              <div className="font-body mb-6" style={{fontSize:32, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.1em'}}>{t.pause}</div>
+              <button onClick={() => setPaused(false)} className="px-8 py-3 rounded-full font-body" style={{fontWeight:500, background:`rgba(${accentRgb},0.12)`, border:`1px solid rgba(${accentRgb},0.25)`, color:palette.accent}}>
+                {t.resume}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
 // ===== MAIN APP =====
 function App() {
+  const [currentLang, setCurrentLang] = useState(() => {
+    return window.localStorage?.getItem('user-lang') || null;
+  });
   const [stats, setStats] = useState(() => loadData() || defaultStats());
-  const [screen, setScreen] = useState(stats.onboarded ? 'home' : 'splash');
+  const [screen, setScreen] = useState(() => {
+    if (!currentLang) return 'lang_select';
+    if (stats.onboarded) return 'home';
+    return 'splash';
+  });
   const [onboardStep, setOnboardStep] = useState(0);
   const [selectedCat, setSelectedCat] = useState(null);
   const [selectedScenario, setSelectedScenario] = useState(null);
   const [selectedDuration, setSelectedDuration] = useState(null);
   const [activeSession, setActiveSession] = useState(null);
   const [selectedProgram, setSelectedProgram] = useState(null);
-  const [selectedDay, setSelectedDay] = useState(null);
   const [tab, setTab] = useState('home');
   const [showPaywall, setShowPaywall] = useState(false);
   const [showCompletion, setShowCompletion] = useState(false);
   const [completionData, setCompletionData] = useState(null);
   const ambientRef = useRef(new AmbientEngine());
   const world = stats.world || 'ocean';
-  const palette = WORLDS[world].palette;
+  const w = WORLDS[world];
+  const palette = w.palette;
+  const accentRgb = palette.accentRgb;
 
-  // Save stats
+  const t = LANG[currentLang] || LANG.en;
+
+  // Apply language
+  useEffect(() => {
+    if (!currentLang) return;
+    window.localStorage?.setItem('user-lang', currentLang);
+    document.documentElement.lang = currentLang;
+    document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
+    if (currentLang === 'ar') document.body.style.fontFamily = "'IBM Plex Sans Arabic','DM Sans',sans-serif";
+    else if (currentLang === 'zh') document.body.style.fontFamily = "'Noto Sans SC','DM Sans',sans-serif";
+    else document.body.style.fontFamily = "'DM Sans',sans-serif";
+  }, [currentLang]);
+
   useEffect(() => { saveData(stats); }, [stats]);
 
-  // Apply CSS vars
+  // Apply CSS vars for world
   useEffect(() => {
-    const p = WORLDS[world].palette;
     const r = document.documentElement;
-    r.style.setProperty('--bg-start', p.bgStart);
-    r.style.setProperty('--bg-mid', p.bgMid);
-    r.style.setProperty('--bg-end', p.bgEnd);
-    r.style.setProperty('--accent', p.accent);
-    r.style.setProperty('--glow', p.glow);
-    r.style.setProperty('--card', p.card);
-    r.style.setProperty('--text', p.text);
+    r.style.setProperty('--accent', palette.accent);
+    r.style.setProperty('--accent-rgb', accentRgb);
+    r.style.setProperty('--accent-text', palette.accent);
+    r.style.setProperty('--glow', palette.glow);
   }, [world]);
 
-  // Streak check on mount
   useEffect(() => {
     if (!stats.lastSessionDate) return;
     const last = new Date(stats.lastSessionDate);
     const today = new Date();
     const diffDays = Math.floor((today - last) / 86400000);
-    if (diffDays > 1) {
-      setStats(s => ({...s, streak: 0}));
-    }
+    if (diffDays > 1) setStats(s => ({...s, streak: 0}));
   }, []);
 
   const updateStats = useCallback((sessionInfo) => {
@@ -1166,9 +1395,7 @@ function App() {
       }
       const depth = (sessionInfo.duration || 0) / 60 * (sessionInfo.multiplier || 1);
       return {
-        ...prev,
-        totalSessions: prev.totalSessions + 1,
-        streak, lastSessionDate: today,
+        ...prev, totalSessions: prev.totalSessions + 1, streak, lastSessionDate: today,
         totalDepth: Math.round((prev.totalDepth + depth) * 10) / 10,
         totalMinutes: prev.totalMinutes + Math.round((sessionInfo.duration || 0) / 60),
         techniquesUsed: newTechs, categoriesUsed: newCats,
@@ -1181,11 +1408,7 @@ function App() {
 
   const startSession = (segments, meta = {}) => {
     setActiveSession({ segments, meta });
-    // Start ambient
-    if (stats.soundEnabled) {
-      ambientRef.current.init(WORLDS[world].ambient);
-      ambientRef.current.fadeIn();
-    }
+    if (stats.soundEnabled) { ambientRef.current.init(WORLDS[world].ambient); ambientRef.current.fadeIn(); }
   };
 
   const endSession = (completed = true) => {
@@ -1196,68 +1419,77 @@ function App() {
       const totalDur = segs.reduce((s, seg) => s + seg.duration, 0);
       const techs = [...new Set(segs.filter(s => s.type === 'breathing').map(s => s.technique))];
       const maxMult = Math.max(...segs.filter(s => s.type === 'breathing').map(s => TECHNIQUES[s.technique]?.multiplier || 1), 1);
-      updateStats({
-        duration: totalDur, techniques: techs, category: activeSession.meta?.category,
-        scenario: activeSession.meta?.scenario, multiplier: maxMult,
-      });
-      // Program progress
+      updateStats({ duration: totalDur, techniques: techs, category: activeSession.meta?.category, scenario: activeSession.meta?.scenario, multiplier: maxMult });
       if (activeSession.meta?.programId && activeSession.meta?.day !== undefined) {
         setStats(prev => {
           const pp = {...(prev.programProgress || {})};
           if (!pp[activeSession.meta.programId]) pp[activeSession.meta.programId] = [];
-          if (!pp[activeSession.meta.programId].includes(activeSession.meta.day)) {
-            pp[activeSession.meta.programId] = [...pp[activeSession.meta.programId], activeSession.meta.day];
-          }
+          if (!pp[activeSession.meta.programId].includes(activeSession.meta.day)) pp[activeSession.meta.programId] = [...pp[activeSession.meta.programId], activeSession.meta.day];
           const prog = PROGRAMS[activeSession.meta.programId];
-          const programsCompleted = prog && pp[activeSession.meta.programId].length >= prog.days
-            ? prev.programsCompleted + 1 : prev.programsCompleted;
+          const programsCompleted = prog && pp[activeSession.meta.programId].length >= prog.days ? prev.programsCompleted + 1 : prev.programsCompleted;
           return {...prev, programProgress: pp, programsCompleted};
         });
       }
-      setCompletionData({
-        duration: totalDur, techniques: techs, depth: Math.round(totalDur / 60 * maxMult * 10) / 10,
-      });
+      setCompletionData({ duration: totalDur, techniques: techs, depth: Math.round(totalDur / 60 * maxMult * 10) / 10 });
       setShowCompletion(true);
     }
     setActiveSession(null);
   };
 
-  const checkAccess = (item) => {
-    if (stats.isPremium) return true;
-    return item.free || false;
-  };
+  const checkAccess = (item) => stats.isPremium || item.free || false;
+  const selectWorld = (w) => setStats(s => ({...s, world: w}));
 
-  const selectWorld = (w) => {
-    setStats(s => ({...s, world: w}));
-  };
+  const bg = w.bgGradient;
 
-  // ===== SCREENS =====
+  // ===== LANGUAGE SELECTION SCREEN =====
+  if (screen === 'lang_select') {
+    return (
+      <div className="fixed inset-0 flex flex-col items-center justify-center" style={{background:'#070c15'}}>
+        <div className="screen-transition text-center z-10 w-full max-w-sm px-6">
+          <div className="font-body mb-2" style={{fontSize:48, fontWeight:200, color:'rgba(220,225,235,0.92)', letterSpacing:'0.25em', textTransform:'uppercase'}}>DIVE</div>
+          <div className="font-body mb-12" style={{fontSize:13, fontWeight:400, color:'rgba(220,225,235,0.30)'}}>Choose language</div>
+          <div className="space-y-3">
+            {[['en','English'],['ru','Русский'],['zh','中文'],['ar','العربية']].map(([code,label]) => (
+              <button key={code} className="w-full glass p-4 text-center" style={{fontSize:17, fontWeight:400, color:'rgba(220,225,235,0.92)'}}
+                onClick={() => { setCurrentLang(code); setScreen(stats.onboarded ? 'home' : 'splash'); }}>
+                {label}
+                {code === 'en' && <div className="font-body mt-1" style={{fontSize:11, fontWeight:400, color:'rgba(220,225,235,0.30)'}}>{LANG.en.voiceGuided}</div>}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-  // Premium layered background
-  const bg = `radial-gradient(ellipse at 20% 50%, ${palette.accent}14 0%, transparent 50%), radial-gradient(ellipse at 80% 20%, ${palette.accent}0a 0%, transparent 40%), linear-gradient(180deg, ${palette.bgStart} 0%, ${palette.bgMid} 50%, ${palette.bgEnd} 100%)`;
-
-  // Splash
+  // ===== SPLASH =====
   if (screen === 'splash') {
     return (
       <div className="fixed inset-0 flex flex-col items-center justify-center" style={{background:bg}}>
         <Particles world={world} />
         <div className="screen-transition text-center z-10">
-          <div className="font-body" style={{fontSize:48, fontWeight:200, color:'var(--text)', letterSpacing:'0.25em', textTransform:'uppercase'}}>DIVE</div>
-          <div className="font-body mt-3" style={{fontSize:13, fontWeight:400, color:'var(--text-2)', letterSpacing:'0.06em'}}>Breathe. Focus. Perform.</div>
+          <div className="font-body" style={{fontSize:48, fontWeight:200, color:'var(--text)', letterSpacing:'0.25em', textTransform:'uppercase'}}>{t.appName}</div>
+          <div className="font-body mt-3" style={{fontSize:13, fontWeight:400, color:'var(--text-2)', letterSpacing:'0.06em'}}>{t.tagline}</div>
           <button className="mt-16 flex items-center justify-center mx-auto font-body"
-            style={{height:52, padding:'0 32px', borderRadius:12, background:'rgba(94,170,168,0.12)', border:'1px solid rgba(94,170,168,0.25)', color:'var(--accent-text)', fontSize:15, fontWeight:500, letterSpacing:'0.04em'}}
+            style={{height:52, padding:'0 32px', borderRadius:12, background:`rgba(${accentRgb},0.12)`, border:`1px solid rgba(${accentRgb},0.25)`, color:palette.accent, fontSize:15, fontWeight:500, letterSpacing:'0.04em'}}
             onClick={() => setScreen('onboarding')}>
-            Begin
+            {t.begin}
           </button>
         </div>
       </div>
     );
   }
 
-  // Onboarding
+  // ===== ONBOARDING =====
   if (screen === 'onboarding') {
-    const step = ONBOARDING_STEPS[onboardStep];
-    if (onboardStep < ONBOARDING_STEPS.length) {
+    const stepKeys = [
+      {title:t.onb1title, sub:t.onb1sub, desc:t.onb1desc},
+      {title:t.onb2title, sub:t.onb2sub, desc:t.onb2desc},
+      {title:t.onb3title, sub:t.onb3sub, desc:t.onb3desc},
+      {title:t.onb4title, sub:t.onb4sub, desc:t.onb4desc},
+    ];
+    if (onboardStep < stepKeys.length) {
+      const step = stepKeys[onboardStep];
       return (
         <div className="fixed inset-0 flex flex-col items-center justify-center px-8" style={{background:bg}}>
           <Particles world={world} />
@@ -1266,15 +1498,15 @@ function App() {
             <div className="font-body mb-5" style={{fontSize:16, fontWeight:500, color:palette.accent, letterSpacing:'0.03em'}}>{step.sub}</div>
             <div className="font-body mb-12" style={{fontSize:14, fontWeight:400, color:'var(--text-2)', maxWidth:300, lineHeight:1.7, margin:'0 auto'}}>{step.desc}</div>
             <div className="flex gap-2 justify-center mb-10">
-              {ONBOARDING_STEPS.map((_, i) => (
+              {stepKeys.map((_, i) => (
                 <div key={i} className="rounded-full transition-all" style={{width: i === onboardStep ? 24 : 6, height:6, borderRadius:3, background: i === onboardStep ? palette.accent : 'rgba(255,255,255,0.15)', transition:'all 300ms ease'}} />
               ))}
               <div className="rounded-full" style={{width:6, height:6, borderRadius:3, background:'rgba(255,255,255,0.15)'}} />
             </div>
             <button className="px-10 py-3 rounded-full font-body"
-              style={{fontWeight:500, background:`${palette.accent}26`, border:`1px solid ${palette.accent}4d`, color:palette.accent, backdropFilter:'blur(8px)'}}
+              style={{fontWeight:500, background:`rgba(${accentRgb},0.12)`, border:`1px solid rgba(${accentRgb},0.25)`, color:palette.accent}}
               onClick={() => setOnboardStep(onboardStep + 1)}>
-              Далее
+              {t.next}
             </button>
           </div>
         </div>
@@ -1284,27 +1516,27 @@ function App() {
     return (
       <div className="fixed inset-0 flex flex-col items-center justify-center px-6" style={{background:bg}}>
         <div className="screen-transition text-center z-10 w-full max-w-sm">
-          <div className="font-body mb-2" style={{fontSize:28, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.1em'}}>Выберите мир</div>
-          <div className="font-body mb-10" style={{fontSize:13, fontWeight:400, color:'var(--text-3)'}}>Можно сменить в настройках</div>
+          <div className="font-body mb-2" style={{fontSize:28, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.1em'}}>{t.chooseWorld}</div>
+          <div className="font-body mb-10" style={{fontSize:13, fontWeight:400, color:'var(--text-3)'}}>{t.canChangeLater}</div>
           <div className="space-y-3">
-            {Object.entries(WORLDS).map(([key, w]) => (
+            {Object.entries(WORLDS).map(([key, wd]) => (
               <button key={key} className="w-full glass p-5 flex items-center gap-4 text-left"
-                style={{border: world === key ? `1px solid ${w.palette.accent}4d` : '1px solid rgba(255,255,255,0.06)', boxShadow: world === key ? `0 0 20px ${w.palette.accent}1a` : undefined}}
+                style={{border: world === key ? `1px solid ${wd.palette.accent}4d` : '1px solid rgba(255,255,255,0.06)', boxShadow: world === key ? `0 0 20px ${wd.palette.accent}1a` : undefined}}
                 onClick={() => selectWorld(key)}>
-                <span style={{color:w.palette.accent,opacity:0.6}}><Icon name="world" size={22}/></span>
+                <span style={{color:wd.palette.accent,opacity:0.6}}><Icon name="world" size={22}/></span>
                 <div>
-                  <div className="font-body" style={{fontWeight:600, fontSize:15, color:'rgba(255,255,255,0.92)'}}>{w.name}</div>
+                  <div className="font-body" style={{fontWeight:600, fontSize:15, color:'rgba(255,255,255,0.92)'}}>{t[key]}</div>
                   <div className="font-body" style={{fontSize:12, fontWeight:400, color:'rgba(255,255,255,0.4)', marginTop:2}}>
-                    {key === 'ocean' ? 'Глубина океана, пузыри, звуки волн' : key === 'space' ? 'Бесконечный космос, звёзды, тишина' : 'Тёплые воспоминания, боке, гармония'}
+                    {t[key+'Desc']}
                   </div>
                 </div>
               </button>
             ))}
           </div>
           <button className="mt-10 px-10 py-3 rounded-full font-body"
-            style={{fontWeight:500, background:`${WORLDS[world].palette.accent}26`, border:`1px solid ${WORLDS[world].palette.accent}4d`, color:WORLDS[world].palette.accent, backdropFilter:'blur(8px)'}}
+            style={{fontWeight:500, background:`rgba(${WORLDS[world].palette.accentRgb},0.12)`, border:`1px solid rgba(${WORLDS[world].palette.accentRgb},0.25)`, color:WORLDS[world].palette.accent}}
             onClick={() => { setStats(s => ({...s, onboarded:true})); setScreen('home'); setTab('home'); }}>
-            Начать
+            {t.begin}
           </button>
         </div>
       </div>
@@ -1313,25 +1545,23 @@ function App() {
 
   // Active session
   if (activeSession) {
-    return <SessionPlayer segments={activeSession.segments} world={world} onComplete={() => endSession(true)} onExit={() => endSession(false)} />;
+    return <SessionPlayer segments={activeSession.segments} world={world} onComplete={() => endSession(true)} onExit={() => endSession(false)} t={t} voiceEnabled={stats.voiceEnabled} ambientRef={ambientRef} />;
   }
 
-  // Completion — surfacing animation with light rays
+  // Completion
   if (showCompletion && completionData) {
     const earnedBadges = BADGES.filter(b => b.condition(stats));
     return (
       <div className="fixed inset-0 flex flex-col items-center justify-center px-8" style={{background:bg}}>
-        {/* Light rays from above */}
         <div style={{position:'absolute',top:'-50%',left:'50%',width:'200%',height:'100%',transform:'translateX(-50%)',
-          background:`radial-gradient(ellipse at 50% 0%, ${palette.accent}14 0%, transparent 60%)`,
+          background:`radial-gradient(ellipse at 50% 0%, rgba(${accentRgb},0.08) 0%, transparent 60%)`,
           animation:'rays-appear 2s ease-out forwards', pointerEvents:'none', zIndex:0}} />
         <Particles world={world} />
         <div className="screen-transition text-center z-10">
-          <div style={{marginBottom:20, color:'var(--accent-text)', opacity:0.4}}><Icon name="check" size={32}/></div>
-          <div className="font-body mb-3" style={{fontSize:32, fontWeight:300, color:'rgba(226,232,240,0.95)', }}>session complete</div>
-          <div className="font-body mb-8" style={{fontSize:13, fontWeight:400, color:'var(--text-2)'}}>Сессия завершена</div>
-          <div className="flex gap-8 justify-center mb-10">
-            {[[Math.round(completionData.duration / 60),'минут'],[completionData.depth,WORLDS[world].depthUnit],[stats.streak,'streak']].map(([val,label],i) => (
+          <div style={{marginBottom:20, color:palette.accent, opacity:0.4}}><Icon name="check" size={32}/></div>
+          <div className="font-body mb-3" style={{fontSize:28, fontWeight:300, color:'rgba(226,232,240,0.95)'}}>{t.diveComplete}</div>
+          <div className="flex gap-8 justify-center mb-10 mt-8">
+            {[[Math.round(completionData.duration / 60), t.min],[completionData.depth, WORLDS[world].depthUnit],[stats.streak, t.dayStreak]].map(([val,label],i) => (
               <div key={i} className="text-center" style={{animation:`count-up 600ms ${i*150}ms ease-out both`}}>
                 <div className="font-mono" style={{fontSize:28, fontWeight:300, color:palette.accent}}>{val}</div>
                 <div className="font-body" style={{fontSize:11, fontWeight:400, color:'var(--text-3)', marginTop:4, letterSpacing:'0.05em'}}>{label}</div>
@@ -1341,17 +1571,17 @@ function App() {
           {earnedBadges.length > 0 && (
             <div className="flex gap-2 justify-center flex-wrap mb-8">
               {earnedBadges.slice(-3).map((b, i) => (
-                <div key={b.id} className="glass px-4 py-2 flex items-center gap-2" style={{animation:`badge-pop 400ms ${300+i*100}ms ease-out both`}}>
-                  <span style={{color:'var(--accent-text)',opacity:0.6}}><Icon name="check" size={14}/></span>
-                  <span className="font-body" style={{fontSize:12, fontWeight:500, color:'rgba(226,232,240,0.85)'}}>{b.name}</span>
+                <div key={b.id} className="glass px-4 py-2 flex items-center gap-2">
+                  <span style={{color:palette.accent,opacity:0.6}}><Icon name="check" size={14}/></span>
+                  <span className="font-body" style={{fontSize:12, fontWeight:500, color:'rgba(226,232,240,0.85)'}}>{BADGE_NAMES[b.id]}</span>
                 </div>
               ))}
             </div>
           )}
           <button className="px-10 py-3 rounded-full font-body"
-            style={{fontWeight:500, background:`${palette.accent}26`, border:`1px solid ${palette.accent}4d`, color:palette.accent, backdropFilter:'blur(8px)'}}
+            style={{fontWeight:500, background:`rgba(${accentRgb},0.12)`, border:`1px solid rgba(${accentRgb},0.25)`, color:palette.accent}}
             onClick={() => { setShowCompletion(false); setCompletionData(null); }}>
-            Готово
+            {t.done}
           </button>
         </div>
       </div>
@@ -1363,67 +1593,55 @@ function App() {
     <div className="fixed inset-0 z-50 flex items-end justify-center" style={{background:'rgba(0,0,0,0.7)', backdropFilter:'blur(12px)'}}>
       <div className="glass w-full max-w-sm mx-6 mb-8 p-6 screen-transition" style={{borderRadius:24}}>
         <div className="text-center mb-5">
-          <div className="font-body mb-2" style={{fontSize:24, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.08em'}}>Unlock Everything</div>
-          <div className="font-body" style={{fontSize:13, fontWeight:400, color:'var(--text-3)'}}>Полный доступ ко всем сценариям и программам</div>
+          <div className="font-body mb-2" style={{fontSize:24, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.08em'}}>{t.unlockAll}</div>
         </div>
         <div className="space-y-2.5 mb-5">
-          {['20 сценариев на все случаи жизни','3 программы с видео-уроками','Все 7 техник дыхания','3 визуальных мира','Без рекламы'].map(f => (
-            <div key={f} className="flex items-center gap-3 font-body" style={{fontSize:13, fontWeight:400, color:'rgba(226,232,240,0.75)'}}><span style={{color:palette.accent, fontSize:12}}>✓</span>{f}</div>
+          {(t.paywallFeatures||[]).map(f => (
+            <div key={f} className="flex items-center gap-3 font-body" style={{fontSize:13, fontWeight:400, color:'rgba(226,232,240,0.75)'}}>
+              <span style={{color:palette.accent}}><Icon name="check" size={14}/></span>{f}
+            </div>
           ))}
         </div>
         <div className="flex gap-3 mb-5">
           <div className="flex-1 glass p-4 text-center cursor-pointer" style={{border:'1px solid rgba(255,255,255,0.06)'}}>
-            <div className="font-body" style={{fontWeight:600, fontSize:14, color:'rgba(226,232,240,0.7)'}}>$6.99/мес</div>
+            <div className="font-body" style={{fontWeight:600, fontSize:14, color:'rgba(226,232,240,0.7)'}}>{t.monthly}</div>
           </div>
-          <div className="flex-1 glass p-4 text-center cursor-pointer" style={{border:`1px solid ${palette.accent}4d`, boxShadow:`0 0 15px ${palette.accent}1a`}}>
-            <div className="font-body" style={{fontWeight:600, fontSize:14, color:palette.accent}}>$49.99/год</div>
-            <div className="font-body" style={{fontSize:11, fontWeight:400, color:palette.accent, opacity:0.7, marginTop:2}}>Save 40%</div>
+          <div className="flex-1 glass p-4 text-center cursor-pointer" style={{border:`1px solid rgba(${accentRgb},0.3)`, boxShadow:`0 0 15px rgba(${accentRgb},0.1)`}}>
+            <div className="font-body" style={{fontWeight:600, fontSize:14, color:palette.accent}}>{t.yearly}</div>
+            <div className="font-body" style={{fontSize:11, fontWeight:400, color:palette.accent, opacity:0.7, marginTop:2}}>{t.yearlySave}</div>
           </div>
         </div>
         <button className="w-full py-3.5 rounded-full font-body mb-3"
-          style={{fontWeight:500, background:`${palette.accent}26`, border:`1px solid ${palette.accent}4d`, color:palette.accent, backdropFilter:'blur(8px)'}}>
-          Start 7-day free trial
+          style={{fontWeight:500, background:`rgba(${accentRgb},0.12)`, border:`1px solid rgba(${accentRgb},0.25)`, color:palette.accent}}>
+          {t.startTrial}
         </button>
         <button className="w-full py-2 font-body" style={{fontSize:12, fontWeight:400, color:'var(--text-3)'}}
           onClick={() => { setStats(s => ({...s, isPremium:true})); setShowPaywall(false); }}>
-          Unlock for demo
+          {t.demoUnlock}
         </button>
         <button className="w-full py-2 font-body" style={{fontSize:12, fontWeight:400, color:'rgba(226,232,240,0.2)'}}
           onClick={() => setShowPaywall(false)}>
-          Закрыть
+          {t.close}
         </button>
       </div>
     </div>
   );
 
-  // ===== TAB CONTENT =====
-  // Category gradient overlays
-  const catGradients = {
-    focus:'linear-gradient(135deg, rgba(99,179,237,0.12), transparent)',
-    stress:'linear-gradient(135deg, rgba(252,129,129,0.1), rgba(159,122,234,0.08))',
-    energy:'linear-gradient(135deg, rgba(246,173,85,0.12), rgba(252,129,129,0.06))',
-    recovery:'linear-gradient(135deg, rgba(104,211,145,0.1), rgba(79,209,197,0.08))',
-    deep:'linear-gradient(135deg, rgba(159,122,234,0.12), rgba(99,179,237,0.06))',
-  };
-
+  // ===== HOME =====
   const renderHome = () => (
     <div className="screen-transition overflow-y-auto h-full no-scrollbar" style={{padding:'env(safe-area-inset-top, 48px) 24px 100px 24px'}}>
-      {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <div className="font-body" style={{fontSize:24, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.15em', textTransform:'uppercase'}}>DIVE</div>
+          <div className="font-body" style={{fontSize:24, fontWeight:200, color:'rgba(226,232,240,0.95)', letterSpacing:'0.25em', textTransform:'uppercase'}}>{t.appName}</div>
           <div className="font-body mt-1" style={{fontSize:12, fontWeight:400, color:'var(--text-3)'}}>
-            {stats.streak > 0 ? `${stats.streak} дней подряд` : 'Начните серию сессий'}
+            {stats.streak > 0 ? `${stats.streak} ${t.dayStreak}` : t.streakStart}
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <span style={{color:'var(--text-3)'}}><Icon name="world" size={20}/></span>
         </div>
       </div>
 
       {/* Quick start */}
       <div className="mb-8">
-        <div className="font-body mb-4" style={{fontSize:13, fontWeight:600, color:'rgba(226,232,240,0.6)', letterSpacing:'0.06em', textTransform:'uppercase'}}>Быстрый старт</div>
+        <div className="font-body mb-4" style={{fontSize:13, fontWeight:600, color:'rgba(226,232,240,0.6)', letterSpacing:'0.06em', textTransform:'uppercase'}}>{t.quickStart}</div>
         <div className="grid grid-cols-2 gap-3">
           {[['meeting',5],['hard_day',5],['cant_focus',5],['morning',5]].map(([id,dur]) => {
             const sc = SCENARIOS[id];
@@ -1433,10 +1651,9 @@ function App() {
                 const segs = SESSION_CONTENT[id]?.[dur];
                 if (segs) startSession(segs, {scenario:id, category:sc.cat});
               }}>
-                <div style={{position:'absolute',inset:0,borderRadius:14,background:catGradients[sc.cat],opacity:0.08,pointerEvents:'none'}} />
-                <div style={{marginBottom:8, color:'var(--accent-text)', opacity:0.7}}><Icon name={sc.svgIcon || id} size={24}/></div>
-                <div className="font-body" style={{fontWeight:600, fontSize:15, color:'rgba(255,255,255,0.92)', marginBottom:4}}>{sc.name}</div>
-                <div style={{display:'inline-block',padding:'3px 10px',borderRadius:12,fontSize:11,fontWeight:500,background:'rgba(255,255,255,0.08)',color:'rgba(255,255,255,0.6)',marginTop:6}} className="font-body">{dur} мин</div>
+                <div style={{marginBottom:8, color:palette.accent, opacity:0.7}}><Icon name={sc.svgIcon || id} size={24}/></div>
+                <div className="font-body" style={{fontWeight:600, fontSize:15, color:'rgba(255,255,255,0.92)', marginBottom:4}}>{t[SCENARIO_LANG_KEY[id]]}</div>
+                <div style={{display:'inline-block',padding:'3px 10px',borderRadius:12,fontSize:11,fontWeight:500,background:'rgba(255,255,255,0.08)',color:'rgba(255,255,255,0.6)',marginTop:6}} className="font-body">{dur} {t.min}</div>
               </button>
             );
           })}
@@ -1445,34 +1662,36 @@ function App() {
 
       {/* Categories */}
       <div className="mb-8">
-        <div className="font-body mb-4" style={{fontSize:13, fontWeight:600, color:'rgba(226,232,240,0.6)', letterSpacing:'0.06em', textTransform:'uppercase'}}>Категории</div>
+        <div className="font-body mb-4" style={{fontSize:13, fontWeight:600, color:'rgba(226,232,240,0.6)', letterSpacing:'0.06em', textTransform:'uppercase'}}>{t.categories}</div>
         <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
           {Object.entries(CATEGORIES).map(([key, cat]) => (
             <button key={key} className="glass px-5 py-3 flex-shrink-0 flex items-center gap-2"
               onClick={() => { setSelectedCat(key); setScreen('category'); }}>
-              <span style={{color:'var(--accent-text)',opacity:0.6}}><Icon name={cat.svgIcon || key} size={18}/></span>
-              <span className="font-body" style={{fontSize:13, fontWeight:500, color:'rgba(255,255,255,0.75)'}}>{cat.name}</span>
+              <span style={{color:palette.accent,opacity:0.6}}><Icon name={cat.svgIcon || key} size={18}/></span>
+              <span className="font-body" style={{fontSize:13, fontWeight:500, color:'rgba(255,255,255,0.75)'}}>{t[CATEGORY_LANG_KEY[key]]}</span>
             </button>
           ))}
         </div>
       </div>
 
-      {/* Programs preview */}
+      {/* Programs */}
       <div className="mb-8">
-        <div className="font-body mb-4" style={{fontSize:13, fontWeight:600, color:'rgba(226,232,240,0.6)', letterSpacing:'0.06em', textTransform:'uppercase'}}>Программы</div>
+        <div className="font-body mb-4" style={{fontSize:13, fontWeight:600, color:'rgba(226,232,240,0.6)', letterSpacing:'0.06em', textTransform:'uppercase'}}>{t.programs}</div>
         <div className="space-y-3">
           {Object.entries(PROGRAMS).map(([key, prog]) => {
             const progress = (stats.programProgress?.[key] || []).length;
+            const nameKey = key === 'first_dive' ? 'firstDive' : key === 'stress_shield' ? 'stressShield' : 'deepFocus';
+            const subKey = nameKey + 'Sub';
             return (
               <button key={key} className="glass p-5 w-full text-left flex items-center gap-4"
                 onClick={() => { setSelectedProgram(key); setScreen('program_view'); }}>
-                <span style={{color:'var(--accent-text)',opacity:0.5}}><Icon name={key === 'first_dive' ? 'prog_bubble' : key === 'stress_shield' ? 'prog_shield' : 'prog_target'} size={24}/></span>
+                <span style={{color:palette.accent,opacity:0.5}}><Icon name={key === 'first_dive' ? 'prog_bubble' : key === 'stress_shield' ? 'prog_shield' : 'prog_target'} size={24}/></span>
                 <div className="flex-1">
-                  <div className="font-body" style={{fontWeight:600, fontSize:15, color:'rgba(255,255,255,0.92)'}}>{prog.name}</div>
-                  <div className="font-body" style={{fontSize:12, fontWeight:400, color:'rgba(255,255,255,0.4)', marginTop:2}}>{prog.subtitle}</div>
+                  <div className="font-body" style={{fontWeight:600, fontSize:15, color:'rgba(255,255,255,0.92)'}}>{t[nameKey]}</div>
+                  <div className="font-body" style={{fontSize:12, fontWeight:400, color:'rgba(255,255,255,0.4)', marginTop:2}}>{t[subKey]}</div>
                   {progress > 0 && (
-                    <div className="mt-3" style={{height:2, borderRadius:1, background:'rgba(255,255,255,0.06)'}}>
-                      <div style={{height:'100%', borderRadius:1, width:`${progress/prog.days*100}%`, background:`linear-gradient(90deg, ${palette.accent}, rgba(255,255,255,0.3))`, transition:'width 1s ease'}} />
+                    <div className="mt-3" style={{height:2, borderRadius:1, background:'rgba(255,255,255,0.04)'}}>
+                      <div style={{height:'100%', borderRadius:1, width:`${progress/prog.days*100}%`, background:`rgba(${accentRgb},0.6)`, transition:'width 1s ease'}} />
                     </div>
                   )}
                 </div>
@@ -1487,30 +1706,24 @@ function App() {
 
   const renderCategory = () => {
     const scenarios = Object.entries(SCENARIOS).filter(([_, s]) => s.cat === selectedCat);
-    const cat = CATEGORIES[selectedCat];
     return (
       <div className="screen-transition overflow-y-auto h-full no-scrollbar" style={{padding:'env(safe-area-inset-top, 48px) 24px 100px 24px'}}>
         <button className="flex items-center gap-2 mb-5" onClick={() => setScreen('home')} style={{color:'var(--text-3)'}}>
-          <Icon name="back" size={16}/><span className="font-body" style={{fontSize:13, fontWeight:400}}>Назад</span>
+          <Icon name="back" size={16}/><span className="font-body" style={{fontSize:13, fontWeight:400}}>{t.back}</span>
         </button>
         <div className="flex items-center gap-3 mb-8">
-          <span style={{color:'var(--accent-text)',opacity:0.6}}><Icon name={selectedCat} size={24}/></span>
-          <div className="font-body" style={{fontSize:24, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.08em'}}>{cat?.name}</div>
+          <span style={{color:palette.accent,opacity:0.6}}><Icon name={selectedCat} size={24}/></span>
+          <div className="font-body" style={{fontSize:24, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.08em'}}>{t[CATEGORY_LANG_KEY[selectedCat]]}</div>
         </div>
         <div className="space-y-3">
           {scenarios.map(([id, sc]) => (
-            <button key={id} className="glass p-5 w-full text-left flex items-center gap-4" style={{position:'relative',overflow:'hidden'}}
-              onClick={() => {
-                if (!checkAccess(sc)) { setShowPaywall(true); return; }
-                setSelectedScenario(id);
-                setScreen('session_pre');
-              }}>
-              <div style={{position:'absolute',inset:0,borderRadius:14,background:catGradients[sc.cat],opacity:0.08,pointerEvents:'none'}} />
-              <span style={{color:'var(--accent-text)',opacity:0.6}}><Icon name={sc.svgIcon || id} size={24}/></span>
+            <button key={id} className="glass p-5 w-full text-left flex items-center gap-4"
+              onClick={() => { if (!checkAccess(sc)) { setShowPaywall(true); return; } setSelectedScenario(id); setScreen('session_pre'); }}>
+              <span style={{color:palette.accent,opacity:0.6}}><Icon name={sc.svgIcon || id} size={24}/></span>
               <div className="flex-1">
-                <div className="font-body" style={{fontWeight:600, fontSize:15, color:'rgba(255,255,255,0.92)'}}>{sc.name}</div>
+                <div className="font-body" style={{fontWeight:600, fontSize:15, color:'rgba(255,255,255,0.92)'}}>{t[SCENARIO_LANG_KEY[id]]}</div>
                 <div className="font-body" style={{fontSize:12, fontWeight:400, color:'rgba(255,255,255,0.45)', marginTop:3}}>
-                  {sc.durations.map(d => d + ' мин').join(' · ')}
+                  {sc.durations.map(d => d + ' ' + t.min).join(' / ')}
                 </div>
               </div>
               {!checkAccess(sc) && <span style={{color:'var(--text-3)',opacity:0.5}}><Icon name="lock" size={16}/></span>}
@@ -1530,29 +1743,26 @@ function App() {
           <Icon name="back" size={16}/>
         </button>
         <div className="text-center">
-          <div style={{marginBottom:20, color:'var(--accent-text)', opacity:0.5}}><Icon name={sc.svgIcon || selectedScenario} size={40}/></div>
-          <div className="font-body mb-2" style={{fontSize:26, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.08em'}}>{sc.name}</div>
-          <div className="font-body mb-10" style={{fontSize:13, fontWeight:400, color:'var(--text-3)'}}>
-            {CATEGORIES[sc.cat]?.name}
-          </div>
+          <div style={{marginBottom:20, color:palette.accent, opacity:0.5}}><Icon name={sc.svgIcon || selectedScenario} size={40}/></div>
+          <div className="font-body mb-2" style={{fontSize:26, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.08em'}}>{t[SCENARIO_LANG_KEY[selectedScenario]]}</div>
+          <div className="font-body mb-10" style={{fontSize:13, fontWeight:400, color:'var(--text-3)'}}>{t[CATEGORY_LANG_KEY[sc.cat]]}</div>
           <div className="flex gap-3 justify-center mb-10">
             {sc.durations.map(d => (
               <button key={d} className="glass px-7 py-3 font-body"
-                style={{fontWeight:500, fontSize:14, color: selectedDuration === d ? palette.accent : 'rgba(226,232,240,0.5)', border: selectedDuration === d ? `1px solid ${palette.accent}4d` : '1px solid rgba(255,255,255,0.06)', boxShadow: selectedDuration === d ? `0 0 15px ${palette.accent}1a` : 'none'}}
+                style={{fontWeight:500, fontSize:14, color: selectedDuration === d ? palette.accent : 'rgba(226,232,240,0.5)', border: selectedDuration === d ? `1px solid rgba(${accentRgb},0.3)` : '1px solid rgba(255,255,255,0.06)', boxShadow: selectedDuration === d ? `0 0 15px rgba(${accentRgb},0.1)` : 'none'}}
                 onClick={() => setSelectedDuration(d)}>
-                {d} мин
+                {d} {t.min}
               </button>
             ))}
           </div>
           <button className="flex items-center justify-center mx-auto font-body"
-            style={{height:52, padding:'0 32px', borderRadius:12, fontWeight:500, fontSize:15, background:'rgba(94,170,168,0.12)', border:'1px solid rgba(94,170,168,0.25)', color:'var(--accent-text)', letterSpacing:'0.04em'}}
+            style={{height:52, padding:'0 32px', borderRadius:12, fontWeight:500, fontSize:15, background:`rgba(${accentRgb},0.12)`, border:`1px solid rgba(${accentRgb},0.25)`, color:palette.accent, letterSpacing:'0.04em'}}
             onClick={() => {
               const dur = selectedDuration || sc.durations[0];
               const segs = SESSION_CONTENT[selectedScenario]?.[dur];
               if (segs) startSession(segs, {scenario:selectedScenario, category:sc.cat});
-              else alert('Сессия не найдена');
             }}>
-            Begin
+            {t.begin}
           </button>
         </div>
       </div>
@@ -1561,23 +1771,19 @@ function App() {
 
   const renderQuickDive = () => (
     <div className="screen-transition overflow-y-auto h-full no-scrollbar" style={{padding:'env(safe-area-inset-top, 48px) 24px 100px 24px'}}>
-      <div className="font-body mb-8" style={{fontSize:24, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.1em'}}>Quick Dive</div>
+      <div className="font-body mb-8" style={{fontSize:24, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.1em'}}>{t.quickDives}</div>
       <div className="space-y-3">
         {Object.entries(SCENARIOS).map(([id, sc]) => (
-          <button key={id} className="glass p-5 w-full text-left flex items-center gap-4" style={{position:'relative',overflow:'hidden'}}
+          <button key={id} className="glass p-5 w-full text-left flex items-center gap-4"
             onClick={() => {
               if (!checkAccess(sc)) { setShowPaywall(true); return; }
-              setSelectedScenario(id);
-              setSelectedDuration(sc.durations[0]);
-              setSelectedCat(sc.cat);
-              setScreen('session_pre');
+              setSelectedScenario(id); setSelectedDuration(sc.durations[0]); setSelectedCat(sc.cat); setScreen('session_pre');
             }}>
-            <div style={{position:'absolute',inset:0,borderRadius:14,background:catGradients[sc.cat],opacity:0.08,pointerEvents:'none'}} />
-            <span style={{color:'var(--accent-text)',opacity:0.6}}><Icon name={sc.svgIcon || id} size={24}/></span>
+            <span style={{color:palette.accent,opacity:0.6}}><Icon name={sc.svgIcon || id} size={24}/></span>
             <div className="flex-1">
-              <div className="font-body" style={{fontWeight:600, fontSize:15, color:'rgba(255,255,255,0.92)'}}>{sc.name}</div>
+              <div className="font-body" style={{fontWeight:600, fontSize:15, color:'rgba(255,255,255,0.92)'}}>{t[SCENARIO_LANG_KEY[id]]}</div>
               <div className="font-body" style={{fontSize:12, fontWeight:400, color:'rgba(255,255,255,0.4)', marginTop:3}}>
-                {CATEGORIES[sc.cat]?.name} · {sc.durations.map(d => d+'м').join('/')}
+                {t[CATEGORY_LANG_KEY[sc.cat]]} / {sc.durations.map(d => d + t.min).join('/')}
               </div>
             </div>
             {!checkAccess(sc) && <span style={{color:'var(--text-3)',opacity:0.5}}><Icon name="lock" size={16}/></span>}
@@ -1591,19 +1797,21 @@ function App() {
     const prog = PROGRAMS[selectedProgram];
     if (!prog) { setScreen('home'); return null; }
     const progress = stats.programProgress?.[selectedProgram] || [];
+    const nameKey = selectedProgram === 'first_dive' ? 'firstDive' : selectedProgram === 'stress_shield' ? 'stressShield' : 'deepFocus';
+    const subKey = nameKey + 'Sub';
     return (
       <div className="screen-transition overflow-y-auto h-full no-scrollbar" style={{padding:'env(safe-area-inset-top, 48px) 24px 100px 24px'}}>
         <button className="flex items-center gap-2 mb-5" onClick={() => { setScreen('home'); setTab('programs'); }} style={{color:'var(--text-3)'}}>
-          <Icon name="back" size={16}/><span className="font-body" style={{fontSize:13, fontWeight:400}}>Назад</span>
+          <Icon name="back" size={16}/><span className="font-body" style={{fontSize:13, fontWeight:400}}>{t.back}</span>
         </button>
         <div className="text-center mb-8">
-          <div style={{color:'var(--accent-text)', opacity:0.4}}><Icon name={selectedProgram === 'first_dive' ? 'prog_bubble' : selectedProgram === 'stress_shield' ? 'prog_shield' : 'prog_target'} size={36}/></div>
-          <div className="font-body mt-3" style={{fontSize:24, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.08em'}}>{prog.name}</div>
-          <div className="font-body mt-1" style={{fontSize:13, fontWeight:400, color:'var(--text-3)'}}>{prog.subtitle}</div>
-          <div className="mt-4 mx-auto" style={{height:2, borderRadius:1, background:'rgba(255,255,255,0.06)', maxWidth:200}}>
-            <div style={{height:'100%', borderRadius:1, width:`${progress.length/prog.days*100}%`, background:`linear-gradient(90deg, ${palette.accent}, rgba(255,255,255,0.3))`, transition:'width 1s ease'}} />
+          <div style={{color:palette.accent, opacity:0.4}}><Icon name={selectedProgram === 'first_dive' ? 'prog_bubble' : selectedProgram === 'stress_shield' ? 'prog_shield' : 'prog_target'} size={36}/></div>
+          <div className="font-body mt-3" style={{fontSize:24, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.08em'}}>{t[nameKey]}</div>
+          <div className="font-body mt-1" style={{fontSize:13, fontWeight:400, color:'var(--text-3)'}}>{t[subKey]}</div>
+          <div className="mt-4 mx-auto" style={{height:2, borderRadius:1, background:'rgba(255,255,255,0.04)', maxWidth:200}}>
+            <div style={{height:'100%', borderRadius:1, width:`${progress.length/prog.days*100}%`, background:`rgba(${accentRgb},0.6)`, transition:'width 1s ease'}} />
           </div>
-          <div className="font-body mt-2" style={{fontSize:12, fontWeight:400, color:palette.accent, opacity:0.8}}>{progress.length} / {prog.days} дней</div>
+          <div className="font-body mt-2" style={{fontSize:12, fontWeight:400, color:palette.accent, opacity:0.8}}>{progress.length} / {prog.days} {t.days}</div>
         </div>
         <div className="space-y-3">
           {prog.sessions.map((daySegs, i) => {
@@ -1611,18 +1819,15 @@ function App() {
             const locked = !stats.isPremium && i >= prog.trialDay;
             return (
               <button key={i} className="glass p-5 w-full text-left flex items-center gap-4"
-                onClick={() => {
-                  if (locked) { setShowPaywall(true); return; }
-                  startSession(daySegs, {programId:selectedProgram, day:i, category:'program'});
-                }}>
+                onClick={() => { if (locked) { setShowPaywall(true); return; } startSession(daySegs, {programId:selectedProgram, day:i, category:'program'}); }}>
                 <div className="flex items-center justify-center rounded-full font-mono"
-                  style={{width:40, height:40, fontWeight:300, fontSize:14, background: completed ? `${palette.accent}26` : 'rgba(255,255,255,0.06)', border: completed ? `1px solid ${palette.accent}4d` : '1px solid rgba(255,255,255,0.06)', color: completed ? palette.accent : 'rgba(226,232,240,0.5)'}}>
-                  {completed ? '✓' : i + 1}
+                  style={{width:40, height:40, fontWeight:300, fontSize:14, background: completed ? `rgba(${accentRgb},0.15)` : 'rgba(255,255,255,0.06)', border: completed ? `1px solid rgba(${accentRgb},0.3)` : '1px solid rgba(255,255,255,0.06)', color: completed ? palette.accent : 'rgba(226,232,240,0.5)'}}>
+                  {completed ? <Icon name="check" size={16}/> : i + 1}
                 </div>
                 <div className="flex-1">
-                  <div className="font-body" style={{fontWeight:600, fontSize:15, color:'rgba(255,255,255,0.92)'}}>День {i + 1}</div>
+                  <div className="font-body" style={{fontWeight:600, fontSize:15, color:'rgba(255,255,255,0.92)'}}>{t.dayN} {i + 1}</div>
                   <div className="font-body" style={{fontSize:12, fontWeight:400, color:'rgba(255,255,255,0.4)', marginTop:3}}>
-                    {daySegs.filter(s=>s.type==='breathing').map(s=>TECHNIQUES[s.technique]?.name).filter(Boolean).join(', ')}
+                    {completed ? t.completed : locked ? t.locked : t.startDay}
                   </div>
                 </div>
                 {locked && <span style={{color:'var(--text-3)',opacity:0.5}}><Icon name="lock" size={16}/></span>}
@@ -1636,24 +1841,26 @@ function App() {
 
   const renderPrograms = () => (
     <div className="screen-transition overflow-y-auto h-full no-scrollbar" style={{padding:'env(safe-area-inset-top, 48px) 24px 100px 24px'}}>
-      <div className="font-body mb-8" style={{fontSize:24, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.1em'}}>Программы</div>
+      <div className="font-body mb-8" style={{fontSize:24, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.1em'}}>{t.programs}</div>
       <div className="space-y-4">
         {Object.entries(PROGRAMS).map(([key, prog]) => {
           const progress = (stats.programProgress?.[key] || []).length;
+          const nameKey = key === 'first_dive' ? 'firstDive' : key === 'stress_shield' ? 'stressShield' : 'deepFocus';
+          const subKey = nameKey + 'Sub';
           return (
             <button key={key} className="glass p-6 w-full text-left"
               onClick={() => { setSelectedProgram(key); setScreen('program_view'); }}>
               <div className="flex items-center gap-4 mb-4">
-                <span style={{color:'var(--accent-text)',opacity:0.5}}><Icon name={key === 'first_dive' ? 'prog_bubble' : key === 'stress_shield' ? 'prog_shield' : 'prog_target'} size={28}/></span>
+                <span style={{color:palette.accent,opacity:0.5}}><Icon name={key === 'first_dive' ? 'prog_bubble' : key === 'stress_shield' ? 'prog_shield' : 'prog_target'} size={28}/></span>
                 <div>
-                  <div className="font-body" style={{fontWeight:600, fontSize:16, color:'rgba(255,255,255,0.92)'}}>{prog.name}</div>
-                  <div className="font-body" style={{fontSize:12, fontWeight:400, color:'rgba(255,255,255,0.4)', marginTop:2}}>{prog.subtitle}</div>
+                  <div className="font-body" style={{fontWeight:600, fontSize:16, color:'rgba(255,255,255,0.92)'}}>{t[nameKey]}</div>
+                  <div className="font-body" style={{fontSize:12, fontWeight:400, color:'rgba(255,255,255,0.4)', marginTop:2}}>{t[subKey]}</div>
                 </div>
               </div>
-              <div style={{height:2, borderRadius:1, background:'rgba(255,255,255,0.06)'}}>
-                <div style={{height:'100%', borderRadius:1, width:`${progress/prog.days*100}%`, background:`linear-gradient(90deg, ${palette.accent}, rgba(255,255,255,0.3))`, transition:'width 1s ease'}} />
+              <div style={{height:2, borderRadius:1, background:'rgba(255,255,255,0.04)'}}>
+                <div style={{height:'100%', borderRadius:1, width:`${progress/prog.days*100}%`, background:`rgba(${accentRgb},0.6)`, transition:'width 1s ease'}} />
               </div>
-              <div className="font-body mt-2" style={{fontSize:12, fontWeight:400, color:palette.accent, opacity:0.7}}>{progress}/{prog.days} дней</div>
+              <div className="font-body mt-2" style={{fontSize:12, fontWeight:400, color:palette.accent, opacity:0.7}}>{progress}/{prog.days} {t.days}</div>
             </button>
           );
         })}
@@ -1665,17 +1872,17 @@ function App() {
     const earned = BADGES.filter(b => b.condition(stats));
     return (
       <div className="screen-transition overflow-y-auto h-full no-scrollbar" style={{padding:'env(safe-area-inset-top, 48px) 24px 100px 24px'}}>
-        <div className="font-body mb-8" style={{fontSize:24, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.1em'}}>Профиль</div>
+        <div className="font-body mb-8" style={{fontSize:24, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.1em'}}>{t.profile}</div>
 
         {/* Stats */}
         <div className="grid grid-cols-3 gap-3 mb-8">
           {[
-            [stats.totalDepth, WORLDS[world].depthUnit, WORLDS[world].depthLabel],
-            [stats.streak, 'дней', 'streak'],
-            [stats.totalSessions, '', 'сессий'],
-          ].map(([val, unit, label], i) => (
-            <div key={i} className="glass p-5 text-center" style={{animation:`count-up 600ms ${i*150}ms ease-out both`}}>
-              <div className="font-mono" style={{fontSize:22, fontWeight:300, color:palette.accent}}>{val}{unit && <span style={{fontSize:11, marginLeft:2}}>{unit}</span>}</div>
+            [stats.totalDepth, WORLDS[world].depthUnit],
+            [stats.streak, t.dayStreak],
+            [stats.totalSessions, t.sessions],
+          ].map(([val, label], i) => (
+            <div key={i} className="glass p-5 text-center">
+              <div className="font-mono" style={{fontSize:22, fontWeight:300, color:palette.accent}}>{val}</div>
               <div className="font-body mt-2" style={{fontSize:11, fontWeight:400, color:'var(--text-3)', letterSpacing:'0.05em'}}>{label}</div>
             </div>
           ))}
@@ -1683,14 +1890,14 @@ function App() {
 
         {/* World switch */}
         <div className="mb-8">
-          <div className="font-body mb-4" style={{fontSize:13, fontWeight:600, color:'rgba(226,232,240,0.6)', letterSpacing:'0.06em', textTransform:'uppercase'}}>Мир</div>
+          <div className="font-body mb-4" style={{fontSize:13, fontWeight:600, color:'rgba(226,232,240,0.6)', letterSpacing:'0.06em', textTransform:'uppercase'}}>{t.world}</div>
           <div className="flex gap-3">
-            {Object.entries(WORLDS).map(([key, w]) => (
+            {Object.entries(WORLDS).map(([key, wd]) => (
               <button key={key} className="glass flex-1 p-4 text-center"
-                style={{border: world === key ? `1px solid ${w.palette.accent}4d` : '1px solid rgba(255,255,255,0.06)', boxShadow: world === key ? `0 0 15px ${w.palette.accent}1a` : 'none'}}
+                style={{border: world === key ? `1px solid rgba(${wd.palette.accentRgb},0.3)` : '1px solid rgba(255,255,255,0.06)', boxShadow: world === key ? `0 0 15px rgba(${wd.palette.accentRgb},0.1)` : 'none'}}
                 onClick={() => selectWorld(key)}>
-                <div style={{color:w.palette.accent,opacity:0.5}}><Icon name="world" size={20}/></div>
-                <div className="font-body mt-2" style={{fontSize:12, fontWeight:400, color:'rgba(226,232,240,0.6)'}}>{w.name}</div>
+                <div style={{color:wd.palette.accent,opacity:0.5}}><Icon name="world" size={20}/></div>
+                <div className="font-body mt-2" style={{fontSize:12, fontWeight:400, color:'rgba(226,232,240,0.6)'}}>{t[key]}</div>
               </button>
             ))}
           </div>
@@ -1698,14 +1905,14 @@ function App() {
 
         {/* Badges */}
         <div className="mb-8">
-          <div className="font-body mb-4" style={{fontSize:13, fontWeight:600, color:'rgba(226,232,240,0.6)', letterSpacing:'0.06em', textTransform:'uppercase'}}>Достижения ({earned.length}/{BADGES.length})</div>
+          <div className="font-body mb-4" style={{fontSize:13, fontWeight:600, color:'rgba(226,232,240,0.6)', letterSpacing:'0.06em', textTransform:'uppercase'}}>{t.badges} ({earned.length}/{BADGES.length})</div>
           <div className="grid grid-cols-4 gap-2">
             {BADGES.map(b => {
               const has = b.condition(stats);
               return (
                 <div key={b.id} className="glass p-3 text-center" style={{opacity: has ? 1 : 0.25}}>
-                  <div style={{color: has ? 'var(--accent-text)' : 'var(--text-3)', opacity: has ? 0.8 : 0.4}}><Icon name="check" size={20}/></div>
-                  <div className="font-body mt-1" style={{fontSize:10, fontWeight:400, color:'rgba(226,232,240,0.6)'}}>{b.name}</div>
+                  <div style={{color: has ? palette.accent : 'var(--text-3)', opacity: has ? 0.8 : 0.4}}><Icon name="check" size={20}/></div>
+                  <div className="font-body mt-1" style={{fontSize:10, fontWeight:400, color:'rgba(226,232,240,0.6)'}}>{BADGE_NAMES[b.id]}</div>
                 </div>
               );
             })}
@@ -1714,23 +1921,42 @@ function App() {
 
         {/* Settings */}
         <div className="mb-8">
-          <div className="font-body mb-4" style={{fontSize:13, fontWeight:600, color:'rgba(226,232,240,0.6)', letterSpacing:'0.06em', textTransform:'uppercase'}}>Настройки</div>
+          <div className="font-body mb-4" style={{fontSize:13, fontWeight:600, color:'rgba(226,232,240,0.6)', letterSpacing:'0.06em', textTransform:'uppercase'}}>{t.settings}</div>
           <div className="glass p-5 space-y-4">
             {[
-              ['Ambient звук', 'soundEnabled'],
-              ['Вибрация', 'vibrateEnabled'],
+              [t.ambientSound, 'soundEnabled'],
+              [t.vibration, 'vibrateEnabled'],
             ].map(([label, key]) => (
               <div key={key} className="flex items-center justify-between">
                 <span className="font-body" style={{fontSize:14, fontWeight:400, color:'rgba(226,232,240,0.75)'}}>{label}</span>
-                <button className="relative rounded-full" style={{width:44, height:24, background: stats[key] ? `${palette.accent}40` : 'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.06)', transition:'all 200ms ease'}}
+                <button className="relative rounded-full" style={{width:44, height:24, background: stats[key] ? `rgba(${accentRgb},0.25)` : 'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.06)', transition:'all 200ms ease'}}
                   onClick={() => setStats(s => ({...s, [key]:!s[key]}))}>
                   <div className="absolute rounded-full transition-all" style={{top:3, width:16, height:16, background: stats[key] ? palette.accent : 'rgba(255,255,255,0.3)', left: stats[key] ? 'calc(100% - 20px)' : '4px'}} />
                 </button>
               </div>
             ))}
+            {/* Voice narration toggle */}
             <div className="flex items-center justify-between">
-              <span className="font-body" style={{fontSize:14, fontWeight:400, color:'rgba(226,232,240,0.75)'}}>Premium</span>
-              <span className="font-body" style={{fontSize:13, fontWeight:500, color: stats.isPremium ? palette.accent : 'var(--text-3)'}}>{stats.isPremium ? 'Active' : 'Free'}</span>
+              <span className="font-body" style={{fontSize:14, fontWeight:400, color:'rgba(226,232,240,0.75)'}}>{t.voiceNarration}</span>
+              <button className="relative rounded-full" style={{width:44, height:24, background: stats.voiceEnabled ? `rgba(${accentRgb},0.25)` : 'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.06)', transition:'all 200ms ease'}}
+                onClick={() => setStats(s => ({...s, voiceEnabled:!s.voiceEnabled}))}>
+                <div className="absolute rounded-full transition-all" style={{top:3, width:16, height:16, background: stats.voiceEnabled ? palette.accent : 'rgba(255,255,255,0.3)', left: stats.voiceEnabled ? 'calc(100% - 20px)' : '4px'}} />
+              </button>
+            </div>
+            {/* Language switch */}
+            <div className="flex items-center justify-between">
+              <span className="font-body" style={{fontSize:14, fontWeight:400, color:'rgba(226,232,240,0.75)'}}>{t.language}</span>
+              <select className="font-body rounded-lg px-3 py-1" style={{fontSize:13, fontWeight:400, background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.08)', color:'rgba(226,232,240,0.75)', outline:'none'}}
+                value={currentLang} onChange={e => setCurrentLang(e.target.value)}>
+                <option value="en">English</option>
+                <option value="ru">Русский</option>
+                <option value="zh">中文</option>
+                <option value="ar">العربية</option>
+              </select>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="font-body" style={{fontSize:14, fontWeight:400, color:'rgba(226,232,240,0.75)'}}>{t.premium}</span>
+              <span className="font-body" style={{fontSize:13, fontWeight:500, color: stats.isPremium ? palette.accent : 'var(--text-3)'}}>{stats.isPremium ? t.active : t.free}</span>
             </div>
           </div>
         </div>
@@ -1738,16 +1964,16 @@ function App() {
         {/* History */}
         {stats.history.length > 0 && (
           <div className="mb-8">
-            <div className="font-body mb-4" style={{fontSize:13, fontWeight:600, color:'rgba(226,232,240,0.6)', letterSpacing:'0.06em', textTransform:'uppercase'}}>История</div>
+            <div className="font-body mb-4" style={{fontSize:13, fontWeight:600, color:'rgba(226,232,240,0.6)', letterSpacing:'0.06em', textTransform:'uppercase'}}>{t.history}</div>
             <div className="space-y-2">
               {stats.history.slice(-5).reverse().map((h, i) => (
                 <div key={i} className="glass p-4 flex items-center gap-3">
-                  <span style={{color:'var(--accent-text)',opacity:0.4}}><Icon name={SCENARIOS[h.scenario]?.svgIcon || 'check'} size={16}/></span>
+                  <span style={{color:palette.accent,opacity:0.4}}><Icon name={SCENARIOS[h.scenario]?.svgIcon || 'check'} size={16}/></span>
                   <div className="flex-1">
-                    <div className="font-body" style={{fontSize:14, fontWeight:500, color:'rgba(226,232,240,0.85)'}}>{SCENARIOS[h.scenario]?.name || h.scenario}</div>
-                    <div className="font-body" style={{fontSize:11, fontWeight:400, color:'var(--text-3)', marginTop:2}}>{new Date(h.date).toLocaleDateString('ru')}</div>
+                    <div className="font-body" style={{fontSize:14, fontWeight:500, color:'rgba(226,232,240,0.85)'}}>{t[SCENARIO_LANG_KEY[h.scenario]] || h.scenario}</div>
+                    <div className="font-body" style={{fontSize:11, fontWeight:400, color:'var(--text-3)', marginTop:2}}>{new Date(h.date).toLocaleDateString(currentLang === 'zh' ? 'zh-CN' : currentLang === 'ar' ? 'ar' : currentLang)}</div>
                   </div>
-                  <div className="font-mono" style={{fontSize:12, fontWeight:300, color:palette.accent}}>{Math.round(h.duration/60)}м</div>
+                  <div className="font-mono" style={{fontSize:12, fontWeight:300, color:palette.accent}}>{Math.round(h.duration/60)}{t.min}</div>
                 </div>
               ))}
             </div>
@@ -1756,19 +1982,17 @@ function App() {
 
         {/* Reset */}
         <button className="w-full py-3 font-body rounded-full" style={{fontSize:13, fontWeight:400, color:'rgba(252,129,129,0.6)', border:'1px solid rgba(252,129,129,0.15)'}}
-          onClick={() => { if (confirm('Сбросить весь прогресс?')) { setStats(defaultStats()); setScreen('splash'); }}}>
-          Сбросить прогресс
+          onClick={() => { if (confirm(t.resetConfirm)) { setStats(defaultStats()); setScreen('splash'); }}}>
+          {t.resetProgress}
         </button>
       </div>
     );
   };
 
-  // Render current screen
   const renderScreen = () => {
     if (screen === 'category') return renderCategory();
     if (screen === 'session_pre') return renderSessionPre();
     if (screen === 'program_view') return renderProgramView();
-
     switch (tab) {
       case 'home': return renderHome();
       case 'quick': return renderQuickDive();
@@ -1787,20 +2011,20 @@ function App() {
         {renderScreen()}
       </div>
 
-      {/* Tab bar — premium */}
+      {/* Tab bar */}
       {showTabs && (
         <div className="fixed bottom-0 left-0 right-0 z-40" style={{background:'rgba(7,12,21,0.85)', backdropFilter:'blur(20px)', WebkitBackdropFilter:'blur(20px)', borderTop:'1px solid rgba(255,255,255,0.04)'}}>
           <div className="flex justify-around" style={{paddingTop:12, paddingBottom:'env(safe-area-inset-bottom, 24px)'}}>
             {[
-              {id:'home', svgIcon:'home', label:'Home'},
-              {id:'quick', svgIcon:'quick', label:'Explore'},
-              {id:'programs', svgIcon:'programs', label:'Programs'},
-              {id:'profile', svgIcon:'profile', label:'Profile'},
-            ].map(t => (
-              <button key={t.id} className="flex flex-col items-center py-1 px-3" style={{gap:3}}
-                onClick={() => { setTab(t.id); if (['category','session_pre','program_view'].includes(screen)) setScreen('home'); }}>
-                <span style={{color: tab === t.id ? 'var(--accent-text)' : 'var(--text-3)', transition:'color 200ms ease'}}><Icon name={t.svgIcon} size={20}/></span>
-                <span className="font-body" style={{fontSize:10, fontWeight:500, letterSpacing:'0.03em', color: tab === t.id ? 'var(--accent-text)' : 'var(--text-3)', transition:'color 200ms ease'}}>{t.label}</span>
+              {id:'home', svgIcon:'home', labelKey:'home'},
+              {id:'quick', svgIcon:'quick', labelKey:'explore'},
+              {id:'programs', svgIcon:'programs', labelKey:'programs'},
+              {id:'profile', svgIcon:'profile', labelKey:'profile'},
+            ].map(tb => (
+              <button key={tb.id} className="flex flex-col items-center py-1 px-3" style={{gap:3}}
+                onClick={() => { setTab(tb.id); if (['category','session_pre','program_view'].includes(screen)) setScreen('home'); }}>
+                <span style={{color: tab === tb.id ? palette.accent : 'var(--text-3)', transition:'color 200ms ease'}}><Icon name={tb.svgIcon} size={20}/></span>
+                <span className="font-body" style={{fontSize:10, fontWeight:500, letterSpacing:'0.03em', color: tab === tb.id ? palette.accent : 'var(--text-3)', transition:'color 200ms ease'}}>{t[tb.labelKey]}</span>
               </button>
             ))}
           </div>
