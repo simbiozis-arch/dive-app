@@ -37,13 +37,14 @@ html[lang="zh"] body, html[lang="zh"] #root { font-family:'Noto Sans SC','DM San
 @keyframes twinkle { 0%,100%{opacity:var(--base-opacity)} 50%{opacity:0.05} }
 @keyframes bokeh-drift { 0%{transform:translate(0,0)} 25%{transform:translate(10px,-15px)} 50%{transform:translate(-8px,12px)} 75%{transform:translate(15px,5px)} 100%{transform:translate(0,0)} }
 @keyframes caustic-drift { 0%{transform:translateX(0)} 100%{transform:translateX(30px)} }
+@keyframes tentacle-sway { 0% { transform: rotate(-3deg) scaleY(1); } 100% { transform: rotate(3deg) scaleY(1.05); } }
 
 .font-display { font-family:'DM Sans',sans-serif; }
 .font-mono { font-family:'JetBrains Mono',monospace; font-variant-numeric:tabular-nums; }
 .font-body { font-family:inherit; }
 
 .screen-transition { animation: fade-in 400ms ease-out; }
-.text-deblur { animation: deblur 500ms ease-out forwards; }
+.text-deblur { animation: deblur 600ms ease-out forwards; }
 
 .glass {
   background: rgba(255,255,255,0.025);
@@ -70,9 +71,10 @@ html[lang="zh"] body, html[lang="zh"] #root { font-family:'Noto Sans SC','DM San
   left: 50%;
   transform: translate(-50%, -50%);
   width: calc(100% - 48px);
-  max-width: 340px;
+  max-width: 320px;
   text-align: center;
   z-index: 10;
+  padding: 0 24px;
 }
 .session-text-content {
   font-family: 'DM Sans', sans-serif;
@@ -82,9 +84,9 @@ html[lang="zh"] body, html[lang="zh"] #root { font-family:'Noto Sans SC','DM San
   color: rgba(220, 225, 235, 0.88);
   letter-spacing: 0.01em;
 }
-.circle-hidden { opacity: 0; transform: scale(0.8); transition: opacity 400ms ease, transform 400ms ease; }
-.circle-visible { opacity: 1; transform: scale(1); transition: opacity 400ms ease, transform 400ms ease; }
-.text-fade-out { opacity: 0; filter: blur(3px); transition: opacity 300ms ease, filter 300ms ease; }
+.circle-hidden { opacity: 0; transform: scale(0.7); transition: opacity 500ms ease, transform 500ms ease; }
+.circle-visible { opacity: 1; transform: scale(1); transition: opacity 500ms ease, transform 500ms ease; transition-delay: 300ms; }
+.text-fade-out { opacity: 0; filter: blur(3px); transition: opacity 400ms ease, filter 400ms ease; }
 </style>
 </head>
 <body>
@@ -515,208 +517,208 @@ const CATEGORIES = {
 const getSessionContent = (t, world) => ({
   meeting: {
     5: [
-      { type:'text', duration:10, text:t.sitDown },
+      { type:'text', duration:10, text:t.sitDown, textKey:'sitDown' },
       { type:'breathing', technique:'box', duration:96, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
-      { type:'text', duration:20, text:t.visOceanCalm },
+      { type:'visualization', duration:20, texts:{ocean:t.visOceanCalm, space:t.visSpaceCalm, memory:t.visMemoryCalm} },
       { type:'breathing', technique:'ujjayi', duration:130, params:{inhale:5,exhale:8} },
-      { type:'text', duration:8, text:t.openEyes },
+      { type:'text', duration:8, text:t.openEyes, textKey:'openEyes' },
     ],
     10: [
-      { type:'text', duration:10, text:t.sitDown },
+      { type:'text', duration:10, text:t.sitDown, textKey:'sitDown' },
       { type:'breathing', technique:'tidal', duration:90, params:{inhale:4,exhale:6,pause:2} },
       { type:'breathing', technique:'box', duration:128, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
-      { type:'bodyscan', duration:40, text:t.bodyScanFull },
+      { type:'bodyscan', duration:40, text:t.bodyScanFull, scanType:'short' },
       { type:'breathing', technique:'ujjayi', duration:150, params:{inhale:5,exhale:10} },
       { type:'visualization', duration:30, texts:{ocean:t.visOceanCalm, space:t.visSpaceCalm, memory:t.visMemoryCalm} },
       { type:'breathing', technique:'diaphragmatic', duration:90, params:{inhale:5,exhale:10} },
-      { type:'text', duration:8, text:t.openEyes },
+      { type:'text', duration:8, text:t.openEyes, textKey:'openEyes' },
     ]
   },
   presentation: {
     5: [
-      { type:'text', duration:10, text:t.speechIntro },
+      { type:'text', duration:10, text:t.speechIntro, textKey:'speechIntro' },
       { type:'breathing', technique:'physiological_sigh', duration:60, params:{inhale1:2,inhale2:1,exhale:7} },
       { type:'breathing', technique:'box', duration:96, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
-      { type:'text', duration:20, text:t.conflictIntro },
+      { type:'text', duration:20, text:t.conflictIntro, textKey:'conflictIntro' },
       { type:'breathing', technique:'diaphragmatic', duration:90, params:{inhale:4,exhale:8} },
-      { type:'text', duration:8, text:t.openEyes },
+      { type:'text', duration:8, text:t.openEyes, textKey:'openEyes' },
     ]
   },
   call: {
     3: [
-      { type:'text', duration:5, text:t.deadlineIntro },
+      { type:'text', duration:5, text:t.deadlineIntro, textKey:'deadlineIntro' },
       { type:'breathing', technique:'physiological_sigh', duration:40, params:{inhale1:2,inhale2:1,exhale:7} },
       { type:'breathing', technique:'box', duration:80, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
-      { type:'text', duration:15, text:t.openEyes },
+      { type:'text', duration:15, text:t.openEyes, textKey:'openEyes' },
       { type:'breathing', technique:'diaphragmatic', duration:30, params:{inhale:4,exhale:8} },
-      { type:'text', duration:5, text:t.openEyes },
+      { type:'text', duration:5, text:t.openEyes, textKey:'openEyes' },
     ]
   },
   cant_focus: {
     5: [
-      { type:'text', duration:10, text:t.focusIntro },
+      { type:'text', duration:10, text:t.focusIntro, textKey:'focusIntro' },
       { type:'breathing', technique:'tidal', duration:90, params:{inhale:4,exhale:5,pause:2} },
       { type:'breathing', technique:'box', duration:100, params:{inhale:5,holdIn:5,exhale:5,holdOut:5} },
-      { type:'text', duration:15, text:t.focusIntro },
+      { type:'text', duration:15, text:t.focusIntro, textKey:'focusIntro' },
       { type:'breathing', technique:'ujjayi', duration:60, params:{inhale:5,exhale:8} },
-      { type:'text', duration:8, text:t.openEyes },
+      { type:'text', duration:8, text:t.openEyes, textKey:'openEyes' },
     ]
   },
   decision: {
     5: [
-      { type:'text', duration:10, text:t.decisionIntro },
+      { type:'text', duration:10, text:t.decisionIntro, textKey:'decisionIntro' },
       { type:'breathing', technique:'diaphragmatic', duration:90, params:{inhale:5,exhale:10} },
-      { type:'text', duration:20, text:t.decisionIntro },
+      { type:'text', duration:20, text:t.decisionIntro, textKey:'decisionIntro' },
       { type:'breathing', technique:'box', duration:100, params:{inhale:4,holdIn:6,exhale:4,holdOut:6} },
-      { type:'text', duration:15, text:t.decisionIntro },
+      { type:'text', duration:15, text:t.decisionIntro, textKey:'decisionIntro' },
       { type:'breathing', technique:'tidal', duration:30, params:{inhale:4,exhale:6,pause:2} },
-      { type:'text', duration:5, text:t.openEyes },
+      { type:'text', duration:5, text:t.openEyes, textKey:'openEyes' },
     ]
   },
   hard_day: {
     5: [
-      { type:'text', duration:10, text:t.relaxIntro },
+      { type:'text', duration:10, text:t.relaxIntro, textKey:'relaxIntro' },
       { type:'breathing', technique:'tidal', duration:80, params:{inhale:4,exhale:6,pause:2} },
       { type:'breathing', technique:'diaphragmatic', duration:120, params:{inhale:5,exhale:10} },
-      { type:'bodyscan', duration:60, text:t.bodyScanFull },
-      { type:'text', duration:8, text:t.openEyes },
+      { type:'bodyscan', duration:60, text:t.bodyScanFull, scanType:'full' },
+      { type:'text', duration:8, text:t.openEyes, textKey:'openEyes' },
     ]
   },
   conflict: {
     5: [
-      { type:'text', duration:15, text:t.conflictIntro },
+      { type:'text', duration:15, text:t.conflictIntro, textKey:'conflictIntro' },
       { type:'breathing', technique:'physiological_sigh', duration:60, params:{inhale1:2,inhale2:1,exhale:7} },
       { type:'breathing', technique:'diaphragmatic', duration:90, params:{inhale:4,exhale:8} },
-      { type:'text', duration:20, text:t.conflictIntro },
+      { type:'text', duration:20, text:t.conflictIntro, textKey:'conflictIntro' },
       { type:'breathing', technique:'ujjayi', duration:80, params:{inhale:5,exhale:8} },
-      { type:'text', duration:8, text:t.openEyes },
+      { type:'text', duration:8, text:t.openEyes, textKey:'openEyes' },
     ]
   },
   traffic: {
     5: [
-      { type:'text', duration:10, text:t.trafficIntro },
+      { type:'text', duration:10, text:t.trafficIntro, textKey:'trafficIntro' },
       { type:'breathing', technique:'tidal', duration:90, params:{inhale:4,exhale:6,pause:2} },
       { type:'breathing', technique:'diaphragmatic', duration:120, params:{inhale:5,exhale:10} },
-      { type:'text', duration:15, text:t.trafficIntro },
+      { type:'text', duration:15, text:t.trafficIntro, textKey:'trafficIntro' },
       { type:'breathing', technique:'diaphragmatic', duration:60, params:{inhale:5,exhale:10} },
-      { type:'text', duration:5, text:t.openEyes },
+      { type:'text', duration:5, text:t.openEyes, textKey:'openEyes' },
     ]
   },
   deadline: {
     3: [
-      { type:'text', duration:5, text:t.deadlineIntro },
+      { type:'text', duration:5, text:t.deadlineIntro, textKey:'deadlineIntro' },
       { type:'breathing', technique:'physiological_sigh', duration:40, params:{inhale1:2,inhale2:1,exhale:7} },
       { type:'breathing', technique:'box', duration:64, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
       { type:'breathing', technique:'diaphragmatic', duration:48, params:{inhale:4,exhale:8} },
-      { type:'text', duration:8, text:t.openEyes },
+      { type:'text', duration:8, text:t.openEyes, textKey:'openEyes' },
     ]
   },
   overload: {
     5: [
-      { type:'text', duration:15, text:t.overloadIntro },
+      { type:'text', duration:15, text:t.overloadIntro, textKey:'overloadIntro' },
       { type:'breathing', technique:'tidal', duration:90, params:{inhale:4,exhale:6,pause:3} },
-      { type:'bodyscan', duration:50, text:t.bodyScanFull },
+      { type:'bodyscan', duration:50, text:t.bodyScanFull, scanType:'short' },
       { type:'breathing', technique:'ujjayi', duration:100, params:{inhale:5,exhale:10} },
-      { type:'text', duration:10, text:t.overloadIntro },
+      { type:'text', duration:10, text:t.overloadIntro, textKey:'overloadIntro' },
     ]
   },
   morning: {
     5: [
-      { type:'text', duration:10, text:t.morningIntro },
+      { type:'text', duration:10, text:t.morningIntro, textKey:'morningIntro' },
       { type:'breathing', technique:'segmented', duration:90, params:{belly:3,ribs:3,chest:3,exhale:6} },
       { type:'breathing', technique:'recovery', duration:60, params:{inhale:3,holdIn:1,exhale:2} },
       { type:'breathing', technique:'box', duration:96, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
-      { type:'text', duration:15, text:t.morningIntro },
-      { type:'text', duration:5, text:t.openEyes },
+      { type:'text', duration:15, text:t.morningIntro, textKey:'morningIntro' },
+      { type:'text', duration:5, text:t.openEyes, textKey:'openEyes' },
     ]
   },
   afternoon: {
     3: [
-      { type:'text', duration:5, text:t.betweenIntro },
+      { type:'text', duration:5, text:t.betweenIntro, textKey:'betweenIntro' },
       { type:'breathing', technique:'recovery', duration:45, params:{inhale:3,holdIn:1,exhale:2} },
       { type:'breathing', technique:'segmented', duration:60, params:{belly:3,ribs:3,chest:3,exhale:6} },
       { type:'breathing', technique:'box', duration:48, params:{inhale:3,holdIn:3,exhale:3,holdOut:3} },
-      { type:'text', duration:8, text:t.openEyes },
+      { type:'text', duration:8, text:t.openEyes, textKey:'openEyes' },
     ]
   },
   pre_workout: {
     5: [
-      { type:'text', duration:10, text:t.workoutIntro },
+      { type:'text', duration:10, text:t.workoutIntro, textKey:'workoutIntro' },
       { type:'breathing', technique:'segmented', duration:90, params:{belly:3,ribs:3,chest:3,exhale:5} },
       { type:'breathing', technique:'recovery', duration:60, params:{inhale:3,holdIn:1,exhale:2} },
       { type:'breathing', technique:'ujjayi', duration:60, params:{inhale:4,exhale:6} },
-      { type:'text', duration:15, text:t.workoutIntro },
-      { type:'text', duration:5, text:t.openEyes },
+      { type:'text', duration:15, text:t.workoutIntro, textKey:'workoutIntro' },
+      { type:'text', duration:5, text:t.openEyes, textKey:'openEyes' },
     ]
   },
   quick_reset: {
     3: [
-      { type:'text', duration:5, text:t.betweenIntro },
+      { type:'text', duration:5, text:t.betweenIntro, textKey:'betweenIntro' },
       { type:'breathing', technique:'recovery', duration:45, params:{inhale:3,holdIn:1,exhale:2} },
       { type:'breathing', technique:'box', duration:48, params:{inhale:3,holdIn:3,exhale:3,holdOut:3} },
       { type:'breathing', technique:'physiological_sigh', duration:40, params:{inhale1:2,inhale2:1,exhale:7} },
-      { type:'text', duration:8, text:t.openEyes },
+      { type:'text', duration:8, text:t.openEyes, textKey:'openEyes' },
     ]
   },
   post_workout: {
     5: [
-      { type:'text', duration:10, text:t.postWorkoutIntro },
+      { type:'text', duration:10, text:t.postWorkoutIntro, textKey:'postWorkoutIntro' },
       { type:'breathing', technique:'tidal', duration:90, params:{inhale:4,exhale:6,pause:3} },
       { type:'breathing', technique:'diaphragmatic', duration:120, params:{inhale:5,exhale:12} },
-      { type:'bodyscan', duration:50, text:t.bodyScanFull },
-      { type:'text', duration:8, text:t.openEyes },
+      { type:'bodyscan', duration:50, text:t.bodyScanFull, scanType:'short' },
+      { type:'text', duration:8, text:t.openEyes, textKey:'openEyes' },
     ]
   },
   insomnia: {
     10: [
-      { type:'text', duration:15, text:t.sleepIntro },
+      { type:'text', duration:15, text:t.sleepIntro, textKey:'sleepIntro' },
       { type:'breathing', technique:'tidal', duration:120, params:{inhale:4,exhale:6,pause:3} },
       { type:'breathing', technique:'diaphragmatic', duration:150, params:{inhale:4,exhale:12} },
-      { type:'bodyscan', duration:120, text:t.bodyScanFull },
+      { type:'bodyscan', duration:120, text:t.bodyScanFull, scanType:'sleep' },
       { type:'breathing', technique:'diaphragmatic', duration:120, params:{inhale:4,exhale:14} },
-      { type:'text', duration:10, text:t.sleepEnd },
+      { type:'text', duration:10, text:t.sleepEnd, textKey:'sleepEnd' },
     ]
   },
   anxious_wake: {
     5: [
-      { type:'text', duration:15, text:t.anxiousIntro },
+      { type:'text', duration:15, text:t.anxiousIntro, textKey:'anxiousIntro' },
       { type:'breathing', technique:'physiological_sigh', duration:60, params:{inhale1:2,inhale2:1,exhale:7} },
       { type:'breathing', technique:'diaphragmatic', duration:90, params:{inhale:5,exhale:10} },
-      { type:'text', duration:20, text:t.anxiousIntro },
+      { type:'text', duration:20, text:t.anxiousIntro, textKey:'anxiousIntro' },
       { type:'breathing', technique:'tidal', duration:60, params:{inhale:4,exhale:6,pause:2} },
-      { type:'text', duration:8, text:t.openEyes },
+      { type:'text', duration:8, text:t.openEyes, textKey:'openEyes' },
     ]
   },
   between: {
     3: [
-      { type:'text', duration:5, text:t.betweenIntro },
+      { type:'text', duration:5, text:t.betweenIntro, textKey:'betweenIntro' },
       { type:'breathing', technique:'physiological_sigh', duration:30, params:{inhale1:2,inhale2:1,exhale:7} },
       { type:'breathing', technique:'box', duration:64, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
       { type:'breathing', technique:'diaphragmatic', duration:48, params:{inhale:4,exhale:8} },
-      { type:'text', duration:8, text:t.openEyes },
+      { type:'text', duration:8, text:t.openEyes, textKey:'openEyes' },
     ]
   },
   just_relax: {
     10: [
-      { type:'text', duration:15, text:t.relaxIntro },
+      { type:'text', duration:15, text:t.relaxIntro, textKey:'relaxIntro' },
       { type:'breathing', technique:'tidal', duration:120, params:{inhale:4,exhale:6,pause:2} },
       { type:'breathing', technique:'diaphragmatic', duration:120, params:{inhale:5,exhale:10} },
       { type:'breathing', technique:'ujjayi', duration:180, params:{inhale:6,exhale:12} },
-      { type:'bodyscan', duration:90, text:t.bodyScanFull },
-      { type:'text', duration:10, text:t.relaxIntro },
+      { type:'bodyscan', duration:90, text:t.bodyScanFull, scanType:'full' },
+      { type:'text', duration:10, text:t.relaxIntro, textKey:'relaxIntro' },
     ]
   },
   deep_dive: {
     10: [
-      { type:'text', duration:10, text:t.deepIntro },
+      { type:'text', duration:10, text:t.deepIntro, textKey:'deepIntro' },
       { type:'breathing', technique:'tidal', duration:60, params:{inhale:4,exhale:6,pause:2} },
       { type:'breathing', technique:'segmented', duration:90, params:{belly:4,ribs:3,chest:3,exhale:8} },
       { type:'breathing', technique:'box', duration:100, params:{inhale:5,holdIn:5,exhale:5,holdOut:5} },
       { type:'breathing', technique:'ujjayi', duration:108, params:{inhale:6,exhale:12} },
       { type:'visualization', duration:40, texts:{ocean:t.visOceanCalm, space:t.visSpaceCalm, memory:t.visMemoryCalm} },
       { type:'breathing', technique:'physiological_sigh', duration:50, params:{inhale1:2,inhale2:1,exhale:7} },
-      { type:'bodyscan', duration:60, text:t.bodyScanFull },
-      { type:'text', duration:10, text:t.openEyes },
+      { type:'bodyscan', duration:60, text:t.bodyScanFull, scanType:'full' },
+      { type:'text', duration:10, text:t.openEyes, textKey:'openEyes' },
     ]
   },
 });
@@ -971,43 +973,20 @@ class AmbientEngine {
       this.running = true;
     } catch(e) { console.warn('Audio init failed', e); }
   }
-  duck(dur=0.5) { if (!this.ctx||!this.masterGain) return; this.masterGain.gain.cancelScheduledValues(this.ctx.currentTime); this.masterGain.gain.setValueAtTime(this.masterGain.gain.value,this.ctx.currentTime); this.masterGain.gain.linearRampToValueAtTime(0.04,this.ctx.currentTime+dur); }
-  unduck(dur=1.5) { if (!this.ctx||!this.masterGain) return; this.masterGain.gain.cancelScheduledValues(this.ctx.currentTime); this.masterGain.gain.setValueAtTime(this.masterGain.gain.value,this.ctx.currentTime); this.masterGain.gain.linearRampToValueAtTime(0.12,this.ctx.currentTime+dur); }
+  duck(dur=0.5) { if (!this.ctx||!this.masterGain) return; this.masterGain.gain.cancelScheduledValues(this.ctx.currentTime); this.masterGain.gain.setValueAtTime(this.masterGain.gain.value,this.ctx.currentTime); this.masterGain.gain.linearRampToValueAtTime(0.03,this.ctx.currentTime+dur); }
+  unduck(dur=2) { if (!this.ctx||!this.masterGain) return; this.masterGain.gain.cancelScheduledValues(this.ctx.currentTime); this.masterGain.gain.setValueAtTime(this.masterGain.gain.value,this.ctx.currentTime); this.masterGain.gain.linearRampToValueAtTime(0.12,this.ctx.currentTime+dur); }
   fadeIn(dur=3) { if (!this.ctx||!this.masterGain) return; if (this.ctx.state==='suspended') this.ctx.resume(); this.masterGain.gain.cancelScheduledValues(this.ctx.currentTime); this.masterGain.gain.setValueAtTime(this.masterGain.gain.value,this.ctx.currentTime); this.masterGain.gain.linearRampToValueAtTime(0.15,this.ctx.currentTime+dur); }
   fadeOut(dur=2) { if (!this.ctx||!this.masterGain) return; this.masterGain.gain.cancelScheduledValues(this.ctx.currentTime); this.masterGain.gain.setValueAtTime(this.masterGain.gain.value,this.ctx.currentTime); this.masterGain.gain.linearRampToValueAtTime(0,this.ctx.currentTime+dur); }
   destroy() { this.fadeOut(0.5); setTimeout(() => { try { this.ctx?.close(); } catch {} this.ctx = null; this.running = false; }, 600); }
 }
 
 // ===== AUDIO MAP =====
+// Only text/bodyscan/visualization voice files — NO breathing phase cues
 const AUDIO_MAP = {
   'intro_sit': '/audio/intro_sit.mp3',
   'intro_hands': '/audio/intro_hands.mp3',
   'session_end': '/audio/session_end.mp3',
   'session_end_sleep': '/audio/session_end_sleep.mp3',
-  'diaphragmatic_cue': '/audio/diaphragmatic_cue.mp3',
-  'diaphragmatic_exhale': '/audio/diaphragmatic_exhale.mp3',
-  'box_intro': '/audio/box_intro.mp3',
-  'box_cue_inhale': '/audio/box_cue_inhale.mp3',
-  'box_cue_hold': '/audio/box_cue_hold.mp3',
-  'box_cue_exhale': '/audio/box_cue_exhale.mp3',
-  'box_cue_pause': '/audio/box_cue_pause.mp3',
-  'segmented_intro': '/audio/segmented_intro.mp3',
-  'segmented_belly': '/audio/segmented_belly.mp3',
-  'segmented_ribs': '/audio/segmented_ribs.mp3',
-  'segmented_chest': '/audio/segmented_chest.mp3',
-  'segmented_exhale': '/audio/segmented_exhale.mp3',
-  'ujjayi_intro': '/audio/ujjayi_intro.mp3',
-  'ujjayi_cue': '/audio/ujjayi_cue.mp3',
-  'ujjayi_exhale': '/audio/ujjayi_exhale.mp3',
-  'recovery_intro': '/audio/recovery_intro.mp3',
-  'recovery_cue': '/audio/recovery_cue.mp3',
-  'recovery_exhale': '/audio/recovery_exhale.mp3',
-  'sigh_intro': '/audio/sigh_intro.mp3',
-  'sigh_cue': '/audio/sigh_cue.mp3',
-  'sigh_exhale': '/audio/sigh_exhale.mp3',
-  'tidal_intro': '/audio/tidal_intro.mp3',
-  'tidal_cue': '/audio/tidal_cue.mp3',
-  'tidal_exhale': '/audio/tidal_exhale.mp3',
   'bodyscan_short': '/audio/bodyscan_short.mp3',
   'bodyscan_full': '/audio/bodyscan_full.mp3',
   'bodyscan_sleep': '/audio/bodyscan_sleep.mp3',
@@ -1052,6 +1031,30 @@ class VoicePlayer {
   }
 }
 const voicePlayer = new VoicePlayer();
+
+function mapTextToAudio(textKey) {
+  const map = {
+    'sitDown': 'intro_sit',
+    'openEyes': 'session_end',
+    'sleepEnd': 'session_end_sleep',
+    'morningIntro': null,
+    'overloadIntro': null,
+    'conflictIntro': null,
+    'deadlineIntro': null,
+    'trafficIntro': null,
+    'sleepIntro': null,
+    'focusIntro': null,
+    'decisionIntro': null,
+    'workoutIntro': null,
+    'postWorkoutIntro': null,
+    'anxiousIntro': null,
+    'betweenIntro': null,
+    'speechIntro': null,
+    'relaxIntro': null,
+    'deepIntro': null,
+  };
+  return map[textKey] || null;
+}
 
 // ===== PARTICLES =====
 function OceanParticles({ world, diveProgress }) {
@@ -1154,61 +1157,391 @@ function Particles({ world, diveProgress = 0 }) {
   return <OceanParticles world={world} diveProgress={diveProgress} />;
 }
 
-// ===== BREATHING CIRCLE =====
-function BreathingCircle({ technique, params, elapsed, phaseName, phaseTime, phaseRemaining, t, accentRgb }) {
+// ===== GENERATE BREATHING KEYFRAMES =====
+function generateBreathingKeyframes(technique, params) {
   const tech = TECHNIQUES[technique];
-  if (!tech) return null;
-  let scale = 1.0;
-  const isInhale = ['inhale','inhale1','inhale2','belly','ribs','chest'].includes(phaseName);
-  const isHold = ['holdIn'].includes(phaseName);
-  const isExhale = ['exhale'].includes(phaseName);
-  const phaseDuration = params[phaseName] || tech.defaults[phaseName] || 4;
-  const progress = phaseDuration > 0 ? Math.min(1, (phaseDuration - phaseRemaining) / phaseDuration) : 0;
+  if (!tech) return { keyframesCSS: '', totalDuration: 16 };
+  const p = params || tech.defaults;
+  const phases = tech.phases;
+  let totalDuration = 0;
+  for (const ph of phases) totalDuration += (p[ph] || tech.defaults[ph] || 4);
 
-  if (technique === 'segmented') {
-    if (phaseName === 'belly') scale = 1.0 + 0.15 * progress;
-    else if (phaseName === 'ribs') scale = 1.15 + 0.15 * progress;
-    else if (phaseName === 'chest') scale = 1.3 + 0.2 * progress;
-    else scale = 1.5 - 0.5 * progress;
-  } else if (technique === 'physiological_sigh') {
-    if (phaseName === 'inhale1') scale = 1.0 + 0.3 * progress;
-    else if (phaseName === 'inhale2') scale = 1.3 + 0.2 * progress;
-    else scale = 1.5 - 0.5 * progress;
-  } else {
-    if (isInhale) scale = 1.0 + 0.45 * progress;
-    else if (isHold) scale = 1.45;
-    else if (isExhale) scale = 1.45 - 0.45 * progress;
-    else scale = 1.0;
+  let elapsed = 0;
+  const kf = [];
+
+  for (const phase of phases) {
+    const dur = p[phase] || tech.defaults[phase] || 4;
+    const startPct = (elapsed / totalDuration) * 100;
+    const endPct = ((elapsed + dur) / totalDuration) * 100;
+
+    if (phase === 'inhale' || phase === 'inhale1' || phase === 'belly') {
+      kf.push(`${startPct.toFixed(2)}% { transform: scale(1); }`);
+      kf.push(`${endPct.toFixed(2)}% { transform: scale(1.45); }`);
+    } else if (phase === 'inhale2' || phase === 'ribs') {
+      kf.push(`${startPct.toFixed(2)}% { transform: scale(1.15); }`);
+      kf.push(`${endPct.toFixed(2)}% { transform: scale(1.3); }`);
+    } else if (phase === 'chest') {
+      kf.push(`${startPct.toFixed(2)}% { transform: scale(1.3); }`);
+      kf.push(`${endPct.toFixed(2)}% { transform: scale(1.45); }`);
+    } else if (phase === 'holdIn' || phase === 'hold') {
+      kf.push(`${startPct.toFixed(2)}% { transform: scale(1.45); }`);
+      kf.push(`${endPct.toFixed(2)}% { transform: scale(1.45); }`);
+    } else if (phase === 'exhale') {
+      kf.push(`${startPct.toFixed(2)}% { transform: scale(1.45); }`);
+      kf.push(`${endPct.toFixed(2)}% { transform: scale(1); }`);
+    } else if (phase === 'holdOut' || phase === 'pause') {
+      kf.push(`${startPct.toFixed(2)}% { transform: scale(1); }`);
+      kf.push(`${endPct.toFixed(2)}% { transform: scale(1); }`);
+    }
+    elapsed += dur;
   }
 
-  const rgb = accentRgb || '94,170,168';
+  const keyframesCSS = `@keyframes breathe-cycle { ${kf.join(' ')} }`;
+  return { keyframesCSS, totalDuration };
+}
+
+// Generate jellyfish-specific keyframes (scaleX wider on inhale, scaleY taller on exhale)
+function generateJellyfishKeyframes(technique, params) {
+  const tech = TECHNIQUES[technique];
+  if (!tech) return { keyframesCSS: '', totalDuration: 16 };
+  const p = params || tech.defaults;
+  const phases = tech.phases;
+  let totalDuration = 0;
+  for (const ph of phases) totalDuration += (p[ph] || tech.defaults[ph] || 4);
+
+  let elapsed = 0;
+  const kf = [];
+  for (const phase of phases) {
+    const dur = p[phase] || tech.defaults[phase] || 4;
+    const startPct = (elapsed / totalDuration) * 100;
+    const endPct = ((elapsed + dur) / totalDuration) * 100;
+
+    if (['inhale','inhale1','belly'].includes(phase)) {
+      kf.push(`${startPct.toFixed(2)}% { transform: scaleX(0.85) scaleY(1.15); }`);
+      kf.push(`${endPct.toFixed(2)}% { transform: scaleX(1.3) scaleY(0.85); }`);
+    } else if (['inhale2','ribs'].includes(phase)) {
+      kf.push(`${startPct.toFixed(2)}% { transform: scaleX(1.05) scaleY(0.95); }`);
+      kf.push(`${endPct.toFixed(2)}% { transform: scaleX(1.2) scaleY(0.88); }`);
+    } else if (phase === 'chest') {
+      kf.push(`${startPct.toFixed(2)}% { transform: scaleX(1.2) scaleY(0.88); }`);
+      kf.push(`${endPct.toFixed(2)}% { transform: scaleX(1.3) scaleY(0.85); }`);
+    } else if (['holdIn','hold'].includes(phase)) {
+      kf.push(`${startPct.toFixed(2)}% { transform: scaleX(1.3) scaleY(0.85); }`);
+      kf.push(`${endPct.toFixed(2)}% { transform: scaleX(1.3) scaleY(0.85); }`);
+    } else if (phase === 'exhale') {
+      kf.push(`${startPct.toFixed(2)}% { transform: scaleX(1.3) scaleY(0.85); }`);
+      kf.push(`${endPct.toFixed(2)}% { transform: scaleX(0.85) scaleY(1.15); }`);
+    } else if (['holdOut','pause'].includes(phase)) {
+      kf.push(`${startPct.toFixed(2)}% { transform: scaleX(0.85) scaleY(1.15); }`);
+      kf.push(`${endPct.toFixed(2)}% { transform: scaleX(0.85) scaleY(1.15); }`);
+    }
+    elapsed += dur;
+  }
+  const keyframesCSS = `@keyframes jellyfish-breathe { ${kf.join(' ')} }`;
+  return { keyframesCSS, totalDuration };
+}
+
+// Generate ring-pulse keyframes for Pulsar
+function generateRingPulseKeyframes(technique, params) {
+  const tech = TECHNIQUES[technique];
+  if (!tech) return { keyframesCSS: '', totalDuration: 16 };
+  const p = params || tech.defaults;
+  const phases = tech.phases;
+  let totalDuration = 0;
+  for (const ph of phases) totalDuration += (p[ph] || tech.defaults[ph] || 4);
+
+  let elapsed = 0;
+  const kf = [];
+  for (const phase of phases) {
+    const dur = p[phase] || tech.defaults[phase] || 4;
+    const startPct = (elapsed / totalDuration) * 100;
+    const endPct = ((elapsed + dur) / totalDuration) * 100;
+
+    if (['inhale','inhale1','belly','inhale2','ribs','chest'].includes(phase)) {
+      kf.push(`${startPct.toFixed(2)}% { transform: translate(-50%,-50%) scale(1); opacity: 0.5; }`);
+      kf.push(`${endPct.toFixed(2)}% { transform: translate(-50%,-50%) scale(1.5); opacity: 1; }`);
+    } else if (['holdIn','hold'].includes(phase)) {
+      kf.push(`${startPct.toFixed(2)}% { transform: translate(-50%,-50%) scale(1.5); opacity: 1; }`);
+      kf.push(`${endPct.toFixed(2)}% { transform: translate(-50%,-50%) scale(1.5); opacity: 1; }`);
+    } else if (phase === 'exhale') {
+      kf.push(`${startPct.toFixed(2)}% { transform: translate(-50%,-50%) scale(1.5); opacity: 1; }`);
+      kf.push(`${endPct.toFixed(2)}% { transform: translate(-50%,-50%) scale(1); opacity: 0.5; }`);
+    } else if (['holdOut','pause'].includes(phase)) {
+      kf.push(`${startPct.toFixed(2)}% { transform: translate(-50%,-50%) scale(1); opacity: 0.5; }`);
+      kf.push(`${endPct.toFixed(2)}% { transform: translate(-50%,-50%) scale(1); opacity: 0.5; }`);
+    }
+    elapsed += dur;
+  }
+  const keyframesCSS = `@keyframes ring-pulse { ${kf.join(' ')} }`;
+  return { keyframesCSS, totalDuration };
+}
+
+// Generate sunflare keyframes
+function generateSunflareKeyframes(technique, params) {
+  const tech = TECHNIQUES[technique];
+  if (!tech) return { coreCSS: '', glowCSS: '', totalDuration: 16 };
+  const p = params || tech.defaults;
+  const phases = tech.phases;
+  let totalDuration = 0;
+  for (const ph of phases) totalDuration += (p[ph] || tech.defaults[ph] || 4);
+
+  let elapsed = 0;
+  const coreKf = [];
+  const glowKf = [];
+  for (const phase of phases) {
+    const dur = p[phase] || tech.defaults[phase] || 4;
+    const startPct = (elapsed / totalDuration) * 100;
+    const endPct = ((elapsed + dur) / totalDuration) * 100;
+
+    if (['inhale','inhale1','belly','inhale2','ribs','chest'].includes(phase)) {
+      coreKf.push(`${startPct.toFixed(2)}% { transform: scale(1); opacity: 0.7; }`);
+      coreKf.push(`${endPct.toFixed(2)}% { transform: scale(1.3); opacity: 1; }`);
+      glowKf.push(`${startPct.toFixed(2)}% { transform: scale(1); opacity: 0.5; }`);
+      glowKf.push(`${endPct.toFixed(2)}% { transform: scale(1.6); opacity: 1; }`);
+    } else if (['holdIn','hold'].includes(phase)) {
+      coreKf.push(`${startPct.toFixed(2)}% { transform: scale(1.3); opacity: 1; }`);
+      coreKf.push(`${endPct.toFixed(2)}% { transform: scale(1.3); opacity: 1; }`);
+      glowKf.push(`${startPct.toFixed(2)}% { transform: scale(1.6); opacity: 1; }`);
+      glowKf.push(`${endPct.toFixed(2)}% { transform: scale(1.6); opacity: 1; }`);
+    } else if (phase === 'exhale') {
+      coreKf.push(`${startPct.toFixed(2)}% { transform: scale(1.3); opacity: 1; }`);
+      coreKf.push(`${endPct.toFixed(2)}% { transform: scale(1); opacity: 0.7; }`);
+      glowKf.push(`${startPct.toFixed(2)}% { transform: scale(1.6); opacity: 1; }`);
+      glowKf.push(`${endPct.toFixed(2)}% { transform: scale(1); opacity: 0.5; }`);
+    } else if (['holdOut','pause'].includes(phase)) {
+      coreKf.push(`${startPct.toFixed(2)}% { transform: scale(1); opacity: 0.7; }`);
+      coreKf.push(`${endPct.toFixed(2)}% { transform: scale(1); opacity: 0.7; }`);
+      glowKf.push(`${startPct.toFixed(2)}% { transform: scale(1); opacity: 0.5; }`);
+      glowKf.push(`${endPct.toFixed(2)}% { transform: scale(1); opacity: 0.5; }`);
+    }
+    elapsed += dur;
+  }
+  const coreCSS = `@keyframes sunflare-breathe { ${coreKf.join(' ')} }`;
+  const glowCSS = `@keyframes sunflare-glow-breathe { ${glowKf.join(' ')} }`;
+  return { coreCSS, glowCSS, totalDuration };
+}
+
+// Generate pulsar core keyframes
+function generatePulsarCoreKeyframes(technique, params) {
+  const tech = TECHNIQUES[technique];
+  if (!tech) return { keyframesCSS: '', totalDuration: 16 };
+  const p = params || tech.defaults;
+  const phases = tech.phases;
+  let totalDuration = 0;
+  for (const ph of phases) totalDuration += (p[ph] || tech.defaults[ph] || 4);
+
+  let elapsed = 0;
+  const kf = [];
+  for (const phase of phases) {
+    const dur = p[phase] || tech.defaults[phase] || 4;
+    const startPct = (elapsed / totalDuration) * 100;
+    const endPct = ((elapsed + dur) / totalDuration) * 100;
+
+    if (['inhale','inhale1','belly','inhale2','ribs','chest'].includes(phase)) {
+      kf.push(`${startPct.toFixed(2)}% { box-shadow: 0 0 20px rgba(139,126,200,0.3), 0 0 60px rgba(139,126,200,0.15); }`);
+      kf.push(`${endPct.toFixed(2)}% { box-shadow: 0 0 30px rgba(139,126,200,0.8), 0 0 80px rgba(139,126,200,0.5), 0 0 120px rgba(139,126,200,0.25); }`);
+    } else if (['holdIn','hold'].includes(phase)) {
+      kf.push(`${startPct.toFixed(2)}% { box-shadow: 0 0 30px rgba(139,126,200,0.8), 0 0 80px rgba(139,126,200,0.5), 0 0 120px rgba(139,126,200,0.25); }`);
+      kf.push(`${endPct.toFixed(2)}% { box-shadow: 0 0 30px rgba(139,126,200,0.8), 0 0 80px rgba(139,126,200,0.5), 0 0 120px rgba(139,126,200,0.25); }`);
+    } else if (phase === 'exhale') {
+      kf.push(`${startPct.toFixed(2)}% { box-shadow: 0 0 30px rgba(139,126,200,0.8), 0 0 80px rgba(139,126,200,0.5), 0 0 120px rgba(139,126,200,0.25); }`);
+      kf.push(`${endPct.toFixed(2)}% { box-shadow: 0 0 20px rgba(139,126,200,0.3), 0 0 60px rgba(139,126,200,0.15); }`);
+    } else if (['holdOut','pause'].includes(phase)) {
+      kf.push(`${startPct.toFixed(2)}% { box-shadow: 0 0 20px rgba(139,126,200,0.3), 0 0 60px rgba(139,126,200,0.15); }`);
+      kf.push(`${endPct.toFixed(2)}% { box-shadow: 0 0 20px rgba(139,126,200,0.3), 0 0 60px rgba(139,126,200,0.15); }`);
+    }
+    elapsed += dur;
+  }
+  const keyframesCSS = `@keyframes pulsar-core-breathe { ${kf.join(' ')} }`;
+  return { keyframesCSS, totalDuration };
+}
+
+// ===== DYNAMIC STYLE INJECTOR =====
+let breathStyleEl = null;
+function injectBreathingStyles(css) {
+  if (!breathStyleEl) {
+    breathStyleEl = document.createElement('style');
+    breathStyleEl.id = 'dive-breathing-keyframes';
+    document.head.appendChild(breathStyleEl);
+  }
+  breathStyleEl.textContent = css;
+}
+
+// ===== JELLYFISH OBJECT (Ocean) =====
+function JellyfishObject({ cycleDuration, technique, params }) {
+  const styleRef = useRef(null);
+  useEffect(() => {
+    const { keyframesCSS } = generateJellyfishKeyframes(technique, params);
+    injectBreathingStyles(keyframesCSS);
+  }, [technique, params]);
+
+  return (
+    <div style={{
+      width: 'min(55vw, 220px)',
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+      animation: `jellyfish-breathe ${cycleDuration}s cubic-bezier(0.35, 0, 0.25, 1) infinite`,
+    }}>
+      {/* Bell (dome) */}
+      <div style={{
+        width: '100%', aspectRatio: '1 / 0.7',
+        borderRadius: '50% 50% 40% 40%',
+        background: 'radial-gradient(ellipse at 40% 30%, rgba(94,170,168,0.35) 0%, rgba(94,170,168,0.12) 50%, rgba(94,170,168,0.04) 80%, transparent 100%)',
+        boxShadow: '0 0 60px rgba(94,170,168,0.12), 0 0 120px rgba(94,170,168,0.06), inset 0 -20px 40px rgba(94,170,168,0.08)',
+        border: '1px solid rgba(94,170,168,0.08)',
+        position: 'relative',
+      }}>
+        {/* Inner glow */}
+        <div style={{
+          position:'absolute', top:'25%', left:'35%', width:'30%', height:'30%',
+          borderRadius:'50%', background:'rgba(94,170,168,0.15)', filter:'blur(12px)',
+        }} />
+      </div>
+      {/* Tentacles */}
+      <div style={{ display:'flex', justifyContent:'center', gap:6, marginTop:-4 }}>
+        {[
+          { dur:'3.2s', h:45, delay:'0s' },
+          { dur:'2.8s', h:55, delay:'-0.5s' },
+          { dur:'3.5s', h:60, delay:'-1.2s' },
+          { dur:'2.6s', h:50, delay:'-0.8s' },
+          { dur:'3.0s', h:42, delay:'-1.5s' },
+        ].map((tn, i) => (
+          <div key={i} style={{
+            width: 1.5, height: tn.h,
+            background: 'linear-gradient(180deg, rgba(94,170,168,0.15) 0%, rgba(94,170,168,0.03) 100%)',
+            borderRadius: '0 0 1px 1px',
+            transformOrigin: 'top center',
+            animation: `tentacle-sway ${tn.dur} ease-in-out infinite alternate`,
+            animationDelay: tn.delay,
+          }} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ===== PULSAR OBJECT (Space) =====
+function PulsarObject({ cycleDuration, technique, params }) {
+  useEffect(() => {
+    const { keyframesCSS: ringCSS } = generateRingPulseKeyframes(technique, params);
+    const { keyframesCSS: coreCSS } = generatePulsarCoreKeyframes(technique, params);
+    injectBreathingStyles(ringCSS + ' ' + coreCSS);
+  }, [technique, params]);
+
+  return (
+    <div style={{
+      width: 'min(65vw, 260px)', aspectRatio: '1',
+      position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+      {/* Ring 3 (outermost) */}
+      <div style={{
+        position:'absolute', borderRadius:'50%',
+        border:'1px solid rgba(139,126,200,0.04)',
+        top:'50%', left:'50%', width:'90%', height:'90%',
+        transform:'translate(-50%,-50%) scale(1)',
+        animation: `ring-pulse ${cycleDuration}s cubic-bezier(0.35, 0, 0.25, 1) infinite`,
+        animationDelay: `${cycleDuration * -0.3}s`,
+      }} />
+      {/* Ring 2 */}
+      <div style={{
+        position:'absolute', borderRadius:'50%',
+        border:'1px solid rgba(139,126,200,0.07)',
+        top:'50%', left:'50%', width:'60%', height:'60%',
+        transform:'translate(-50%,-50%) scale(1)',
+        animation: `ring-pulse ${cycleDuration}s cubic-bezier(0.35, 0, 0.25, 1) infinite`,
+        animationDelay: `${cycleDuration * -0.15}s`,
+      }} />
+      {/* Ring 1 (innermost) */}
+      <div style={{
+        position:'absolute', borderRadius:'50%',
+        border:'1px solid rgba(139,126,200,0.12)',
+        top:'50%', left:'50%', width:'33%', height:'33%',
+        transform:'translate(-50%,-50%) scale(1)',
+        animation: `ring-pulse ${cycleDuration}s cubic-bezier(0.35, 0, 0.25, 1) infinite`,
+      }} />
+      {/* Core */}
+      <div style={{
+        width:8, height:8, borderRadius:'50%',
+        background:'rgba(139,126,200,0.9)',
+        boxShadow:'0 0 20px rgba(139,126,200,0.6), 0 0 60px rgba(139,126,200,0.3), 0 0 100px rgba(139,126,200,0.15)',
+        animation: `pulsar-core-breathe ${cycleDuration}s cubic-bezier(0.35, 0, 0.25, 1) infinite`,
+        zIndex:3,
+      }} />
+    </div>
+  );
+}
+
+// ===== SUNFLARE OBJECT (Memory) =====
+function SunflareObject({ cycleDuration, technique, params }) {
+  useEffect(() => {
+    const { coreCSS, glowCSS } = generateSunflareKeyframes(technique, params);
+    injectBreathingStyles(coreCSS + ' ' + glowCSS);
+  }, [technique, params]);
+
+  return (
+    <div style={{
+      width: 'min(60vw, 240px)', aspectRatio: '1',
+      position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+      {/* Glow (behind core) */}
+      <div style={{
+        position:'absolute', width:'100%', height:'100%', borderRadius:'50%',
+        background:'radial-gradient(circle, rgba(255,200,120,0.08) 0%, rgba(196,149,106,0.03) 40%, transparent 70%)',
+        filter:'blur(20px)',
+        animation: `sunflare-glow-breathe ${cycleDuration}s cubic-bezier(0.35, 0, 0.25, 1) infinite`,
+        zIndex:1,
+      }} />
+      {/* Core */}
+      <div style={{
+        width:'40%', height:'40%', borderRadius:'50%',
+        background:'radial-gradient(circle, rgba(255,200,120,0.25) 0%, rgba(196,149,106,0.10) 60%, transparent 100%)',
+        filter:'blur(4px)',
+        animation: `sunflare-breathe ${cycleDuration}s cubic-bezier(0.35, 0, 0.25, 1) infinite`,
+        zIndex:2,
+      }} />
+    </div>
+  );
+}
+
+// ===== BREATHING OBJECT (switches by world) =====
+function BreathingObject({ world, cycleDuration, technique, params, currentPhase }) {
+  if (world === 'ocean') return <JellyfishObject cycleDuration={cycleDuration} technique={technique} params={params} />;
+  if (world === 'space') return <PulsarObject cycleDuration={cycleDuration} technique={technique} params={params} />;
+  if (world === 'memory') return <SunflareObject cycleDuration={cycleDuration} technique={technique} params={params} />;
+  return null;
+}
+
+// ===== BREATHING CIRCLE (now uses BreathingObject + phase label below) =====
+function BreathingCircle({ technique, params, elapsed, phaseName, phaseTime, phaseRemaining, t, accentRgb, world }) {
+  const tech = TECHNIQUES[technique];
+  if (!tech) return null;
+  const p = params || tech.defaults;
+  const phases = tech.phases;
+  let cycleDuration = 0;
+  for (const ph of phases) cycleDuration += (p[ph] || tech.defaults[ph] || 4);
+
   const phaseLabel = t[PHASE_LANG_KEY[phaseName]] || phaseName;
   const techLabel = t[TECHNIQUE_LANG_KEY[technique]] || technique;
 
   return (
     <div className="flex flex-col items-center justify-center">
-      <div style={{position:'relative', width:'min(60vw, 240px)', aspectRatio:'1'}}>
-        <div style={{position:'absolute', inset:'-6px', borderRadius:'50%', border:`1px solid rgba(${rgb},0.12)`}} />
-        <div style={{
-          width:'100%', height:'100%', borderRadius:'50%',
-          background: `radial-gradient(circle at 40% 35%, rgba(${rgb},0.25) 0%, rgba(${rgb},0.08) 40%, rgba(12,19,34,0.9) 80%)`,
-          boxShadow: isHold
-            ? `0 0 100px rgba(${rgb},0.18), 0 0 200px rgba(${rgb},0.08)`
-            : `0 0 80px rgba(${rgb},0.10), 0 0 160px rgba(${rgb},0.05)`,
-          transform: `scale(${Math.min(scale, 1.45)})`,
-          transition: `transform 0.3s cubic-bezier(0.4,0,0.2,1), box-shadow 0.5s ease`,
-          display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+      <BreathingObject world={world} cycleDuration={cycleDuration} technique={technique} params={p} currentPhase={phaseName} />
+      {/* Phase info below the object */}
+      <div style={{ textAlign:'center', marginTop:24, zIndex:5 }}>
+        <div className="font-body" style={{
+          fontWeight:500, fontSize:14, letterSpacing:'0.1em', textTransform:'uppercase',
+          color:'rgba(220,225,235,0.7)', marginBottom:4, transition:'opacity 300ms ease',
         }}>
-          <div className="font-body" style={{fontSize:16, fontWeight:500, letterSpacing:'0.08em', textTransform:'uppercase', color:'rgba(255,255,255,0.9)'}}>
-            {phaseLabel}
-          </div>
-          <div className="font-mono" style={{fontSize:36, fontWeight:300, color:'rgba(255,255,255,0.75)', marginTop:4}}>
-            {Math.ceil(phaseRemaining)}
-          </div>
+          {phaseLabel}
         </div>
-      </div>
-      <div className="font-body mt-5" style={{fontSize:13, fontWeight:400, color:'var(--text-2)'}}>
-        {techLabel}
+        <div className="font-mono" style={{
+          fontWeight:300, fontSize:32, color:'rgba(220,225,235,0.5)',
+          fontVariantNumeric:'tabular-nums',
+        }}>
+          {Math.ceil(phaseRemaining)}
+        </div>
+        <div className="font-body" style={{fontSize:13, fontWeight:400, color:'var(--text-2)', marginTop:8}}>
+          {techLabel}
+        </div>
       </div>
     </div>
   );
@@ -1251,7 +1584,8 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
   // Sync voicePlayer with voiceOn state
   useEffect(() => { voicePlayer.enabled = voiceOn; if (!voiceOn) voicePlayer.stop(); }, [voiceOn]);
 
-  // Voice audio: play matching audio for text/bodyscan/visualization segments
+  // Voice audio: play matching audio for text/bodyscan/visualization segments ONLY
+  // NO voice during breathing segments
   const voicePlayedForSegRef = useRef(false);
   useEffect(() => {
     voicePlayedForSegRef.current = false;
@@ -1261,29 +1595,68 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
   useEffect(() => {
     if (!voiceOn || voicePlayedForSegRef.current) return;
     if (!seg || currentLang !== 'en') return;
+
+    // NO audio during breathing — complete silence, only ambient
+    if (seg.type === 'breathing') {
+      ambientRef.current?.unduck();
+      return;
+    }
+
     let audioKey = null;
     if (seg.type === 'text') {
-      if (seg.text === t.sitDown) audioKey = 'intro_sit';
-      else if (seg.text === t.sleepEnd) audioKey = 'session_end_sleep';
-      else if (seg.text === t.openEyes) audioKey = 'session_end';
-    } else if (seg.type === 'bodyscan') {
-      audioKey = 'bodyscan_full';
-    } else if (seg.type === 'visualization') {
-      if (world === 'ocean') audioKey = 'vis_ocean_calm';
-      else if (world === 'space') audioKey = 'vis_space_calm';
-      else audioKey = 'vis_memory_calm';
-    }
-    if (audioKey) {
-      voicePlayedForSegRef.current = true;
-      const a = voicePlayer.play(audioKey, 0.85);
-      if (a && ambientRef.current) {
-        ambientRef.current.duck();
-        a.onended = () => { ambientRef.current?.unduck(); };
-        a.onerror = () => { ambientRef.current?.unduck(); };
+      // Map textKey or fallback to text content matching
+      if (seg.textKey) {
+        audioKey = mapTextToAudio(seg.textKey);
+      } else {
+        if (seg.text === t.sitDown) audioKey = 'intro_sit';
+        else if (seg.text === t.sleepEnd) audioKey = 'session_end_sleep';
+        else if (seg.text === t.openEyes) audioKey = 'session_end';
       }
-      // Fade out 2 sec before segment ends
-      const fadeTimeout = setTimeout(() => { voicePlayer.fadeOut(2000); }, Math.max(0, (seg.duration - 2) * 1000));
-      return () => clearTimeout(fadeTimeout);
+    } else if (seg.type === 'bodyscan') {
+      audioKey = seg.scanType === 'sleep' ? 'bodyscan_sleep' :
+                 seg.scanType === 'short' ? 'bodyscan_short' : 'bodyscan_full';
+    } else if (seg.type === 'visualization') {
+      audioKey = `vis_${world}_calm`;
+    }
+
+    if (audioKey && AUDIO_MAP[audioKey]) {
+      voicePlayedForSegRef.current = true;
+      // 1.5 second silence gap before voice starts
+      const silenceTimeout = setTimeout(() => {
+        ambientRef.current?.duck();
+        // Play at volume 0 then fade in
+        const a = voicePlayer.play(audioKey, 0);
+        if (a) {
+          // Fade in over 0.5s
+          let vol = 0;
+          const fadeInInterval = setInterval(() => {
+            vol += 0.05;
+            if (vol >= 0.85) { vol = 0.85; clearInterval(fadeInInterval); }
+            try { a.volume = vol; } catch {}
+          }, 30);
+          a.onended = () => { ambientRef.current?.unduck(); };
+          a.onerror = () => { ambientRef.current?.unduck(); };
+
+          // Schedule fade out 2 seconds before segment ends (1.5s fade duration)
+          const fadeOutTime = Math.max(0, (seg.duration - 2) * 1000 - 1500);
+          const fadeOutTimeout = setTimeout(() => {
+            voicePlayer.fadeOut(1500);
+            ambientRef.current?.unduck();
+          }, fadeOutTime);
+
+          // store for cleanup
+          a._fadeOutTimeout = fadeOutTimeout;
+          a._fadeInInterval = fadeInInterval;
+        }
+      }, 1500);
+
+      return () => {
+        clearTimeout(silenceTimeout);
+        if (voicePlayer.current) {
+          clearTimeout(voicePlayer.current._fadeOutTimeout);
+          clearInterval(voicePlayer.current._fadeInInterval);
+        }
+      };
     }
   }, [segIdx, seg, voiceOn, currentLang, world]);
 
@@ -1316,38 +1689,10 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
     setPhaseName(currentPhase);
     setPhaseRemaining(remaining);
 
-    // Play technique intro audio once at start of breathing segment
-    if (!breathIntroPlayedRef.current && currentLang === 'en' && voiceOn) {
-      breathIntroPlayedRef.current = true;
-      const techKey = seg.technique === 'physiological_sigh' ? 'sigh' : seg.technique;
-      const introKey = `${techKey}_intro`;
-      if (AUDIO_MAP[introKey]) {
-        const a = voicePlayer.play(introKey, 0.8);
-        if (a && ambientRef.current) {
-          ambientRef.current.duck();
-          a.onended = () => { ambientRef.current?.unduck(); };
-          a.onerror = () => { ambientRef.current?.unduck(); };
-        }
-      }
-    }
-
-    // Play phase audio cues (only first 2 cycles, only English)
+    // NO voice audio during breathing — only visual + phase label
+    // Phase change haptic only
     if (currentPhase !== lastPhaseRef.current) {
       lastPhaseRef.current = currentPhase;
-      if (currentCycle < 2 && currentLang === 'en' && voiceOn) {
-        const techKey = seg.technique === 'physiological_sigh' ? 'sigh' : seg.technique;
-        // Map phase names to audio key suffixes
-        const phaseAudioMap = {
-          inhale: 'inhale', exhale: 'exhale', holdIn: 'hold', holdOut: 'pause',
-          belly: 'belly', ribs: 'ribs', chest: 'chest',
-          inhale1: 'inhale', inhale2: 'inhale', pause: 'pause'
-        };
-        const phaseSuffix = phaseAudioMap[currentPhase] || currentPhase;
-        const audioKey = `${techKey}_cue_${phaseSuffix}`;
-        if (AUDIO_MAP[audioKey]) {
-          voicePlayer.play(audioKey, 0.8);
-        }
-      }
       // Haptic
       if (navigator.vibrate) {
         try { navigator.vibrate(currentPhase === 'exhale' ? 150 : 80); } catch {}
@@ -1369,7 +1714,8 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
       for (let i = 0; i < seg.parts.length; i++) { acc += seg.parts[i].hold; if (segElapsed < acc) { setBodyScanIdx(i); return; } }
       setBodyScanIdx(seg.parts.length - 1);
     } else if (bodyScanSentences.length > 0) {
-      const holdPerSentence = seg.duration / bodyScanSentences.length;
+      // Crossfade every 5 seconds as per spec
+      const holdPerSentence = 5;
       const idx = Math.min(Math.floor(segElapsed / holdPerSentence), bodyScanSentences.length - 1);
       setBodyScanIdx(idx);
     }
@@ -1415,7 +1761,7 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
         return (
           <div className="flex-1 flex flex-col items-center justify-center">
             <div className={isTextSegment ? 'circle-hidden' : 'circle-visible'}>
-              <BreathingCircle technique={seg.technique} params={seg.params || TECHNIQUES[seg.technique]?.defaults} elapsed={segElapsed} phaseName={phaseName} phaseTime={0} phaseRemaining={phaseRemaining} t={t} accentRgb={accentRgb} />
+              <BreathingCircle technique={seg.technique} params={seg.params || TECHNIQUES[seg.technique]?.defaults} elapsed={segElapsed} phaseName={phaseName} phaseTime={0} phaseRemaining={phaseRemaining} t={t} accentRgb={accentRgb} world={world} />
             </div>
             {subInstruction && (
               <div className="font-body text-center mt-5 px-8" style={{fontSize:13,fontWeight:300,color:'var(--text-2)',maxWidth:280,lineHeight:1.6}}>
