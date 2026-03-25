@@ -87,6 +87,14 @@ html[lang="zh"] body, html[lang="zh"] #root { font-family:'Noto Sans SC','DM San
 .circle-hidden { opacity: 0; transform: scale(0.7); transition: opacity 500ms ease, transform 500ms ease; }
 .circle-visible { opacity: 1; transform: scale(1); transition: opacity 500ms ease, transform 500ms ease; transition-delay: 300ms; }
 .text-fade-out { opacity: 0; filter: blur(3px); transition: opacity 400ms ease, filter 400ms ease; }
+.session-text-container {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  display: flex; align-items: center; justify-content: center;
+  z-index: 20; pointer-events: none;
+}
+.bodyscan-crossfade {
+  transition: opacity 400ms ease;
+}
 </style>
 </head>
 <body>
@@ -150,12 +158,12 @@ const LANG = {
     onb4title:'3 programs',onb4sub:'Step-by-step learning',onb4desc:'First Dive. Stress Shield. Deep Focus. With video coaching.',
     paywallFeatures:['20 scenarios for every situation','3 programs with video lessons','All 7 breathing techniques','3 visual worlds','No ads'],
     morningIntro:'Good morning. Five minutes of breathing before coffee. Your body will wake up faster.',
-    overloadIntro:'Put your phone down. Close extra tabs. Close your eyes.',
+    overloadIntro:'Five minutes. Zero input. Just you and your breath.',
     conflictIntro:'Stop. Before replaying it in your head — breathe. Adrenaline leaves your blood in 3 to 5 minutes. Let it pass.',
     deadlineIntro:'Three minutes. Then back to the task. But calmly.',
     trafficIntro:'Eyes open, hands on the wheel. Only breathing.',
     sleepIntro:'Lie on your back. Cover yourself. Close your eyes. Nothing to do. Just follow the breath.',
-    focusIntro:'Put your phone away. Close your eyes. For the next five minutes — zero incoming information.',
+    focusIntro:'Close your eyes when you are ready. For the next five minutes — only breathing.',
     decisionIntro:'Important decisions come from calm, not anxiety. Give yourself five minutes.',
     workoutIntro:'Activating your body. Mobilizing resources.',
     postWorkoutIntro:'Workout done. Switching your body to recovery mode.',
@@ -217,12 +225,12 @@ const LANG = {
     onb4title:'3 программы',onb4sub:'Пошаговое обучение',onb4desc:'Первое погружение. Стресс-щит. Глубокий фокус. С видео-уроками тренера.',
     paywallFeatures:['20 сценариев на все случаи жизни','3 программы с видео-уроками','Все 7 техник дыхания','3 визуальных мира','Без рекламы'],
     morningIntro:'Доброе утро. Перед кофе — 5 минут дыхания. Тело проснётся быстрее.',
-    overloadIntro:'Отложите телефон. Закройте лишние вкладки. Закройте глаза.',
+    overloadIntro:'Пять минут. Ноль входящей информации. Только вы и дыхание.',
     conflictIntro:'Стоп. Прежде чем прокручивать — продышите. Адреналин уходит за 3-5 минут.',
     deadlineIntro:'Три минуты. Потом к задаче. Но спокойно.',
     trafficIntro:'Глаза открыты, руки на руле. Только дыхание.',
     sleepIntro:'Лягте на спину. Накройтесь. Закройте глаза. Просто следуйте за дыханием.',
-    focusIntro:'Отложите телефон. Закройте глаза. Ноль входящей информации.',
+    focusIntro:'Закройте глаза, когда будете готовы. Следующие пять минут — только дыхание.',
     decisionIntro:'Важные решения — из спокойствия, не из тревоги. Дайте себе 5 минут.',
     workoutIntro:'Активируем тело. Мобилизуем ресурсы.',
     postWorkoutIntro:'Тренировка окончена. Переключаем тело в восстановление.',
@@ -280,12 +288,12 @@ const LANG = {
     onb4title:'3个课程',onb4sub:'循序渐进学习',onb4desc:'初次沉浸。压力护盾。深度专注。含教练视频。',
     paywallFeatures:['20种场景','3个视频课程','全部7种呼吸技巧','3个视觉世界','无广告'],
     morningIntro:'早安。咖啡之前五分钟呼吸。身体会更快醒来。',
-    overloadIntro:'放下手机。关闭多余标签。闭上眼睛。',
+    overloadIntro:'五分钟。零输入。只有你和呼吸。',
     conflictIntro:'停。在脑中重播之前——先呼吸。肾上腺素3到5分钟就会消退。',
     deadlineIntro:'三分钟。然后回到任务。但要平静。',
     trafficIntro:'睁开眼，手握方向盘。只有呼吸。',
     sleepIntro:'仰卧。盖好被子。闭眼。什么都不用做。跟随呼吸。',
-    focusIntro:'放下手机。闭眼。接下来五分钟零信息输入。',
+    focusIntro:'准备好就闭上眼睛。接下来五分钟只有呼吸。',
     decisionIntro:'重要决定来自平静，不是焦虑。给自己五分钟。',
     workoutIntro:'激活身体。调动资源。',
     postWorkoutIntro:'训练结束。切换到恢复模式。',
@@ -343,12 +351,12 @@ const LANG = {
     onb4title:'3 برامج',onb4sub:'تعلّم خطوة بخطوة',onb4desc:'الغوصة الأولى. درع التوتر. تركيز عميق. مع فيديو المدرب.',
     paywallFeatures:['20 سيناريو','3 برامج فيديو','كل التقنيات السبع','3 عوالم بصرية','بلا إعلانات'],
     morningIntro:'صباح الخير. خمس دقائق تنفس قبل القهوة. جسمك سيستيقظ أسرع.',
-    overloadIntro:'ضع هاتفك. أغلق التبويبات. أغلق عينيك.',
+    overloadIntro:'خمس دقائق. صفر مدخلات. فقط أنت وتنفسك.',
     conflictIntro:'توقف. قبل إعادة التفكير — تنفّس. الأدرينالين يختفي في ٣-٥ دقائق.',
     deadlineIntro:'ثلاث دقائق. ثم عد للمهمة. لكن بهدوء.',
     trafficIntro:'عيون مفتوحة، يدان على المقود. فقط التنفس.',
     sleepIntro:'استلقِ. تغطّ. أغلق عينيك. فقط تابع التنفس.',
-    focusIntro:'ضع الهاتف. أغلق عينيك. صفر معلومات واردة.',
+    focusIntro:'أغلق عينيك عندما تكون مستعداً. الدقائق الخمس القادمة — فقط التنفس.',
     decisionIntro:'القرارات المهمة تأتي من الهدوء. امنح نفسك خمس دقائق.',
     workoutIntro:'تنشيط الجسم. تعبئة الموارد.',
     postWorkoutIntro:'انتهى التمرين. التحول لوضع الاستعادة.',
@@ -729,7 +737,7 @@ const PROGRAMS = {
     id: 'first_dive', days: 5, free: false, trialDay: 1,
     sessions: [
       [
-        { type:'video', duration:60, src:'', placeholder:'Видео тренера: Дмитрий Власов — Диафрагмальное дыхание' },
+        { type:'video', duration:0, src:'', textKey:'videoComingSoon' },
         { type:'text', duration:15, text:'Сядьте удобно. Спина прямая, но без напряжения. Положите одну руку на живот, другую на грудь.' },
         { type:'breathing', technique:'diaphragmatic', duration:90, params:{inhale:4,exhale:8}, hint:'Вдох — живот идёт вперёд. Выдох — живот мягко внутрь.' },
         { type:'text', duration:15, text:'Обратите внимание: грудь почти не двигается. Всю работу делает диафрагма — мышца под лёгкими.' },
@@ -737,7 +745,7 @@ const PROGRAMS = {
         { type:'text', duration:10, text:'Отлично. Первое погружение завершено. Завтра — квадратное дыхание.' },
       ],
       [
-        { type:'video', duration:50, src:'', placeholder:'Видео тренера: Box Breathing — техника Navy SEALs' },
+        { type:'video', duration:0, src:'', textKey:'videoComingSoon' },
         { type:'text', duration:10, text:'Найдите удобное положение. Закройте глаза.' },
         { type:'breathing', technique:'tidal', duration:60, params:{inhale:4,exhale:5,pause:2}, hint:'Начнём с обычного спокойного дыхания. Настраиваемся.' },
         { type:'breathing', technique:'box', duration:160, params:{inhale:4,holdIn:4,exhale:4,holdOut:4}, hint:'Вдох на 4 — задержите на 4 — выдох на 4 — пауза на 4. Рисуете квадрат дыханием.' },
@@ -746,7 +754,7 @@ const PROGRAMS = {
         { type:'text', duration:10, text:'Квадрат освоен. Завтра — трёхфазное дыхание.' },
       ],
       [
-        { type:'video', duration:60, src:'', placeholder:'Видео тренера: Трёхфазное дыхание фридайверов' },
+        { type:'video', duration:0, src:'', textKey:'videoComingSoon' },
         { type:'text', duration:10, text:'Сядьте прямо. Руки свободно на коленях.' },
         { type:'breathing', technique:'segmented', duration:120, params:{belly:3,ribs:3,chest:3,exhale:8}, hint:'Живот... рёбра... грудь... и мягкий длинный выдох. Три этажа вверх, лифт вниз.' },
         { type:'text', duration:20, text:'Не форсируйте. Если грудной отдел «не хочет» — ничего страшного. Гибкость придёт с практикой.' },
@@ -754,7 +762,7 @@ const PROGRAMS = {
         { type:'text', duration:10, text:'Три этажа освоены. Завтра — океанское дыхание.' },
       ],
       [
-        { type:'video', duration:60, src:'', placeholder:'Видео тренера: Ujjayi — океанское дыхание' },
+        { type:'video', duration:0, src:'', textKey:'videoComingSoon' },
         { type:'text', duration:15, text:'Попробуйте: откройте рот и выдохните — «хааа». Теперь закройте рот и сделайте то же через нос. Слышите мягкий звук?' },
         { type:'breathing', technique:'ujjayi', duration:120, params:{inhale:5,exhale:8}, hint:'Вдох через нос — звук океана. Выдох через нос — звук прибоя.' },
         { type:'bodyscan', duration:60, parts:[
@@ -764,7 +772,7 @@ const PROGRAMS = {
         { type:'text', duration:10, text:'Вы слышите свой внутренний океан. Завтра — финальное погружение.' },
       ],
       [
-        { type:'video', duration:50, src:'', placeholder:'Видео тренера: Финальное погружение — все техники' },
+        { type:'video', duration:0, src:'', textKey:'videoComingSoon' },
         { type:'text', duration:10, text:'Закройте глаза. Расслабьте лицо. Отпустите плечи.' },
         { type:'breathing', technique:'diaphragmatic', duration:60, params:{inhale:4,exhale:8} },
         { type:'breathing', technique:'box', duration:96, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
@@ -783,7 +791,7 @@ const PROGRAMS = {
     id: 'stress_shield', days: 7, free: false, trialDay: 1,
     sessions: [
       [
-        { type:'video', duration:40, src:'', placeholder:'Видео: Стресс — это про тело. Физиологический вздох.' },
+        { type:'video', duration:0, src:'', textKey:'videoComingSoon' },
         { type:'breathing', technique:'physiological_sigh', duration:90, params:{inhale1:2,inhale2:1,exhale:7} },
         { type:'breathing', technique:'diaphragmatic', duration:120, params:{inhale:5,exhale:10} },
         { type:'bodyscan', duration:60, parts:[
@@ -791,7 +799,7 @@ const PROGRAMS = {
         ]},
       ],
       [
-        { type:'video', duration:40, src:'', placeholder:'Видео: Учимся замедляться' },
+        { type:'video', duration:0, src:'', textKey:'videoComingSoon' },
         { type:'breathing', technique:'tidal', duration:90, params:{inhale:4,exhale:6,pause:2} },
         { type:'breathing', technique:'diaphragmatic', duration:120, params:{inhale:4,exhale:12} },
         { type:'bodyscan', duration:90, parts:[
@@ -799,13 +807,13 @@ const PROGRAMS = {
         ]},
       ],
       [
-        { type:'video', duration:40, src:'', placeholder:'Видео: Контроль в дискомфорте' },
+        { type:'video', duration:0, src:'', textKey:'videoComingSoon' },
         { type:'breathing', technique:'tidal', duration:60, params:{inhale:4,exhale:6,pause:2} },
         { type:'breathing', technique:'box', duration:120, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
         { type:'breathing', technique:'box', duration:120, params:{inhale:4,holdIn:6,exhale:4,holdOut:6} },
       ],
       [
-        { type:'video', duration:40, src:'', placeholder:'Видео: Блуждающий нерв — ваш антистресс' },
+        { type:'video', duration:0, src:'', textKey:'videoComingSoon' },
         { type:'breathing', technique:'diaphragmatic', duration:60, params:{inhale:5,exhale:10} },
         { type:'breathing', technique:'ujjayi', duration:180, params:{inhale:5,exhale:8} },
         { type:'bodyscan', duration:60, parts:[
@@ -813,7 +821,7 @@ const PROGRAMS = {
         ]},
       ],
       [
-        { type:'video', duration:40, src:'', placeholder:'Видео: Визуальная броня' },
+        { type:'video', duration:0, src:'', textKey:'videoComingSoon' },
         { type:'breathing', technique:'box', duration:90, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
         { type:'visualization', duration:40, texts:{
           ocean:'Представьте ситуацию стресса. Увидьте её чётко. Вы наблюдаете со стороны. Как фридайвер смотрит на глубину перед нырком — спокойно.',
@@ -824,7 +832,7 @@ const PROGRAMS = {
         { type:'text', duration:10, text:'Стресс не исчез. Но вы выбрали, как на него реагировать.' },
       ],
       [
-        { type:'video', duration:40, src:'', placeholder:'Видео: Полный антистресс-протокол' },
+        { type:'video', duration:0, src:'', textKey:'videoComingSoon' },
         { type:'breathing', technique:'physiological_sigh', duration:60, params:{inhale1:2,inhale2:1,exhale:7} },
         { type:'breathing', technique:'diaphragmatic', duration:90, params:{inhale:5,exhale:10} },
         { type:'breathing', technique:'box', duration:90, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
@@ -834,7 +842,7 @@ const PROGRAMS = {
         ]},
       ],
       [
-        { type:'video', duration:40, src:'', placeholder:'Видео: Щит на автомате — без подсказок' },
+        { type:'video', duration:0, src:'', textKey:'videoComingSoon' },
         { type:'breathing', technique:'tidal', duration:60, params:{inhale:4,exhale:6,pause:2} },
         { type:'breathing', technique:'physiological_sigh', duration:60, params:{inhale1:2,inhale2:1,exhale:7} },
         { type:'breathing', technique:'diaphragmatic', duration:90, params:{inhale:5,exhale:10} },
@@ -850,30 +858,30 @@ const PROGRAMS = {
     id: 'deep_focus', days: 5, free: false, trialDay: 1,
     sessions: [
       [
-        { type:'video', duration:40, src:'', placeholder:'Видео: Фокус начинается с внимания' },
+        { type:'video', duration:0, src:'', textKey:'videoComingSoon' },
         { type:'breathing', technique:'tidal', duration:180, params:{inhale:4,exhale:6,pause:2}, hint:'Считайте вдохи от 1 до 10, потом сначала.' },
         { type:'breathing', technique:'box', duration:90, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
       ],
       [
-        { type:'video', duration:40, src:'', placeholder:'Видео: Box breathing — тренажёр внимания' },
+        { type:'video', duration:0, src:'', textKey:'videoComingSoon' },
         { type:'breathing', technique:'box', duration:120, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
         { type:'breathing', technique:'box', duration:120, params:{inhale:5,holdIn:5,exhale:5,holdOut:5} },
         { type:'text', duration:20, text:'Когда ум отвлекается — вы теряете счёт. Когда вы в фокусе — счёт идёт автоматически.' },
       ],
       [
-        { type:'video', duration:40, src:'', placeholder:'Видео: Сегментированное дыхание — максимальная осознанность' },
+        { type:'video', duration:0, src:'', textKey:'videoComingSoon' },
         { type:'breathing', technique:'segmented', duration:180, params:{belly:3,ribs:3,chest:3,exhale:8} },
         { type:'breathing', technique:'diaphragmatic', duration:90, params:{inhale:5,exhale:10} },
         { type:'text', duration:20, text:'Способность изолировать внимание на одной зоне тела переносится на способность изолировать внимание на одной задаче.' },
       ],
       [
-        { type:'video', duration:40, src:'', placeholder:'Видео: Фокус под давлением — удлинённые задержки' },
+        { type:'video', duration:0, src:'', textKey:'videoComingSoon' },
         { type:'breathing', technique:'box', duration:120, params:{inhale:4,holdIn:6,exhale:4,holdOut:6} },
         { type:'breathing', technique:'box', duration:120, params:{inhale:4,holdIn:8,exhale:4,holdOut:8} },
         { type:'breathing', technique:'ujjayi', duration:90, params:{inhale:5,exhale:8} },
       ],
       [
-        { type:'video', duration:40, src:'', placeholder:'Видео: Состояние потока' },
+        { type:'video', duration:0, src:'', textKey:'videoComingSoon' },
         { type:'breathing', technique:'tidal', duration:60, params:{inhale:4,exhale:6,pause:2} },
         { type:'breathing', technique:'segmented', duration:90, params:{belly:3,ribs:3,chest:3,exhale:8} },
         { type:'breathing', technique:'ujjayi', duration:180, params:{inhale:6,exhale:12} },
@@ -1176,18 +1184,18 @@ function generateBreathingKeyframes(technique, params) {
 
     if (phase === 'inhale' || phase === 'inhale1' || phase === 'belly') {
       kf.push(`${startPct.toFixed(2)}% { transform: scale(1); }`);
-      kf.push(`${endPct.toFixed(2)}% { transform: scale(1.45); }`);
+      kf.push(`${endPct.toFixed(2)}% { transform: scale(1.5); }`);
     } else if (phase === 'inhale2' || phase === 'ribs') {
       kf.push(`${startPct.toFixed(2)}% { transform: scale(1.15); }`);
       kf.push(`${endPct.toFixed(2)}% { transform: scale(1.3); }`);
     } else if (phase === 'chest') {
       kf.push(`${startPct.toFixed(2)}% { transform: scale(1.3); }`);
-      kf.push(`${endPct.toFixed(2)}% { transform: scale(1.45); }`);
+      kf.push(`${endPct.toFixed(2)}% { transform: scale(1.5); }`);
     } else if (phase === 'holdIn' || phase === 'hold') {
-      kf.push(`${startPct.toFixed(2)}% { transform: scale(1.45); }`);
-      kf.push(`${endPct.toFixed(2)}% { transform: scale(1.45); }`);
+      kf.push(`${startPct.toFixed(2)}% { transform: scale(1.5); }`);
+      kf.push(`${endPct.toFixed(2)}% { transform: scale(1.5); }`);
     } else if (phase === 'exhale') {
-      kf.push(`${startPct.toFixed(2)}% { transform: scale(1.45); }`);
+      kf.push(`${startPct.toFixed(2)}% { transform: scale(1.5); }`);
       kf.push(`${endPct.toFixed(2)}% { transform: scale(1); }`);
     } else if (phase === 'holdOut' || phase === 'pause') {
       kf.push(`${startPct.toFixed(2)}% { transform: scale(1); }`);
@@ -1367,53 +1375,40 @@ function injectBreathingStyles(css) {
   breathStyleEl.textContent = css;
 }
 
-// ===== JELLYFISH OBJECT (Ocean) =====
-function JellyfishObject({ cycleDuration, technique, params }) {
-  const styleRef = useRef(null);
+// ===== OCEAN BUBBLE OBJECT (Ocean) =====
+function OceanBubble({ cycleDuration, technique, params }) {
   useEffect(() => {
-    const { keyframesCSS } = generateJellyfishKeyframes(technique, params);
+    const { keyframesCSS } = generateBreathingKeyframes(technique, params);
     injectBreathingStyles(keyframesCSS);
   }, [technique, params]);
 
   return (
     <div style={{
-      width: 'min(55vw, 220px)',
-      display: 'flex', flexDirection: 'column', alignItems: 'center',
-      animation: `jellyfish-breathe ${cycleDuration}s cubic-bezier(0.35, 0, 0.25, 1) infinite`,
+      width: 'min(80vw, 320px)', aspectRatio: '1',
+      position: 'absolute', top: '45%', left: '50%',
+      transform: 'translate(-50%, -50%)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
-      {/* Bell (dome) */}
       <div style={{
-        width: '100%', aspectRatio: '1 / 0.7',
-        borderRadius: '50% 50% 40% 40%',
-        background: 'radial-gradient(ellipse at 40% 30%, rgba(94,170,168,0.35) 0%, rgba(94,170,168,0.12) 50%, rgba(94,170,168,0.04) 80%, transparent 100%)',
-        boxShadow: '0 0 60px rgba(94,170,168,0.12), 0 0 120px rgba(94,170,168,0.06), inset 0 -20px 40px rgba(94,170,168,0.08)',
-        border: '1px solid rgba(94,170,168,0.08)',
+        width: '100%', height: '100%', borderRadius: '50%',
+        background: 'radial-gradient(circle at 40% 35%, rgba(94,170,168,0.10) 0%, rgba(94,170,168,0.04) 40%, transparent 70%)',
+        border: '1.5px solid rgba(255,255,255,0.12)',
+        boxShadow: '0 0 80px rgba(94,170,168,0.15), 0 0 160px rgba(94,170,168,0.08), inset 0 0 60px rgba(94,170,168,0.06)',
         position: 'relative',
+        animation: `breathe-cycle ${cycleDuration}s cubic-bezier(0.35, 0, 0.25, 1) infinite`,
       }}>
-        {/* Inner glow */}
+        {/* Top-left highlight */}
         <div style={{
-          position:'absolute', top:'25%', left:'35%', width:'30%', height:'30%',
-          borderRadius:'50%', background:'rgba(94,170,168,0.15)', filter:'blur(12px)',
+          content: '""', position: 'absolute', top: '15%', left: '20%',
+          width: '25%', height: '20%', borderRadius: '50%',
+          background: 'rgba(255,255,255,0.12)', filter: 'blur(8px)',
         }} />
-      </div>
-      {/* Tentacles */}
-      <div style={{ display:'flex', justifyContent:'center', gap:6, marginTop:-4 }}>
-        {[
-          { dur:'3.2s', h:45, delay:'0s' },
-          { dur:'2.8s', h:55, delay:'-0.5s' },
-          { dur:'3.5s', h:60, delay:'-1.2s' },
-          { dur:'2.6s', h:50, delay:'-0.8s' },
-          { dur:'3.0s', h:42, delay:'-1.5s' },
-        ].map((tn, i) => (
-          <div key={i} style={{
-            width: 1.5, height: tn.h,
-            background: 'linear-gradient(180deg, rgba(94,170,168,0.15) 0%, rgba(94,170,168,0.03) 100%)',
-            borderRadius: '0 0 1px 1px',
-            transformOrigin: 'top center',
-            animation: `tentacle-sway ${tn.dur} ease-in-out infinite alternate`,
-            animationDelay: tn.delay,
-          }} />
-        ))}
+        {/* Bottom-right secondary reflection */}
+        <div style={{
+          content: '""', position: 'absolute', bottom: '18%', right: '22%',
+          width: '18%', height: '14%', borderRadius: '50%',
+          background: 'rgba(255,255,255,0.06)', filter: 'blur(6px)',
+        }} />
       </div>
     </div>
   );
@@ -1429,14 +1424,17 @@ function PulsarObject({ cycleDuration, technique, params }) {
 
   return (
     <div style={{
-      width: 'min(65vw, 260px)', aspectRatio: '1',
-      position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      width: 'min(80vw, 320px)', aspectRatio: '1',
+      position: 'absolute', top: '45%', left: '50%',
+      transform: 'translate(-50%, -50%)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
       {/* Ring 3 (outermost) */}
       <div style={{
         position:'absolute', borderRadius:'50%',
-        border:'1px solid rgba(139,126,200,0.04)',
-        top:'50%', left:'50%', width:'90%', height:'90%',
+        border:'1px solid rgba(139,126,200,0.10)',
+        boxShadow:'0 0 20px rgba(139,126,200,0.04)',
+        top:'50%', left:'50%', width:'92%', height:'92%',
         transform:'translate(-50%,-50%) scale(1)',
         animation: `ring-pulse ${cycleDuration}s cubic-bezier(0.35, 0, 0.25, 1) infinite`,
         animationDelay: `${cycleDuration * -0.3}s`,
@@ -1444,8 +1442,9 @@ function PulsarObject({ cycleDuration, technique, params }) {
       {/* Ring 2 */}
       <div style={{
         position:'absolute', borderRadius:'50%',
-        border:'1px solid rgba(139,126,200,0.07)',
-        top:'50%', left:'50%', width:'60%', height:'60%',
+        border:'1.5px solid rgba(139,126,200,0.15)',
+        boxShadow:'0 0 15px rgba(139,126,200,0.06)',
+        top:'50%', left:'50%', width:'65%', height:'65%',
         transform:'translate(-50%,-50%) scale(1)',
         animation: `ring-pulse ${cycleDuration}s cubic-bezier(0.35, 0, 0.25, 1) infinite`,
         animationDelay: `${cycleDuration * -0.15}s`,
@@ -1453,16 +1452,17 @@ function PulsarObject({ cycleDuration, technique, params }) {
       {/* Ring 1 (innermost) */}
       <div style={{
         position:'absolute', borderRadius:'50%',
-        border:'1px solid rgba(139,126,200,0.12)',
-        top:'50%', left:'50%', width:'33%', height:'33%',
+        border:'1.5px solid rgba(139,126,200,0.25)',
+        boxShadow:'0 0 12px rgba(139,126,200,0.08)',
+        top:'50%', left:'50%', width:'40%', height:'40%',
         transform:'translate(-50%,-50%) scale(1)',
         animation: `ring-pulse ${cycleDuration}s cubic-bezier(0.35, 0, 0.25, 1) infinite`,
       }} />
       {/* Core */}
       <div style={{
-        width:8, height:8, borderRadius:'50%',
-        background:'rgba(139,126,200,0.9)',
-        boxShadow:'0 0 20px rgba(139,126,200,0.6), 0 0 60px rgba(139,126,200,0.3), 0 0 100px rgba(139,126,200,0.15)',
+        width:24, height:24, borderRadius:'50%',
+        background:'rgba(139,126,200,0.95)',
+        boxShadow:'0 0 30px rgba(139,126,200,0.8), 0 0 80px rgba(139,126,200,0.5), 0 0 120px rgba(139,126,200,0.25)',
         animation: `pulsar-core-breathe ${cycleDuration}s cubic-bezier(0.35, 0, 0.25, 1) infinite`,
         zIndex:3,
       }} />
@@ -1470,43 +1470,44 @@ function PulsarObject({ cycleDuration, technique, params }) {
   );
 }
 
-// ===== SUNFLARE OBJECT (Memory) =====
-function SunflareObject({ cycleDuration, technique, params }) {
+// ===== MEMORY ORB OBJECT (Memory) =====
+function MemoryOrb({ cycleDuration, technique, params }) {
   useEffect(() => {
-    const { coreCSS, glowCSS } = generateSunflareKeyframes(technique, params);
-    injectBreathingStyles(coreCSS + ' ' + glowCSS);
+    const { keyframesCSS } = generateBreathingKeyframes(technique, params);
+    injectBreathingStyles(keyframesCSS);
   }, [technique, params]);
 
   return (
     <div style={{
-      width: 'min(60vw, 240px)', aspectRatio: '1',
-      position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      width: 'min(80vw, 320px)', aspectRatio: '1',
+      position: 'absolute', top: '45%', left: '50%',
+      transform: 'translate(-50%, -50%)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
-      {/* Glow (behind core) */}
       <div style={{
-        position:'absolute', width:'100%', height:'100%', borderRadius:'50%',
-        background:'radial-gradient(circle, rgba(255,200,120,0.08) 0%, rgba(196,149,106,0.03) 40%, transparent 70%)',
-        filter:'blur(20px)',
-        animation: `sunflare-glow-breathe ${cycleDuration}s cubic-bezier(0.35, 0, 0.25, 1) infinite`,
-        zIndex:1,
-      }} />
-      {/* Core */}
-      <div style={{
-        width:'40%', height:'40%', borderRadius:'50%',
-        background:'radial-gradient(circle, rgba(255,200,120,0.25) 0%, rgba(196,149,106,0.10) 60%, transparent 100%)',
-        filter:'blur(4px)',
-        animation: `sunflare-breathe ${cycleDuration}s cubic-bezier(0.35, 0, 0.25, 1) infinite`,
-        zIndex:2,
-      }} />
+        width: '100%', height: '100%', borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(255,200,120,0.30) 0%, rgba(255,200,120,0.10) 40%, transparent 70%)',
+        filter: 'blur(2px)',
+        boxShadow: '0 0 80px rgba(255,200,120,0.15), 0 0 160px rgba(196,149,106,0.08), inset 0 0 60px rgba(255,200,120,0.06)',
+        position: 'relative',
+        animation: `breathe-cycle ${cycleDuration}s cubic-bezier(0.35, 0, 0.25, 1) infinite`,
+      }}>
+        {/* Inner warm spot */}
+        <div style={{
+          position: 'absolute', top: '38%', left: '38%',
+          width: '24%', height: '24%', borderRadius: '50%',
+          background: 'rgba(255,220,150,0.20)', filter: 'blur(10px)',
+        }} />
+      </div>
     </div>
   );
 }
 
 // ===== BREATHING OBJECT (switches by world) =====
 function BreathingObject({ world, cycleDuration, technique, params, currentPhase }) {
-  if (world === 'ocean') return <JellyfishObject cycleDuration={cycleDuration} technique={technique} params={params} />;
+  if (world === 'ocean') return <OceanBubble cycleDuration={cycleDuration} technique={technique} params={params} />;
   if (world === 'space') return <PulsarObject cycleDuration={cycleDuration} technique={technique} params={params} />;
-  if (world === 'memory') return <SunflareObject cycleDuration={cycleDuration} technique={technique} params={params} />;
+  if (world === 'memory') return <MemoryOrb cycleDuration={cycleDuration} technique={technique} params={params} />;
   return null;
 }
 
@@ -1728,6 +1729,11 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
     const tick = (now) => {
       const dt = (now - (lastTimeRef.current || now)) / 1000;
       lastTimeRef.current = now;
+      // duration:0 means user-driven advance (e.g. video placeholder) — skip auto-advance
+      if (seg.duration === 0) {
+        rafRef.current = requestAnimationFrame(tick);
+        return;
+      }
       setSegElapsed(prev => {
         const next = prev + dt;
         if (next >= seg.duration) {
@@ -1777,7 +1783,7 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
         );
       case 'text':
         return (
-          <div className="flex-1 flex items-center justify-center" style={{position:'relative'}}>
+          <div className="session-text-container">
             <div className="session-text-segment">
               <div className="session-text-content text-deblur" key={seg.text?.slice(0,20)}>
                 {seg.text}
@@ -1786,13 +1792,21 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
           </div>
         );
       case 'bodyscan': {
-        const bsText = bodyScanSentences[bodyScanIdx] || '';
         return (
-          <div className="flex-1 flex items-center justify-center" style={{position:'relative'}}>
-            <div className="session-text-segment">
-              <div className="session-text-content text-deblur" key={bodyScanIdx}>
-                {bsText}
-              </div>
+          <div className="session-text-container">
+            <div className="session-text-segment" style={{position:'relative'}}>
+              {bodyScanSentences.map((sentence, idx) => (
+                <div key={idx} className="session-text-content bodyscan-crossfade"
+                  style={{
+                    position: idx === 0 ? 'relative' : 'absolute',
+                    top: idx === 0 ? undefined : '50%', left: idx === 0 ? undefined : '50%',
+                    transform: idx === 0 ? undefined : 'translate(-50%, -50%)',
+                    width: idx === 0 ? undefined : '100%',
+                    opacity: idx === bodyScanIdx ? 1 : 0,
+                  }}>
+                  {sentence}
+                </div>
+              ))}
             </div>
           </div>
         );
@@ -1800,7 +1814,7 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
       case 'visualization': {
         const vText = seg.texts?.[world] || seg.texts?.ocean || '';
         return (
-          <div className="flex-1 flex items-center justify-center" style={{position:'relative'}}>
+          <div className="session-text-container">
             <div className="session-text-segment">
               <div className="session-text-content text-deblur" key={vText?.slice(0,20)}>
                 {vText}
@@ -1810,20 +1824,34 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
         );
       }
       case 'video':
-        // Video placeholder (no real videos yet)
+        // Video placeholder (no real videos yet) — 16:9 aspect ratio
         return (
-          <div className="flex-1 flex flex-col items-center justify-center px-8">
-            <div className="glass p-8 text-center screen-transition" style={{maxWidth:300}}>
-              <div style={{marginBottom:16, color:palette.accent, opacity:0.4}}><Icon name="play_circle" size={48}/></div>
-              <div className="font-body mb-4" style={{fontWeight:400, fontSize:14, color:'var(--text-2)', lineHeight:1.5}}>{t.videoComingSoon}</div>
-              <button className="px-8 py-3 rounded-full font-body"
-                style={{fontWeight:500, fontSize:14, background:`rgba(${accentRgb},0.12)`, border:`1px solid rgba(${accentRgb},0.25)`, color:palette.accent}}
-                onClick={() => {
-                  if (segIdx < segments.length - 1) { setSegIdx(si => si + 1); setSegElapsed(0); setBodyScanIdx(0); }
-                  else onComplete();
-                }}>
-                {t.continueText}
-              </button>
+          <div className="flex-1 flex flex-col items-center justify-center px-6">
+            <div className="screen-transition w-full" style={{maxWidth:340}}>
+              <div style={{
+                width:'100%', aspectRatio:'16/9', borderRadius:16,
+                background:'rgba(255,255,255,0.025)', border:'1px solid rgba(255,255,255,0.06)',
+                display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+                marginBottom:20, position:'relative', overflow:'hidden',
+              }}>
+                <svg width="48" height="48" viewBox="0 0 48 48" fill="none" style={{opacity:0.3, marginBottom:12}}>
+                  <circle cx="24" cy="24" r="23" stroke={palette.accent} strokeWidth="1.5"/>
+                  <path d="M20 16l12 8-12 8V16z" fill={palette.accent} opacity="0.6"/>
+                </svg>
+                <div className="font-body" style={{fontWeight:400, fontSize:13, color:'var(--text-3)', textAlign:'center', padding:'0 24px', lineHeight:1.5}}>
+                  {seg.textKey ? t[seg.textKey] : (seg.placeholder || t.videoComingSoon)}
+                </div>
+              </div>
+              <div style={{textAlign:'center'}}>
+                <button className="px-8 py-3 rounded-full font-body"
+                  style={{fontWeight:500, fontSize:14, background:`rgba(${accentRgb},0.12)`, border:`1px solid rgba(${accentRgb},0.25)`, color:palette.accent}}
+                  onClick={() => {
+                    if (segIdx < segments.length - 1) { setSegIdx(si => si + 1); setSegElapsed(0); setBodyScanIdx(0); }
+                    else onComplete();
+                  }}>
+                  {t.continueText}
+                </button>
+              </div>
             </div>
           </div>
         );
