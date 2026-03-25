@@ -1,0 +1,16 @@
+{
+  "name": "DIVE — Breathe Like a Freediver",
+  "short_name": "DIVE",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#051225",
+  "theme_color": "#051225",
+  "description": "Anti-stress breathing techniques from freedivers",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>🫧</text></svg>",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

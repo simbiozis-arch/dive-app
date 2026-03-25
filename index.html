@@ -1,0 +1,1817 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#051225">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>DIVE — Breathe Like a Freediver</title>
+<link rel="manifest" href="manifest.json">
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@200;300;400;500;600&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html,body,#root { width:100%; height:100%; overflow:hidden; font-family:'DM Sans',sans-serif; }
+:root {
+  --bg-1:#070c15; --bg-2:#0c1322; --bg-3:#111b2e; --bg-4:#182640;
+  --bg-start:#0c1322; --bg-mid:#0a1628; --bg-end:#070c15;
+  --accent:#5eaaa8; --accent-glow:rgba(94,170,168,0.12); --accent-text:#7ec8c8;
+  --glow:rgba(94,170,168,0.12);
+  --card:rgba(255,255,255,0.025); --text:rgba(220,225,235,0.92);
+  --text-2:rgba(220,225,235,0.55); --text-3:rgba(220,225,235,0.30);
+}
+
+@keyframes fade-in { from{opacity:0} to{opacity:1} }
+@keyframes deblur { from{opacity:0;filter:blur(3px)} to{opacity:1;filter:blur(0)} }
+@keyframes rays-appear { from{opacity:0} to{opacity:1} }
+@keyframes count-up { from{opacity:0} to{opacity:1} }
+@keyframes drift { 0%{transform:translateY(100vh);opacity:0} 5%{opacity:var(--peak-opacity)} 95%{opacity:var(--peak-opacity)} 100%{transform:translateY(-5vh);opacity:0} }
+
+.font-display { font-family:'DM Sans',sans-serif; }
+.font-mono { font-family:'JetBrains Mono',monospace; font-variant-numeric:tabular-nums; }
+.font-body { font-family:'DM Sans',sans-serif; }
+
+.screen-transition { animation: fade-in 400ms ease-out; }
+.text-deblur { animation: deblur 500ms ease-out forwards; }
+
+.glass {
+  background: rgba(255,255,255,0.025);
+  border: 1px solid rgba(255,255,255,0.04);
+  border-radius: 14px;
+  padding: 18px 20px;
+  transition: transform 120ms ease, background 120ms ease;
+}
+.glass:active { transform: scale(0.985); background: rgba(255,255,255,0.04); }
+
+.no-scrollbar::-webkit-scrollbar { display:none; }
+.no-scrollbar { -ms-overflow-style:none; scrollbar-width:none; }
+
+/* Single soft light spot per screen */
+.screen-glow {
+  position:fixed; top:-20%; left:-10%; width:60%; height:50%;
+  background: radial-gradient(ellipse, rgba(94,170,168,0.04) 0%, transparent 70%);
+  pointer-events:none; z-index:0;
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback, useMemo, useReducer } = React;
+
+// ===== WORLDS =====
+// SVG icon helper — thin line icons, 24x24, stroke-width 1.5
+const I = (d, size=24) => React.createElement('svg', {width:size,height:size,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:1.5,strokeLinecap:'round',strokeLinejoin:'round'}, ...(Array.isArray(d)?d:[d]).map(p=>React.createElement('path',{d:p,key:p})));
+const ICONS = {
+  // Scenarios
+  meeting: (s) => I(['M12 12m-2 0a2 2 0 1 0 4 0a2 2 0 1 0-4 0','M12 2v4','M12 18v4','M2 12h4','M18 12h4'],s),
+  presentation: (s) => I(['M4 20h16','M8 20V10h8v10','M12 10V6'],s),
+  call: (s) => I(['M5 4h4l2 5l-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2'],s),
+  cant_focus: (s) => I(['M12 12m-10 0a10 10 0 1 0 20 0a10 10 0 1 0-20 0','M12 12m-6 0a6 6 0 1 0 12 0a6 6 0 1 0-12 0','M12 12m-2 0a2 2 0 1 0 4 0a2 2 0 1 0-4 0'],s),
+  decision: (s) => I(['M3 6l9-4l9 4','M3 6v12l9 4l9-4V6','M3 6l9 4l9-4','M12 10v12'],s),
+  hard_day: (s) => I(['M3 17h18','M5 17a7 7 0 0 1 14 0'],s),
+  conflict: (s) => I(['M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z'],s),
+  traffic: (s) => I(['M3 18h18','M12 18V8','M7 18V12','M17 18V14'],s),
+  deadline: (s) => I(['M12 12m-10 0a10 10 0 1 0 20 0a10 10 0 1 0-20 0','M12 6v6l4 2'],s),
+  overload: (s) => I(['M6 3v18','M18 3v18','M6 12h12','M6 7h12','M6 17h12'],s),
+  morning: (s) => I(['M12 3v2','M19.07 4.93l-1.41 1.41','M21 12h-2','M19.07 19.07l-1.41-1.41','M12 19v2','M6.34 19.07l-1.41-1.41','M3 12h2','M6.34 4.93L4.93 6.34','M12 8a4 4 0 1 0 0 8a4 4 0 1 0 0-8'],s),
+  afternoon: (s) => I(['M17 18a5 5 0 0 0-10 0','M12 2v5','M4.22 10.22l1.42 1.42','M1 18h22'],s),
+  pre_workout: (s) => I(['M13 2L3 14h9l-1 8l10-12h-9l1-8'],s),
+  quick_reset: (s) => I(['M1 4v6h6','M23 20v-6h-6','M20.49 9A9 9 0 0 0 5.64 5.64L1 10','M23 14l-4.64 4.36A9 9 0 0 1 3.51 15'],s),
+  post_workout: (s) => I(['M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10s10-4.48 10-10','M8 12l3 3l5-5'],s),
+  insomnia: (s) => I(['M21 12.79A9 9 0 1 1 11.21 3A7 7 0 0 0 21 12.79z'],s),
+  anxious_wake: (s) => I(['M12 3v2','M17 7l1.5-1.5','M21 12h-2','M12 8a4 4 0 1 0 0 8a4 4 0 1 0 0-8','M3 19h18'],s),
+  between: (s) => I(['M1 4v6h6','M23 20v-6h-6','M20.49 9A9 9 0 0 0 5.64 5.64L1 10','M23 14l-4.64 4.36A9 9 0 0 1 3.51 15'],s),
+  just_relax: (s) => I(['M2 12c2-4 4-6 6-6s4 6 6 6s4-6 6-6s4 2 6 6'],s),
+  deep_dive: (s) => I(['M12 2v20','M2 12c2-3 4-5 6-5s4 5 6 5','M22 12c-2-3-4-5-6-5s-4 5-6 5'],s),
+  // Categories
+  focus: (s) => I(['M12 12m-10 0a10 10 0 1 0 20 0a10 10 0 1 0-20 0','M12 12m-6 0a6 6 0 1 0 12 0a6 6 0 1 0-12 0','M12 12m-2 0a2 2 0 1 0 4 0a2 2 0 1 0-4 0'],s),
+  stress: (s) => I(['M2 12c2 4 6 6 10 2s8-6 10-2'],s),
+  energy: (s) => I(['M13 2L3 14h9l-1 8l10-12h-9l1-8'],s),
+  recovery: (s) => I(['M21 12.79A9 9 0 1 1 11.21 3A7 7 0 0 0 21 12.79z'],s),
+  deep: (s) => I(['M18.178 8c5.096 0 5.096 8 0 8s-5.096 8-10.178 8c-5.096 0-5.096-8 0-8s5.096-8 10.178-8'],s),
+  // Tabs
+  home: (s) => I(['M3 12l9-8l9 8','M5 10v10h14V10'],s),
+  quick: (s) => I(['M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2S2 6.477 2 12','M12 6v6l4 2'],s),
+  programs: (s) => I(['M4 19.5A2.5 2.5 0 0 1 6.5 17H20','M4 4h16v13H6.5A2.5 2.5 0 0 0 4 19.5V4z'],s),
+  profile: (s) => I(['M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2','M12 3a4 4 0 1 0 0 8a4 4 0 1 0 0-8'],s),
+  // Misc
+  lock: (s) => I(['M5 11h14v10H5z','M7 11V7a5 5 0 0 1 10 0v4'],s),
+  back: (s) => I(['M19 12H5','M12 19l-7-7l7-7'],s),
+  close: (s) => I(['M18 6L6 18','M6 6l12 12'],s),
+  pause: (s) => I(['M6 4h4v16H6z','M14 4h4v16h-4z'],s),
+  play: (s) => I(['M5 3l14 9l-14 9V3z'],s),
+  sound: (s) => I(['M11 5L6 9H2v6h4l5 4V5z','M19.07 4.93a10 10 0 0 1 0 14.14','M15.54 8.46a5 5 0 0 1 0 7.07'],s),
+  mute: (s) => I(['M11 5L6 9H2v6h4l5 4V5z','M23 9l-6 6','M17 9l6 6'],s),
+  check: (s) => I(['M20 6L9 17l-5-5'],s),
+  video: (s) => I(['M23 7l-7 5l7 5V7z','M14 5H3a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2z'],s),
+  world: (s) => I(['M12 12m-10 0a10 10 0 1 0 20 0a10 10 0 1 0-20 0','M2 12h20','M12 2a15.3 15.3 0 0 1 4 10a15.3 15.3 0 0 1-4 10a15.3 15.3 0 0 1-4-10A15.3 15.3 0 0 1 12 2'],s),
+  prog_bubble: (s) => I(['M12 16a4 4 0 1 0 0-8a4 4 0 1 0 0 8','M7 6a2 2 0 1 0 0-4a2 2 0 1 0 0 4','M17 8a1.5 1.5 0 1 0 0-3a1.5 1.5 0 1 0 0 3'],s),
+  prog_shield: (s) => I(['M12 22s8-4 8-10V5l-8-3l-8 3v7c0 6 8 10 8 10z'],s),
+  prog_target: (s) => I(['M12 12m-10 0a10 10 0 1 0 20 0a10 10 0 1 0-20 0','M12 12m-6 0a6 6 0 1 0 12 0a6 6 0 1 0-12 0','M12 12m-2 0a2 2 0 1 0 4 0a2 2 0 1 0-4 0'],s),
+};
+// Render icon by key
+const Icon = ({name, size=24, style={}}) => {
+  const fn = ICONS[name];
+  return fn ? React.createElement('span', {style:{display:'inline-flex',color:'currentColor',...style}}, fn(size)) : null;
+};
+
+const WORLDS = {
+  ocean: {
+    name: 'Ocean', icon: 'world',
+    palette: { bgStart:'#0e1f2f', bgMid:'#0a1628', bgEnd:'#070c15', accent:'#5eaaa8', glow:'rgba(94,170,168,0.12)', card:'rgba(255,255,255,0.025)', text:'rgba(220,225,235,0.92)' },
+    particles: { type:'bubbles', count:8, speed:[15,30], opacity:[0.04,0.08] },
+    ambient: { baseFreq:65, filterFreq:300, lfoRate:0.08 },
+    depthUnit:'m', depthLabel:'depth'
+  },
+  space: {
+    name: 'Space', icon: 'world',
+    palette: { bgStart:'#0f0f1e', bgMid:'#0c1322', bgEnd:'#070c15', accent:'#8b7ec8', glow:'rgba(139,126,200,0.12)', card:'rgba(255,255,255,0.025)', text:'rgba(220,225,235,0.92)' },
+    particles: { type:'stars', count:8, speed:[18,35], opacity:[0.04,0.08] },
+    ambient: { baseFreq:45, filterFreq:200, lfoRate:0.04 },
+    depthUnit:'km', depthLabel:'distance'
+  },
+  memory: {
+    name: 'Memory', icon: 'world',
+    palette: { bgStart:'#1a1510', bgMid:'#12100c', bgEnd:'#0a0806', accent:'#b09060', glow:'rgba(176,144,96,0.12)', card:'rgba(255,255,255,0.025)', text:'rgba(220,225,235,0.92)' },
+    particles: { type:'bokeh', count:6, speed:[22,35], opacity:[0.03,0.07] },
+    ambient: { baseFreq:82, filterFreq:500, lfoRate:0.06 },
+    depthUnit:'min', depthLabel:'stillness'
+  }
+};
+
+// ===== TECHNIQUES =====
+const TECHNIQUES = {
+  tidal:              { phases:['inhale','exhale','pause'],           defaults:{inhale:4,exhale:6,pause:2},                   multiplier:1.0, color:'#68d391', name:'Tidal Breathing' },
+  diaphragmatic:      { phases:['inhale','exhale'],                   defaults:{inhale:5,exhale:10},                          multiplier:1.2, color:'#4fd1c5', name:'Diaphragmatic' },
+  box:                { phases:['inhale','holdIn','exhale','holdOut'], defaults:{inhale:4,holdIn:4,exhale:4,holdOut:4},        multiplier:1.5, color:'#63b3ed', name:'Box Breathing' },
+  segmented:          { phases:['belly','ribs','chest','exhale'],     defaults:{belly:3,ribs:3,chest:3,exhale:8},             multiplier:1.5, color:'#9f7aea', name:'Segmented' },
+  ujjayi:             { phases:['inhale','exhale'],                   defaults:{inhale:5,exhale:8},                           multiplier:2.0, color:'#4299e1', name:'Ujjayi' },
+  recovery:           { phases:['inhale','holdIn','exhale'],          defaults:{inhale:3,holdIn:1,exhale:2},                  multiplier:1.0, color:'#fc8181', name:'Recovery' },
+  physiological_sigh: { phases:['inhale1','inhale2','exhale'],        defaults:{inhale1:2,inhale2:1,exhale:7},                multiplier:1.8, color:'#f6ad55', name:'Physiological Sigh' },
+};
+
+const PHASE_LABELS = {
+  inhale:'Вдох', exhale:'Выдох', holdIn:'Задержите', holdOut:'Пауза',
+  belly:'Живот', ribs:'Рёбра', chest:'Грудь', pause:'Пауза',
+  inhale1:'Вдох', inhale2:'+ вдох',
+};
+
+// Concrete sub-instructions per technique per phase
+const PHASE_SUBS = {
+  diaphragmatic: {
+    inhale: 'через нос, живот вперёд на 70-80%',
+    exhale: 'через рот, губы сжаты, живот внутрь до конца',
+  },
+  box: {
+    inhale: 'через нос, равномерно, как воду в стакан',
+    holdIn: 'не зажимайте горло — просто остановите поток',
+    exhale: 'через рот, ровный, отпускайте',
+    holdOut: 'расслабьтесь, просто ждите',
+  },
+  segmented: {
+    belly: 'воздух в живот — расширяется вперёд и в стороны',
+    ribs: 'рёбра расходятся в стороны, не вверх',
+    chest: 'минимальное движение, ключицы приподнимаются',
+    exhale: 'одним потоком сверху вниз, как сдувающийся шар',
+  },
+  ujjayi: {
+    inhale: 'через нос, горло сужено — тихий шипящий звук',
+    exhale: 'через нос, тот же звук — ровный, как шум волн',
+  },
+  recovery: {
+    inhale: 'резкий вдох через рот, лёгкие на 100%',
+    holdIn: 'создайте давление, как перед звуком «П»',
+    exhale: 'резкий выдох «ПХА!» — весь воздух за полсекунды',
+  },
+  physiological_sigh: {
+    inhale1: 'короткий вдох через нос — лёгкие на 60%',
+    inhale2: 'ещё один поверх — до 90%, без паузы',
+    exhale: 'длинный медленный выдох через рот, до конца',
+  },
+  tidal: {
+    inhale: 'мягкий вдох через нос, лёгкие на 40-50%',
+    exhale: 'свободный выдох, просто отпустите',
+    pause: 'естественная пауза, тело само остановится',
+  },
+};
+
+// ===== SCENARIOS =====
+const SCENARIOS = {
+  meeting:      { cat:'focus', name:'Перед встречей', svgIcon:'meeting', free:true, durations:[5,10] },
+  presentation: { cat:'focus', name:'Перед выступлением', svgIcon:'presentation', free:false, durations:[5,10] },
+  call:         { cat:'focus', name:'Перед сложным звонком', svgIcon:'call', free:false, durations:[3] },
+  cant_focus:   { cat:'focus', name:'Не могу сосредоточиться', svgIcon:'cant_focus', free:true, durations:[5] },
+  decision:     { cat:'focus', name:'Перед решением', svgIcon:'decision', free:false, durations:[5] },
+  hard_day:     { cat:'stress', name:'После тяжёлого дня', svgIcon:'hard_day', free:true, durations:[5,10] },
+  conflict:     { cat:'stress', name:'После конфликта', svgIcon:'conflict', free:false, durations:[5] },
+  traffic:      { cat:'stress', name:'В пробке', svgIcon:'traffic', free:false, durations:[5], audioOnly:true },
+  deadline:     { cat:'stress', name:'Дедлайн давит', svgIcon:'deadline', free:false, durations:[3] },
+  overload:     { cat:'stress', name:'Перегруз информацией', svgIcon:'overload', free:false, durations:[5] },
+  morning:      { cat:'energy', name:'Утренний старт', svgIcon:'morning', free:true, durations:[5] },
+  afternoon:    { cat:'energy', name:'Послеобеденный спад', svgIcon:'afternoon', free:false, durations:[3] },
+  pre_workout:  { cat:'energy', name:'Перед тренировкой', svgIcon:'pre_workout', free:false, durations:[5] },
+  quick_reset:  { cat:'energy', name:'Быстро собраться', svgIcon:'quick_reset', free:false, durations:[3] },
+  post_workout: { cat:'recovery', name:'После тренировки', svgIcon:'post_workout', free:false, durations:[5] },
+  insomnia:     { cat:'recovery', name:'Не могу уснуть', svgIcon:'insomnia', free:true, durations:[10] },
+  anxious_wake: { cat:'recovery', name:'Тревожное утро', svgIcon:'anxious_wake', free:false, durations:[5] },
+  between:      { cat:'recovery', name:'Между встречами', svgIcon:'between', free:false, durations:[3] },
+  just_relax:   { cat:'deep', name:'Просто расслабиться', svgIcon:'just_relax', free:false, durations:[10] },
+  deep_dive:    { cat:'deep', name:'Глубокое погружение', svgIcon:'deep_dive', free:false, durations:[10] },
+};
+
+const CATEGORIES = {
+  focus:    { name:'Фокус', svgIcon:'focus', color:'#5eaaa8' },
+  stress:   { name:'Стресс', svgIcon:'stress', color:'#5eaaa8' },
+  energy:   { name:'Энергия', svgIcon:'energy', color:'#5eaaa8' },
+  recovery: { name:'Восстановление', svgIcon:'recovery', color:'#5eaaa8' },
+  deep:     { name:'Глубокая практика', svgIcon:'deep', color:'#5eaaa8' },
+};
+
+// ===== SESSION CONTENT =====
+const SESSION_CONTENT = {
+  // FOCUS
+  meeting: {
+    5: [
+      { type:'text', duration:10, text:'Сядьте. Спина ровная. Руки на коленях. Закройте глаза.' },
+      { type:'breathing', technique:'box', duration:96, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
+      { type:'text', duration:20, text:'Представьте встречу. Вы входите уверенно. Ваш голос ровный. Каждое слово — на месте.' },
+      { type:'breathing', technique:'ujjayi', duration:130, params:{inhale:5,exhale:8} },
+      { type:'text', duration:8, text:'Откройте глаза. Вы готовы.' },
+    ],
+    10: [
+      { type:'text', duration:10, text:'Найдите тихое место. Сядьте с прямой спиной. Глаза закрыты.' },
+      { type:'breathing', technique:'tidal', duration:90, params:{inhale:4,exhale:6,pause:2} },
+      { type:'breathing', technique:'box', duration:128, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
+      { type:'bodyscan', duration:40, parts:[
+        {text:'Лоб — расслабьте',hold:8},{text:'Челюсть — отпустите',hold:8},{text:'Плечи — тяжёлые',hold:8},{text:'Руки — тёплые',hold:8},{text:'Живот — мягкий',hold:8}
+      ]},
+      { type:'breathing', technique:'ujjayi', duration:150, params:{inhale:5,exhale:10} },
+      { type:'visualization', duration:30, texts:{
+        ocean:'Вы в переговорной. Хозяин ситуации. Аргументы выстроены. Голос спокоен. Вы контролируете ритм.',
+        space:'Вы в кабине управления. Перед вами — панель. Каждый индикатор горит зелёным. Миссия ясна.',
+        memory:'Вспомните момент, когда вы были абсолютно уверены. Это ощущение — здесь и сейчас.'
+      }},
+      { type:'breathing', technique:'diaphragmatic', duration:90, params:{inhale:5,exhale:10} },
+      { type:'text', duration:8, text:'Действуйте.' },
+    ]
+  },
+  presentation: {
+    5: [
+      { type:'text', duration:10, text:'Встаньте или сядьте. Расправьте плечи. Поднимите подбородок.' },
+      { type:'breathing', technique:'physiological_sigh', duration:60, params:{inhale1:2,inhale2:1,exhale:7} },
+      { type:'breathing', technique:'box', duration:96, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
+      { type:'text', duration:20, text:'Страх сцены — нормально. Это адреналин. Он вам поможет. Просто направьте его.' },
+      { type:'breathing', technique:'diaphragmatic', duration:90, params:{inhale:4,exhale:8} },
+      { type:'text', duration:8, text:'Выходите. Вы это сделаете.' },
+    ]
+  },
+  call: {
+    3: [
+      { type:'text', duration:5, text:'Остановитесь. 3 минуты.' },
+      { type:'breathing', technique:'physiological_sigh', duration:40, params:{inhale1:2,inhale2:1,exhale:7} },
+      { type:'breathing', technique:'box', duration:80, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
+      { type:'text', duration:15, text:'Вы знаете, что сказать. Голос ровный. Позиция ясна.' },
+      { type:'breathing', technique:'diaphragmatic', duration:30, params:{inhale:4,exhale:8} },
+      { type:'text', duration:5, text:'Звоните.' },
+    ]
+  },
+  cant_focus: {
+    5: [
+      { type:'text', duration:10, text:'Отложите телефон. Закройте лишние вкладки. Закройте глаза.' },
+      { type:'breathing', technique:'tidal', duration:90, params:{inhale:4,exhale:5,pause:2}, hint:'Считайте вдохи от 1 до 10. Сбились — начните сначала.' },
+      { type:'breathing', technique:'box', duration:100, params:{inhale:5,holdIn:5,exhale:5,holdOut:5} },
+      { type:'text', duration:15, text:'Когда ум отвлекается — замечайте и возвращайте. Это не провал, это тренировка.' },
+      { type:'breathing', technique:'ujjayi', duration:60, params:{inhale:5,exhale:8} },
+      { type:'text', duration:8, text:'Теперь — одна задача. Только одна.' },
+    ]
+  },
+  decision: {
+    5: [
+      { type:'text', duration:10, text:'Важные решения принимаются из спокойствия, не из тревоги. Дайте себе 5 минут.' },
+      { type:'breathing', technique:'diaphragmatic', duration:90, params:{inhale:5,exhale:10} },
+      { type:'text', duration:20, text:'Уберите эмоции. Представьте решение как шахматную партию. Какой следующий ход?' },
+      { type:'breathing', technique:'box', duration:100, params:{inhale:4,holdIn:6,exhale:4,holdOut:6} },
+      { type:'text', duration:15, text:'Два варианта. Какой из них вы бы посоветовали другу? Это и есть ваш ответ.' },
+      { type:'breathing', technique:'tidal', duration:30, params:{inhale:4,exhale:6,pause:2} },
+      { type:'text', duration:5, text:'Решайте.' },
+    ]
+  },
+  // STRESS
+  hard_day: {
+    5: [
+      { type:'text', duration:10, text:'День закончен. Всё, что нужно было сделать — сделано или подождёт. Сейчас — только вы.' },
+      { type:'breathing', technique:'tidal', duration:80, params:{inhale:4,exhale:6,pause:2} },
+      { type:'breathing', technique:'diaphragmatic', duration:120, params:{inhale:5,exhale:10} },
+      { type:'bodyscan', duration:60, parts:[
+        {text:'Отпустите напряжение в лбу',hold:6},{text:'Виски — мягкие',hold:5},{text:'Глаза — тяжёлые',hold:5},{text:'Челюсть — приоткрыта, язык свободен',hold:6},{text:'Шея — отпустите',hold:5},{text:'Плечи — опустите от ушей',hold:6},{text:'Руки — тяжёлые, как после бассейна',hold:6},{text:'Живот — мягкий',hold:5},{text:'Ноги — тяжёлые, тёплые',hold:5},{text:'Ступни — расслаблены',hold:5}
+      ]},
+      { type:'text', duration:8, text:'День отпущен. Вечер — ваш.' },
+    ]
+  },
+  conflict: {
+    5: [
+      { type:'text', duration:15, text:'Стоп. Прежде чем прокручивать в голове — продышите. Адреналин уходит за 3-5 минут. Дайте ему уйти.' },
+      { type:'breathing', technique:'physiological_sigh', duration:60, params:{inhale1:2,inhale2:1,exhale:7} },
+      { type:'breathing', technique:'diaphragmatic', duration:90, params:{inhale:4,exhale:8} },
+      { type:'text', duration:20, text:'Конфликт — это информация, не приговор. Когда тело успокоится, вы увидите ситуацию яснее.' },
+      { type:'breathing', technique:'ujjayi', duration:80, params:{inhale:5,exhale:8} },
+      { type:'text', duration:8, text:'Теперь можно думать.' },
+    ]
+  },
+  traffic: {
+    5: [
+      { type:'text', duration:10, text:'Глаза открыты, руки на руле. Только дыхание.' },
+      { type:'breathing', technique:'tidal', duration:90, params:{inhale:4,exhale:6,pause:2} },
+      { type:'breathing', technique:'diaphragmatic', duration:120, params:{inhale:5,exhale:10} },
+      { type:'text', duration:15, text:'Пробка — не потеря времени. Это 5 минут, которые вы подарили своему телу.' },
+      { type:'breathing', technique:'diaphragmatic', duration:60, params:{inhale:5,exhale:10} },
+      { type:'text', duration:5, text:'Приехали в лучшей форме.' },
+    ]
+  },
+  deadline: {
+    3: [
+      { type:'text', duration:5, text:'Три минуты. Потом — обратно к задаче. Но уже спокойно.' },
+      { type:'breathing', technique:'physiological_sigh', duration:40, params:{inhale1:2,inhale2:1,exhale:7} },
+      { type:'breathing', technique:'box', duration:64, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
+      { type:'breathing', technique:'diaphragmatic', duration:48, params:{inhale:4,exhale:8} },
+      { type:'text', duration:8, text:'Дедлайн никуда не ушёл. Но вы теперь думаете, а не паникуете.' },
+    ]
+  },
+  overload: {
+    5: [
+      { type:'text', duration:15, text:'Закройте ноутбук. Отложите телефон. Закройте глаза. Следующие 5 минут — ноль входящей информации.' },
+      { type:'breathing', technique:'tidal', duration:90, params:{inhale:4,exhale:6,pause:3} },
+      { type:'bodyscan', duration:50, parts:[
+        {text:'Внимание на тело. Не на мысли.',hold:6},{text:'Лоб — расслабьте',hold:7},{text:'Глаза — мягко закрыты',hold:7},{text:'Челюсть — свободна',hold:7},{text:'Шея — отпустите',hold:7},{text:'Плечи — опустите',hold:7},{text:'Каждую зону — расслабляем',hold:7}
+      ]},
+      { type:'breathing', technique:'ujjayi', duration:100, params:{inhale:5,exhale:10} },
+      { type:'text', duration:10, text:'Ваш мозг обработает информацию фоном. Ему просто нужна была пауза.' },
+    ]
+  },
+  // ENERGY
+  morning: {
+    5: [
+      { type:'text', duration:10, text:'Доброе утро. Перед кофе — 5 минут дыхания. Тело проснётся быстрее.' },
+      { type:'breathing', technique:'segmented', duration:90, params:{belly:3,ribs:3,chest:3,exhale:6} },
+      { type:'breathing', technique:'recovery', duration:60, params:{inhale:3,holdIn:1,exhale:2} },
+      { type:'breathing', technique:'box', duration:96, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
+      { type:'text', duration:15, text:'Кровь разогнана. Мозг получил кислород. Кофе будет вкусный, но необязательный.' },
+      { type:'text', duration:5, text:'Хорошего дня.' },
+    ]
+  },
+  afternoon: {
+    3: [
+      { type:'text', duration:5, text:'Три минуты вместо третьего кофе.' },
+      { type:'breathing', technique:'recovery', duration:45, params:{inhale:3,holdIn:1,exhale:2} },
+      { type:'breathing', technique:'segmented', duration:60, params:{belly:3,ribs:3,chest:3,exhale:6} },
+      { type:'breathing', technique:'box', duration:48, params:{inhale:3,holdIn:3,exhale:3,holdOut:3} },
+      { type:'text', duration:8, text:'Энергия — не в кофеине. Она в кислороде.' },
+    ]
+  },
+  pre_workout: {
+    5: [
+      { type:'text', duration:10, text:'Активируем тело. Мобилизуем ресурсы.' },
+      { type:'breathing', technique:'segmented', duration:90, params:{belly:3,ribs:3,chest:3,exhale:5} },
+      { type:'breathing', technique:'recovery', duration:60, params:{inhale:3,holdIn:1,exhale:2} },
+      { type:'breathing', technique:'ujjayi', duration:60, params:{inhale:4,exhale:6} },
+      { type:'text', duration:15, text:'Тело разогрето. Лёгкие раскрыты. Мышцы получат больше кислорода.' },
+      { type:'text', duration:5, text:'Вперёд.' },
+    ]
+  },
+  quick_reset: {
+    3: [
+      { type:'text', duration:5, text:'Экспресс-мобилизация. Три минуты.' },
+      { type:'breathing', technique:'recovery', duration:45, params:{inhale:3,holdIn:1,exhale:2} },
+      { type:'breathing', technique:'box', duration:48, params:{inhale:3,holdIn:3,exhale:3,holdOut:3} },
+      { type:'breathing', technique:'physiological_sigh', duration:40, params:{inhale1:2,inhale2:1,exhale:7} },
+      { type:'text', duration:8, text:'Собрались.' },
+    ]
+  },
+  // RECOVERY
+  post_workout: {
+    5: [
+      { type:'text', duration:10, text:'Тренировка окончена. Переключаем тело в режим восстановления.' },
+      { type:'breathing', technique:'tidal', duration:90, params:{inhale:4,exhale:6,pause:3} },
+      { type:'breathing', technique:'diaphragmatic', duration:120, params:{inhale:5,exhale:12} },
+      { type:'bodyscan', duration:50, parts:[
+        {text:'Пройдитесь вниманием по мышцам, которые работали',hold:10},{text:'Отпустите каждую',hold:8},{text:'Они сделали свою работу',hold:8},{text:'Плечи — расслаблены',hold:8},{text:'Спина — свободна',hold:8},{text:'Ноги — тяжёлые, тёплые',hold:8}
+      ]},
+      { type:'text', duration:8, text:'Восстановление запущено. Мышцы скажут спасибо.' },
+    ]
+  },
+  insomnia: {
+    10: [
+      { type:'text', duration:15, text:'Лягте на спину. Накройтесь. Закройте глаза. Ничего не нужно делать. Просто следуйте за дыханием.' },
+      { type:'breathing', technique:'tidal', duration:120, params:{inhale:4,exhale:6,pause:3} },
+      { type:'breathing', technique:'diaphragmatic', duration:150, params:{inhale:4,exhale:12} },
+      { type:'bodyscan', duration:120, parts:[
+        {text:'Лоб тяжёлый...',hold:10},{text:'Веки тяжёлые...',hold:10},{text:'Челюсть свободна...',hold:10},{text:'Шея расслаблена...',hold:10},{text:'Плечи вдавлены в кровать...',hold:10},{text:'Руки тяжёлые... они тонут в матрас...',hold:12},{text:'Живот мягкий...',hold:10},{text:'Поясница расслаблена...',hold:10},{text:'Бёдра тяжёлые...',hold:10},{text:'Ступни тяжёлые... пальцы ног — свободны...',hold:10}
+      ]},
+      { type:'breathing', technique:'diaphragmatic', duration:120, params:{inhale:4,exhale:14} },
+      { type:'text', duration:10, text:'Если вы это слышите — вы ещё не уснули. Ничего. Продолжайте дышать. Сон придёт.' },
+    ]
+  },
+  anxious_wake: {
+    5: [
+      { type:'text', duration:15, text:'Утренняя тревога — это кортизол. Его пик приходится на первые 30 минут. Сейчас мы его снизим.' },
+      { type:'breathing', technique:'physiological_sigh', duration:60, params:{inhale1:2,inhale2:1,exhale:7} },
+      { type:'breathing', technique:'diaphragmatic', duration:90, params:{inhale:5,exhale:10} },
+      { type:'text', duration:20, text:'Тревога — не предсказание. Это химическая реакция. Вы только что изменили химию своего тела.' },
+      { type:'breathing', technique:'tidal', duration:60, params:{inhale:4,exhale:6,pause:2} },
+      { type:'text', duration:8, text:'Начните день спокойно.' },
+    ]
+  },
+  between: {
+    3: [
+      { type:'text', duration:5, text:'Micro-reset. Три минуты — и вы как новый.' },
+      { type:'breathing', technique:'physiological_sigh', duration:30, params:{inhale1:2,inhale2:1,exhale:7} },
+      { type:'breathing', technique:'box', duration:64, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
+      { type:'breathing', technique:'diaphragmatic', duration:48, params:{inhale:4,exhale:8} },
+      { type:'text', duration:8, text:'Reset complete. Следующая встреча — с чистой головой.' },
+    ]
+  },
+  // DEEP
+  just_relax: {
+    10: [
+      { type:'text', duration:15, text:'Нет цели. Нет задачи. Просто — дышать.' },
+      { type:'breathing', technique:'tidal', duration:120, params:{inhale:4,exhale:6,pause:2} },
+      { type:'breathing', technique:'diaphragmatic', duration:120, params:{inhale:5,exhale:10} },
+      { type:'breathing', technique:'ujjayi', duration:180, params:{inhale:6,exhale:12} },
+      { type:'bodyscan', duration:90, parts:[
+        {text:'Макушка — мягкое тепло',hold:9},{text:'Лоб — расслабьте все морщины',hold:9},{text:'Глаза — тяжёлые веки',hold:9},{text:'Челюсть — приоткрыта',hold:9},{text:'Шея — длинная, расслабленная',hold:9},{text:'Плечи — опустите от ушей',hold:9},{text:'Руки — тяжёлые, тёплые',hold:9},{text:'Живот — мягкий, свободный',hold:9},{text:'Ноги — тяжёлые',hold:9},{text:'Ступни — тёплые',hold:9}
+      ]},
+      { type:'text', duration:10, text:'Вы нигде и одновременно — точно там, где нужно.' },
+    ]
+  },
+  deep_dive: {
+    10: [
+      { type:'text', duration:10, text:'Продвинутая практика. Все техники. Полное погружение.' },
+      { type:'breathing', technique:'tidal', duration:60, params:{inhale:4,exhale:6,pause:2} },
+      { type:'breathing', technique:'segmented', duration:90, params:{belly:4,ribs:3,chest:3,exhale:8} },
+      { type:'breathing', technique:'box', duration:100, params:{inhale:5,holdIn:5,exhale:5,holdOut:5} },
+      { type:'breathing', technique:'ujjayi', duration:108, params:{inhale:6,exhale:12} },
+      { type:'visualization', duration:40, texts:{
+        ocean:'Вы в бесконечной тёплой воде. Невесомость. Тишина. Только пульс — ровный, медленный. Вы — часть этой тишины.',
+        space:'Вы в открытом космосе. Невесомость. Тишина. Под вами — Земля. Все проблемы — на той маленькой точке. А вы — здесь. В покое.',
+        memory:'Вспомните место абсолютного покоя. Тёплый вечер. Запах скошенной травы. Звуки сверчков. Просто — есть.'
+      }},
+      { type:'breathing', technique:'physiological_sigh', duration:50, params:{inhale1:2,inhale2:1,exhale:7} },
+      { type:'bodyscan', duration:60, parts:[
+        {text:'Лоб — расслабьте',hold:7},{text:'Глаза — мягко',hold:6},{text:'Челюсть — свободна',hold:6},{text:'Плечи — тяжёлые',hold:7},{text:'Руки — тёплые',hold:6},{text:'Живот — мягкий',hold:7},{text:'Ноги — тяжёлые',hold:7},{text:'Ступни — тёплые',hold:7}
+      ]},
+      { type:'text', duration:10, text:'Поверхность. Вы вернулись.' },
+    ]
+  },
+};
+
+// ===== PROGRAMS =====
+const PROGRAMS = {
+  first_dive: {
+    id: 'first_dive',
+    name: 'Первое погружение', subtitle: '5 дней · Основы дыхания',
+    days: 5, free: false, trialDay: 1, icon: '🫧',
+    sessions: [
+      // Day 1
+      [
+        { type:'video', duration:60, videoId:'day1_intro', placeholder:'Видео тренера: Дмитрий Власов — Диафрагмальное дыхание' },
+        { type:'text', duration:15, text:'Сядьте удобно. Спина прямая, но без напряжения. Положите одну руку на живот, другую на грудь.' },
+        { type:'breathing', technique:'diaphragmatic', duration:90, params:{inhale:4,exhale:8}, hint:'Вдох — живот идёт вперёд. Выдох — живот мягко внутрь.' },
+        { type:'text', duration:15, text:'Обратите внимание: грудь почти не двигается. Всю работу делает диафрагма — мышца под лёгкими.' },
+        { type:'breathing', technique:'diaphragmatic', duration:120, params:{inhale:5,exhale:10}, hint:'Выдох в два раза длиннее вдоха. Не торопите. Просто отпускайте воздух.' },
+        { type:'text', duration:10, text:'Отлично. Первое погружение завершено. Завтра — квадратное дыхание.' },
+      ],
+      // Day 2
+      [
+        { type:'video', duration:50, videoId:'day2_intro', placeholder:'Видео тренера: Box Breathing — техника Navy SEALs' },
+        { type:'text', duration:10, text:'Найдите удобное положение. Закройте глаза.' },
+        { type:'breathing', technique:'tidal', duration:60, params:{inhale:4,exhale:5,pause:2}, hint:'Начнём с обычного спокойного дыхания. Настраиваемся.' },
+        { type:'breathing', technique:'box', duration:160, params:{inhale:4,holdIn:4,exhale:4,holdOut:4}, hint:'Вдох на 4 — задержите на 4 — выдох на 4 — пауза на 4. Рисуете квадрат дыханием.' },
+        { type:'text', duration:20, text:'Если задержка вызывает дискомфорт — это нормально. Не боритесь. Просто наблюдайте.' },
+        { type:'breathing', technique:'box', duration:80, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
+        { type:'text', duration:10, text:'Квадрат освоен. Завтра — трёхфазное дыхание.' },
+      ],
+      // Day 3
+      [
+        { type:'video', duration:60, videoId:'day3_intro', placeholder:'Видео тренера: Трёхфазное дыхание фридайверов' },
+        { type:'text', duration:10, text:'Сядьте прямо. Руки свободно на коленях.' },
+        { type:'breathing', technique:'segmented', duration:120, params:{belly:3,ribs:3,chest:3,exhale:8}, hint:'Живот... рёбра... грудь... и мягкий длинный выдох. Три этажа вверх, лифт вниз.' },
+        { type:'text', duration:20, text:'Не форсируйте. Если грудной отдел «не хочет» — ничего страшного. Гибкость придёт с практикой.' },
+        { type:'breathing', technique:'segmented', duration:120, params:{belly:4,ribs:3,chest:3,exhale:10} },
+        { type:'text', duration:10, text:'Три этажа освоены. Завтра — океанское дыхание.' },
+      ],
+      // Day 4
+      [
+        { type:'video', duration:60, videoId:'day4_intro', placeholder:'Видео тренера: Ujjayi — океанское дыхание' },
+        { type:'text', duration:15, text:'Попробуйте: откройте рот и выдохните — «хааа». Теперь закройте рот и сделайте то же через нос. Слышите мягкий звук?' },
+        { type:'breathing', technique:'ujjayi', duration:120, params:{inhale:5,exhale:8}, hint:'Вдох через нос — звук океана. Выдох через нос — звук прибоя.' },
+        { type:'bodyscan', duration:60, parts:[
+          {text:'Лоб — расслабьте',hold:8},{text:'Глаза — мягко закрыты',hold:8},{text:'Челюсть — приоткрыта, язык свободен',hold:8},{text:'Плечи — опустите от ушей',hold:8},{text:'Руки — тяжёлые, тёплые',hold:8},{text:'Живот — мягкий, свободный',hold:8}
+        ]},
+        { type:'breathing', technique:'ujjayi', duration:150, params:{inhale:6,exhale:10} },
+        { type:'text', duration:10, text:'Вы слышите свой внутренний океан. Завтра — финальное погружение.' },
+      ],
+      // Day 5
+      [
+        { type:'video', duration:50, videoId:'day5_intro', placeholder:'Видео тренера: Финальное погружение — все техники' },
+        { type:'text', duration:10, text:'Закройте глаза. Расслабьте лицо. Отпустите плечи.' },
+        { type:'breathing', technique:'diaphragmatic', duration:60, params:{inhale:4,exhale:8} },
+        { type:'breathing', technique:'box', duration:96, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
+        { type:'breathing', technique:'ujjayi', duration:120, params:{inhale:5,exhale:10} },
+        { type:'visualization', duration:40, texts:{
+          ocean:'Вы в воде. Тёплой, прозрачной. Невесомость. Никакого давления. Тело поддержано со всех сторон.',
+          space:'Вы в открытом космосе. Невесомость. Тишина. Под вами — Земля. Все проблемы — далеко внизу.',
+          memory:'Вспомните место, где вам было абсолютно спокойно. Тёплый вечер. Запах скошенной травы.'
+        }},
+        { type:'breathing', technique:'physiological_sigh', duration:60, params:{inhale1:2,inhale2:1,exhale:7}, hint:'Двойной короткий вдох — ин-ИН — и длинный мягкий выдох. Как вздох облегчения.' },
+        { type:'text', duration:15, text:'Программа завершена. Вы освоили пять техник фридайверов. Используйте их каждый день. Они работают.' },
+      ],
+    ]
+  },
+  stress_shield: {
+    id: 'stress_shield',
+    name: 'Стресс-щит', subtitle: '7 дней · Антистресс-ритуал',
+    days: 7, free: false, trialDay: 1, icon: '🛡️',
+    sessions: [
+      // Day 1
+      [
+        { type:'video', duration:40, videoId:'ss_day1', placeholder:'Видео: Стресс — это про тело. Физиологический вздох.' },
+        { type:'breathing', technique:'physiological_sigh', duration:90, params:{inhale1:2,inhale2:1,exhale:7} },
+        { type:'breathing', technique:'diaphragmatic', duration:120, params:{inhale:5,exhale:10} },
+        { type:'bodyscan', duration:60, parts:[
+          {text:'Лоб — расслабьте',hold:8},{text:'Глаза — тяжёлые',hold:7},{text:'Челюсть — свободна',hold:7},{text:'Плечи — опустите',hold:8},{text:'Руки — тяжёлые',hold:7},{text:'Живот — мягкий',hold:7},{text:'Ноги — тёплые',hold:7}
+        ]},
+      ],
+      // Day 2
+      [
+        { type:'video', duration:40, videoId:'ss_day2', placeholder:'Видео: Учимся замедляться' },
+        { type:'breathing', technique:'tidal', duration:90, params:{inhale:4,exhale:6,pause:2} },
+        { type:'breathing', technique:'diaphragmatic', duration:120, params:{inhale:4,exhale:12} },
+        { type:'bodyscan', duration:90, parts:[
+          {text:'Макушка — тепло',hold:9},{text:'Лоб — гладкий',hold:9},{text:'Глаза — тяжёлые',hold:9},{text:'Челюсть — свободна',hold:9},{text:'Шея — длинная',hold:9},{text:'Плечи — вниз',hold:9},{text:'Руки — тёплые',hold:9},{text:'Живот — мягкий',hold:9},{text:'Ноги — тяжёлые',hold:9},{text:'Ступни — расслаблены',hold:9}
+        ]},
+      ],
+      // Day 3
+      [
+        { type:'video', duration:40, videoId:'ss_day3', placeholder:'Видео: Контроль в дискомфорте' },
+        { type:'breathing', technique:'tidal', duration:60, params:{inhale:4,exhale:6,pause:2} },
+        { type:'breathing', technique:'box', duration:120, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
+        { type:'breathing', technique:'box', duration:120, params:{inhale:4,holdIn:6,exhale:4,holdOut:6} },
+      ],
+      // Day 4
+      [
+        { type:'video', duration:40, videoId:'ss_day4', placeholder:'Видео: Блуждающий нерв — ваш антистресс' },
+        { type:'breathing', technique:'diaphragmatic', duration:60, params:{inhale:5,exhale:10} },
+        { type:'breathing', technique:'ujjayi', duration:180, params:{inhale:5,exhale:8} },
+        { type:'bodyscan', duration:60, parts:[
+          {text:'Лоб — расслабьте',hold:8},{text:'Глаза — мягко',hold:7},{text:'Челюсть — приоткрыта',hold:7},{text:'Плечи — тяжёлые',hold:8},{text:'Руки — тёплые',hold:7},{text:'Живот — свободный',hold:7},{text:'Ноги — расслаблены',hold:7}
+        ]},
+      ],
+      // Day 5
+      [
+        { type:'video', duration:40, videoId:'ss_day5', placeholder:'Видео: Визуальная броня' },
+        { type:'breathing', technique:'box', duration:90, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
+        { type:'visualization', duration:40, texts:{
+          ocean:'Представьте ситуацию стресса. Увидьте её чётко. Вы наблюдаете со стороны. Как фридайвер смотрит на глубину перед нырком — спокойно.',
+          space:'Представьте ситуацию стресса. Она далеко внизу, на Земле. Вы смотрите из космоса. Масштаб другой. Перспектива другая.',
+          memory:'Представьте ситуацию стресса. Теперь вспомните момент, когда вы справились. Это ощущение силы — оно ваше.'
+        }},
+        { type:'breathing', technique:'ujjayi', duration:120, params:{inhale:5,exhale:8} },
+        { type:'text', duration:10, text:'Стресс не исчез. Но вы выбрали, как на него реагировать.' },
+      ],
+      // Day 6
+      [
+        { type:'video', duration:40, videoId:'ss_day6', placeholder:'Видео: Полный антистресс-протокол' },
+        { type:'breathing', technique:'physiological_sigh', duration:60, params:{inhale1:2,inhale2:1,exhale:7} },
+        { type:'breathing', technique:'diaphragmatic', duration:90, params:{inhale:5,exhale:10} },
+        { type:'breathing', technique:'box', duration:90, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
+        { type:'breathing', technique:'ujjayi', duration:120, params:{inhale:5,exhale:8} },
+        { type:'bodyscan', duration:60, parts:[
+          {text:'Лоб',hold:7},{text:'Глаза',hold:7},{text:'Челюсть',hold:7},{text:'Плечи',hold:7},{text:'Руки',hold:7},{text:'Живот',hold:7},{text:'Ноги',hold:7},{text:'Ступни',hold:7}
+        ]},
+      ],
+      // Day 7
+      [
+        { type:'video', duration:40, videoId:'ss_day7', placeholder:'Видео: Щит на автомате — без подсказок' },
+        { type:'breathing', technique:'tidal', duration:60, params:{inhale:4,exhale:6,pause:2} },
+        { type:'breathing', technique:'physiological_sigh', duration:60, params:{inhale1:2,inhale2:1,exhale:7} },
+        { type:'breathing', technique:'diaphragmatic', duration:90, params:{inhale:5,exhale:10} },
+        { type:'breathing', technique:'box', duration:90, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
+        { type:'breathing', technique:'ujjayi', duration:90, params:{inhale:5,exhale:8} },
+        { type:'bodyscan', duration:60, parts:[
+          {text:'Лоб — мягко',hold:7},{text:'Глаза — тяжёлые',hold:7},{text:'Челюсть — свободна',hold:7},{text:'Плечи — вниз',hold:7},{text:'Руки — тёплые',hold:7},{text:'Живот — мягкий',hold:7},{text:'Ноги — тяжёлые',hold:7},{text:'Ступни — расслаблены',hold:7}
+        ]},
+      ],
+    ]
+  },
+  deep_focus: {
+    id: 'deep_focus',
+    name: 'Глубокий фокус', subtitle: '5 дней · Концентрация',
+    days: 5, free: false, trialDay: 1, icon: '🎯',
+    sessions: [
+      // Day 1
+      [
+        { type:'video', duration:40, videoId:'df_day1', placeholder:'Видео: Фокус начинается с внимания' },
+        { type:'breathing', technique:'tidal', duration:180, params:{inhale:4,exhale:6,pause:2}, hint:'Считайте вдохи от 1 до 10, потом сначала.' },
+        { type:'breathing', technique:'box', duration:90, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
+      ],
+      // Day 2
+      [
+        { type:'video', duration:40, videoId:'df_day2', placeholder:'Видео: Box breathing — тренажёр внимания' },
+        { type:'breathing', technique:'box', duration:120, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
+        { type:'breathing', technique:'box', duration:120, params:{inhale:5,holdIn:5,exhale:5,holdOut:5} },
+        { type:'text', duration:20, text:'Когда ум отвлекается — вы теряете счёт. Когда вы в фокусе — счёт идёт автоматически.' },
+      ],
+      // Day 3
+      [
+        { type:'video', duration:40, videoId:'df_day3', placeholder:'Видео: Сегментированное дыхание — максимальная осознанность' },
+        { type:'breathing', technique:'segmented', duration:180, params:{belly:3,ribs:3,chest:3,exhale:8} },
+        { type:'breathing', technique:'diaphragmatic', duration:90, params:{inhale:5,exhale:10} },
+        { type:'text', duration:20, text:'Способность изолировать внимание на одной зоне тела переносится на способность изолировать внимание на одной задаче.' },
+      ],
+      // Day 4
+      [
+        { type:'video', duration:40, videoId:'df_day4', placeholder:'Видео: Фокус под давлением — удлинённые задержки' },
+        { type:'breathing', technique:'box', duration:120, params:{inhale:4,holdIn:6,exhale:4,holdOut:6} },
+        { type:'breathing', technique:'box', duration:120, params:{inhale:4,holdIn:8,exhale:4,holdOut:8} },
+        { type:'breathing', technique:'ujjayi', duration:90, params:{inhale:5,exhale:8} },
+      ],
+      // Day 5
+      [
+        { type:'video', duration:40, videoId:'df_day5', placeholder:'Видео: Состояние потока' },
+        { type:'breathing', technique:'tidal', duration:60, params:{inhale:4,exhale:6,pause:2} },
+        { type:'breathing', technique:'segmented', duration:90, params:{belly:3,ribs:3,chest:3,exhale:8} },
+        { type:'breathing', technique:'ujjayi', duration:180, params:{inhale:6,exhale:12} },
+        { type:'visualization', duration:30, texts:{
+          ocean:'Вы в воде. Нет звуков, нет мыслей. Только ритм: вдох — движение — выдох. Вы и есть этот ритм.',
+          space:'Вы в кабине. Один экран перед глазами. Одна задача. Одно действие. Полная ясность.',
+          memory:'Вспомните момент абсолютного фокуса. Всё получалось. Каждое решение — точное. Это состояние — внутри вас.'
+        }},
+        { type:'breathing', technique:'physiological_sigh', duration:60, params:{inhale1:2,inhale2:1,exhale:7} },
+      ],
+    ]
+  }
+};
+
+// ===== BADGES =====
+const BADGES = [
+  { id:'first_dive', name:'First Dive', desc:'Первая сессия', icon:'🫧', condition: s => s.totalSessions >= 1 },
+  { id:'week_streak', name:'Weekly Flow', desc:'7 дней подряд', icon:'🔥', condition: s => s.streak >= 7 },
+  { id:'month_streak', name:'Deep Habit', desc:'30 дней подряд', icon:'💎', condition: s => s.streak >= 30 },
+  { id:'all_techniques', name:'Technique Master', desc:'Все 7 техник', icon:'🎓', condition: s => (s.techniquesUsed||[]).length >= 7 },
+  { id:'all_categories', name:'Explorer', desc:'Все 5 категорий', icon:'🗺️', condition: s => (s.categoriesUsed||[]).length >= 5 },
+  { id:'depth_50', name:'Deep Explorer', desc:'Глубина 50м', icon:'🐠', condition: s => s.totalDepth >= 50 },
+  { id:'depth_130', name:'Record Depth', desc:'Глубина 130м', icon:'🏆', condition: s => s.totalDepth >= 130 },
+  { id:'night_5', name:'Night Owl', desc:'5 вечерних сессий', icon:'🦉', condition: s => s.nightSessions >= 5 },
+  { id:'morning_5', name:'Early Riser', desc:'5 утренних сессий', icon:'🌅', condition: s => s.morningSessions >= 5 },
+  { id:'program_done', name:'Course Graduate', desc:'Завершить программу', icon:'📜', condition: s => s.programsCompleted >= 1 },
+  { id:'ten_sessions', name:'Dedicated', desc:'10 сессий', icon:'🎯', condition: s => s.totalSessions >= 10 },
+  { id:'fifty_sessions', name:'Freediver', desc:'50 сессий', icon:'🌊', condition: s => s.totalSessions >= 50 },
+];
+
+// ===== ONBOARDING =====
+const ONBOARDING_STEPS = [
+  { title:'DIVE', sub:'Дыши как фридайвер', desc:'Антистресс-техники от людей, которые ныряют на 130 метров на одном вдохе.' },
+  { title:'7 техник', sub:'Проверены наукой и глубиной', desc:'Диафрагмальное, квадратное, ujjayi, физиологический вздох — и ещё три.' },
+  { title:'20 сценариев', sub:'На каждый случай', desc:'Перед встречей, после конфликта, бессонница, утренняя тревога — найдётся нужный.' },
+  { title:'3 программы', sub:'Пошаговое обучение', desc:'Первое погружение. Стресс-щит. Глубокий фокус. С видео-уроками тренера.' },
+];
+
+// ===== STORAGE HELPERS =====
+const STORAGE_KEY = 'dive_app_data';
+function loadData() {
+  try {
+    const raw = window.localStorage?.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+function saveData(data) {
+  try { window.localStorage?.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {}
+}
+const defaultStats = () => ({
+  totalSessions:0, streak:0, lastSessionDate:null, totalDepth:0, totalMinutes:0,
+  techniquesUsed:[], categoriesUsed:[], nightSessions:0, morningSessions:0, programsCompleted:0,
+  history:[], world:'ocean', onboarded:false, isPremium:false, programProgress:{},
+  soundEnabled:true, vibrateEnabled:true,
+});
+
+// ===== AMBIENT ENGINE =====
+class AmbientEngine {
+  constructor() { this.ctx = null; this.running = false; this.masterGain = null; }
+  init(worldConfig) {
+    if (this.ctx) this.destroy();
+    try {
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      this.masterGain = this.ctx.createGain();
+      this.masterGain.gain.value = 0;
+      this.masterGain.connect(this.ctx.destination);
+      // Bass drone
+      this.osc = this.ctx.createOscillator();
+      this.osc.type = 'sine';
+      this.osc.frequency.value = worldConfig.baseFreq;
+      const oscGain = this.ctx.createGain();
+      oscGain.gain.value = 0.12;
+      this.osc.connect(oscGain);
+      oscGain.connect(this.masterGain);
+      // Noise
+      const bufSize = this.ctx.sampleRate * 2;
+      const buf = this.ctx.createBuffer(1, bufSize, this.ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < bufSize; i++) d[i] = Math.random() * 2 - 1;
+      this.noiseSrc = this.ctx.createBufferSource();
+      this.noiseSrc.buffer = buf;
+      this.noiseSrc.loop = true;
+      this.filter = this.ctx.createBiquadFilter();
+      this.filter.type = 'lowpass';
+      this.filter.frequency.value = worldConfig.filterFreq;
+      const noiseGain = this.ctx.createGain();
+      noiseGain.gain.value = 0.06;
+      this.noiseSrc.connect(this.filter);
+      this.filter.connect(noiseGain);
+      noiseGain.connect(this.masterGain);
+      // LFO
+      this.lfo = this.ctx.createOscillator();
+      this.lfo.frequency.value = worldConfig.lfoRate;
+      const lfoGain = this.ctx.createGain();
+      lfoGain.gain.value = 3;
+      this.lfo.connect(lfoGain);
+      lfoGain.connect(this.osc.frequency);
+      // Harmony for memory world
+      if (worldConfig.baseFreq === 82) {
+        this.osc2 = this.ctx.createOscillator();
+        this.osc2.type = 'sine';
+        this.osc2.frequency.value = 123;
+        const osc2Gain = this.ctx.createGain();
+        osc2Gain.gain.value = 0.03;
+        this.osc2.connect(osc2Gain);
+        osc2Gain.connect(this.masterGain);
+        this.osc2.start();
+      }
+      this.osc.start();
+      this.noiseSrc.start();
+      this.lfo.start();
+      this.running = true;
+    } catch(e) { console.warn('Audio init failed', e); }
+  }
+  fadeIn(dur = 3) {
+    if (!this.ctx || !this.masterGain) return;
+    if (this.ctx.state === 'suspended') this.ctx.resume();
+    this.masterGain.gain.cancelScheduledValues(this.ctx.currentTime);
+    this.masterGain.gain.setValueAtTime(this.masterGain.gain.value, this.ctx.currentTime);
+    this.masterGain.gain.linearRampToValueAtTime(0.15, this.ctx.currentTime + dur);
+  }
+  fadeOut(dur = 2) {
+    if (!this.ctx || !this.masterGain) return;
+    this.masterGain.gain.cancelScheduledValues(this.ctx.currentTime);
+    this.masterGain.gain.setValueAtTime(this.masterGain.gain.value, this.ctx.currentTime);
+    this.masterGain.gain.linearRampToValueAtTime(0, this.ctx.currentTime + dur);
+  }
+  destroy() {
+    this.fadeOut(0.5);
+    setTimeout(() => {
+      try { this.ctx?.close(); } catch {}
+      this.ctx = null; this.running = false;
+    }, 600);
+  }
+}
+
+// ===== PARTICLES COMPONENT =====
+function Particles({ world }) {
+  const w = WORLDS[world];
+  const p = w.particles;
+  const particles = useMemo(() => {
+    return Array.from({length: p.count}, (_, i) => ({
+      id: i, left: Math.random() * 100,
+      delay: Math.random() * 15,
+      duration: p.speed[0] + Math.random() * (p.speed[1] - p.speed[0]),
+      opacity: p.opacity[0] + Math.random() * (p.opacity[1] - p.opacity[0]),
+    }));
+  }, [world]);
+
+  // All particle types: 2px dots, barely visible, drifting upward
+  return <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+    {particles.map(b => (
+      <div key={b.id} className="absolute rounded-full" style={{
+        left: b.left + '%', bottom: '-10px', width: 2, height: 2,
+        background: `rgba(94,170,168,0.08)`,
+        '--peak-opacity': b.opacity,
+        animation: `drift ${b.duration}s ${b.delay}s infinite linear`,
+        opacity: 0,
+      }} />
+    ))}
+  </div>;
+}
+
+// ===== BREATHING CIRCLE =====
+function BreathingCircle({ technique, params, elapsed, phaseName, phaseTime, phaseRemaining }) {
+  const tech = TECHNIQUES[technique];
+  if (!tech) return null;
+  const phases = tech.phases;
+  const totalCycle = phases.reduce((s, p) => s + (params[p] || tech.defaults[p] || 4), 0);
+
+  // Determine current phase and scale
+  let scale = 1.0;
+  const isInhale = ['inhale','inhale1','inhale2','belly','ribs','chest'].includes(phaseName);
+  const isHold = ['holdIn'].includes(phaseName);
+  const isExhale = ['exhale'].includes(phaseName);
+  const isPause = ['holdOut','pause'].includes(phaseName);
+
+  const phaseDuration = params[phaseName] || tech.defaults[phaseName] || 4;
+  const progress = phaseDuration > 0 ? Math.min(1, (phaseDuration - phaseRemaining) / phaseDuration) : 0;
+
+  if (technique === 'segmented') {
+    if (phaseName === 'belly') scale = 1.0 + 0.15 * progress;
+    else if (phaseName === 'ribs') scale = 1.15 + 0.15 * progress;
+    else if (phaseName === 'chest') scale = 1.3 + 0.2 * progress;
+    else scale = 1.5 - 0.5 * progress; // exhale
+  } else if (technique === 'physiological_sigh') {
+    if (phaseName === 'inhale1') scale = 1.0 + 0.3 * progress;
+    else if (phaseName === 'inhale2') scale = 1.3 + 0.2 * progress;
+    else scale = 1.5 - 0.5 * progress;
+  } else {
+    if (isInhale) scale = 1.0 + 0.45 * progress;
+    else if (isHold) scale = 1.45;
+    else if (isExhale) scale = 1.45 - 0.45 * progress;
+    else scale = 1.0;
+  }
+
+  // Muted glow — no bright colors
+  const accentRgb = '94,170,168';
+
+  return (
+    <div className="flex flex-col items-center justify-center">
+      <div style={{position:'relative', width:'min(60vw, 240px)', aspectRatio:'1'}}>
+        {/* Static thin ring — NOT rotating */}
+        <div style={{
+          position:'absolute', inset:'-6px', borderRadius:'50%',
+          border:`1px solid rgba(${accentRgb},0.12)`,
+        }} />
+        <div style={{
+          width:'100%', height:'100%', borderRadius:'50%',
+          background: `radial-gradient(circle at 40% 35%, rgba(${accentRgb},0.25) 0%, rgba(${accentRgb},0.08) 40%, rgba(12,19,34,0.9) 80%)`,
+          boxShadow: isHold
+            ? `0 0 100px rgba(${accentRgb},0.18), 0 0 200px rgba(${accentRgb},0.08)`
+            : `0 0 80px rgba(${accentRgb},0.10), 0 0 160px rgba(${accentRgb},0.05)`,
+          transform: `scale(${Math.min(scale, 1.45)})`,
+          transition: `transform 0.3s cubic-bezier(0.4,0,0.2,1), box-shadow 0.5s ease`,
+          display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+        }}>
+          <div className="font-body" style={{fontSize:16, fontWeight:500, letterSpacing:'0.08em', textTransform:'uppercase', color:'rgba(255,255,255,0.9)'}}>
+            {PHASE_LABELS[phaseName] || phaseName}
+          </div>
+          <div className="font-mono" style={{fontSize:36, fontWeight:300, color:'rgba(255,255,255,0.75)', marginTop:4}}>
+            {Math.ceil(phaseRemaining)}
+          </div>
+        </div>
+      </div>
+      <div className="font-body mt-5" style={{fontSize:13, fontWeight:400, color:'var(--text-2)'}}>
+        {tech.name}
+      </div>
+    </div>
+  );
+}
+
+// ===== SESSION PLAYER =====
+function SessionPlayer({ segments, world, onComplete, onExit }) {
+  const [segIdx, setSegIdx] = useState(0);
+  const [segElapsed, setSegElapsed] = useState(0);
+  const [totalElapsed, setTotalElapsed] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const [phaseName, setPhaseName] = useState('');
+  const [phaseRemaining, setPhaseRemaining] = useState(0);
+  const rafRef = useRef(null);
+  const lastTimeRef = useRef(null);
+
+  const totalDuration = useMemo(() => segments.reduce((s, seg) => s + seg.duration, 0), [segments]);
+  const seg = segments[segIdx];
+  const w = WORLDS[world];
+  const palette = w.palette;
+
+  // Gradient depth effect
+  const depthProgress = totalDuration > 0 ? totalElapsed / totalDuration : 0;
+  const bgColor = useMemo(() => {
+    const lerp = (a, b, t) => {
+      const ah = parseInt(a.slice(1), 16), bh = parseInt(b.slice(1), 16);
+      const ar = (ah >> 16)&0xff, ag = (ah >> 8)&0xff, ab = ah&0xff;
+      const br = (bh >> 16)&0xff, bg_ = (bh >> 8)&0xff, bb = bh&0xff;
+      const r = Math.round(ar + (br-ar)*t), g = Math.round(ag + (bg_-ag)*t), b_ = Math.round(ab + (bb-ab)*t);
+      return `rgb(${r},${g},${b_})`;
+    };
+    if (depthProgress < 0.5) return lerp(palette.bgStart, palette.bgMid, depthProgress * 2);
+    return lerp(palette.bgMid, palette.bgEnd, (depthProgress - 0.5) * 2);
+  }, [depthProgress, palette]);
+
+  // Compute current phase for breathing segments
+  useEffect(() => {
+    if (!seg || seg.type !== 'breathing') return;
+    const tech = TECHNIQUES[seg.technique];
+    if (!tech) return;
+    const p = seg.params || tech.defaults;
+    const phases = tech.phases;
+    const cycleDur = phases.reduce((s, ph) => s + (p[ph] || tech.defaults[ph] || 4), 0);
+    const cyclePos = segElapsed % cycleDur;
+    let acc = 0;
+    for (const ph of phases) {
+      const dur = p[ph] || tech.defaults[ph] || 4;
+      if (cyclePos < acc + dur) {
+        setPhaseName(ph);
+        setPhaseRemaining(dur - (cyclePos - acc));
+        return;
+      }
+      acc += dur;
+    }
+    setPhaseName(phases[0]);
+    setPhaseRemaining(p[phases[0]] || tech.defaults[phases[0]] || 4);
+  }, [segElapsed, seg]);
+
+  // Body scan part tracking
+  const [bodyScanIdx, setBodyScanIdx] = useState(0);
+  useEffect(() => {
+    if (!seg || seg.type !== 'bodyscan') return;
+    let acc = 0;
+    for (let i = 0; i < seg.parts.length; i++) {
+      acc += seg.parts[i].hold;
+      if (segElapsed < acc) { setBodyScanIdx(i); return; }
+    }
+    setBodyScanIdx(seg.parts.length - 1);
+  }, [segElapsed, seg]);
+
+  // Animation loop
+  useEffect(() => {
+    if (paused) return;
+    lastTimeRef.current = performance.now();
+    const tick = (now) => {
+      const dt = (now - (lastTimeRef.current || now)) / 1000;
+      lastTimeRef.current = now;
+      setSegElapsed(prev => {
+        const next = prev + dt;
+        if (next >= seg.duration) {
+          if (segIdx < segments.length - 1) {
+            setSegIdx(si => si + 1);
+            setBodyScanIdx(0);
+            return 0;
+          } else {
+            onComplete();
+            return prev;
+          }
+        }
+        return next;
+      });
+      setTotalElapsed(prev => prev + dt);
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+  }, [paused, segIdx, seg, segments.length]);
+
+  // Vibrate on phase change
+  useEffect(() => {
+    if (seg?.type === 'breathing' && navigator.vibrate) {
+      try { navigator.vibrate(30); } catch {}
+    }
+  }, [phaseName]);
+
+  // Progress bar segments
+  const progressSegments = useMemo(() => {
+    let acc = 0;
+    return segments.map((s, i) => {
+      const start = acc / totalDuration * 100;
+      const width = s.duration / totalDuration * 100;
+      acc += s.duration;
+      return { start, width, type: s.type };
+    });
+  }, [segments, totalDuration]);
+
+  const renderSegment = () => {
+    if (!seg) return null;
+    switch (seg.type) {
+      case 'breathing':
+        const subInstruction = PHASE_SUBS[seg.technique]?.[phaseName] || '';
+        return (
+          <div className="flex-1 flex flex-col items-center justify-center">
+            <div className="font-body mb-4" style={{fontSize:13,fontWeight:400,color:'var(--text-2)'}}>{TECHNIQUES[seg.technique]?.name}</div>
+            <BreathingCircle technique={seg.technique} params={seg.params || TECHNIQUES[seg.technique]?.defaults} elapsed={segElapsed} phaseName={phaseName} phaseTime={0} phaseRemaining={phaseRemaining} />
+            {subInstruction && (
+              <div className="font-body text-center mt-5 px-8" style={{fontSize:13,fontWeight:300,color:'var(--text-2)',maxWidth:280,lineHeight:1.6}}>
+                {subInstruction}
+              </div>
+            )}
+            {seg.hint && segElapsed < 15 && !subInstruction && (
+              <div className="font-body text-center mt-5 px-8 text-deblur" style={{fontSize:13, fontWeight:300, lineHeight:1.6, color:'var(--text-2)', maxWidth:280}}>
+                {seg.hint}
+              </div>
+            )}
+          </div>
+        );
+      case 'text':
+        return (
+          <div className="flex-1 flex items-center justify-center px-8">
+            <div className="font-body text-center text-deblur" style={{fontSize:17, fontWeight:300, lineHeight:1.75, color:'var(--text)', maxWidth:300, letterSpacing:'0.01em'}} key={seg.text.slice(0,20)}>
+              {seg.text}
+            </div>
+          </div>
+        );
+      case 'bodyscan':
+        const part = seg.parts[bodyScanIdx];
+        return (
+          <div className="flex-1 flex items-center justify-center px-8">
+            <div className="font-body text-center text-deblur" style={{fontSize:17, fontWeight:300, lineHeight:1.75, color:'var(--text)', maxWidth:300, letterSpacing:'0.01em'}} key={bodyScanIdx}>
+              {part?.text}
+            </div>
+          </div>
+        );
+      case 'visualization':
+        const vText = seg.texts[world] || seg.texts.ocean || '';
+        return (
+          <div className="flex-1 flex items-center justify-center px-8">
+            <div className="font-body text-center text-deblur" style={{fontSize:17, fontWeight:300, lineHeight:1.75, color:'var(--text)', maxWidth:300, letterSpacing:'0.01em'}} key={vText.slice(0,20)}>
+              {vText}
+            </div>
+          </div>
+        );
+      case 'video':
+        return (
+          <div className="flex-1 flex flex-col items-center justify-center px-8">
+            <div className="glass p-8 text-center screen-transition" style={{maxWidth:300}}>
+              <div style={{marginBottom:16, color:'var(--accent-text)', opacity:0.3}}><Icon name="video" size={32}/></div>
+              <div className="font-body mb-2" style={{fontWeight:500, fontSize:14, color:'rgba(226,232,240,0.85)'}}>Video Placeholder</div>
+              <div className="font-body" style={{fontSize:12, fontWeight:400, color:'var(--text-3)', lineHeight:1.5}}>{seg.placeholder}</div>
+              <div className="font-mono mt-4" style={{fontSize:12, fontWeight:300, color:palette.accent, opacity:0.8}}>{Math.ceil(seg.duration - segElapsed)}s</div>
+            </div>
+          </div>
+        );
+      default: return null;
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 flex flex-col z-50" style={{background:bgColor, transition:'background 2s ease'}}>
+      {/* Top bar */}
+      <div className="flex items-center justify-between px-6" style={{paddingTop:'env(safe-area-inset-top, 48px)', paddingBottom:8}}>
+        <button onClick={onExit} className="flex items-center justify-center rounded-full" style={{width:44,height:44,background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.08)',backdropFilter:'blur(4px)'}}>
+          <Icon name="close" size={18}/>
+        </button>
+        <div className="font-mono" style={{fontSize:13, fontWeight:300, color:'rgba(226,232,240,0.5)'}}>
+          {Math.floor(totalElapsed / 60)}:{String(Math.floor(totalElapsed % 60)).padStart(2,'0')} / {Math.floor(totalDuration / 60)}:{String(Math.floor(totalDuration % 60)).padStart(2,'0')}
+        </div>
+        <button onClick={() => setPaused(!paused)} className="flex items-center justify-center rounded-full" style={{width:44,height:44,background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.08)',backdropFilter:'blur(4px)'}}>
+          <Icon name={paused ? 'play' : 'pause'} size={16}/>
+        </button>
+      </div>
+
+      {/* Progress bar — 2px thin, premium */}
+      <div className="relative" style={{height:2, borderRadius:1, background:'rgba(255,255,255,0.06)', margin:'0 24px 8px'}}>
+        {progressSegments.map((ps, i) => (
+          <React.Fragment key={i}>
+            <div className="absolute top-0 h-full" style={{left:ps.start+'%', width:ps.width+'%'}}>
+              {i <= segIdx && (
+                <div className="h-full" style={{
+                  width: i < segIdx ? '100%' : `${(segElapsed / seg.duration) * 100}%`,
+                  borderRadius:1,
+                  background: `linear-gradient(90deg, ${seg.type === 'breathing' ? (TECHNIQUES[seg.technique]?.color || palette.accent) : palette.accent}, rgba(255,255,255,0.3))`,
+                  transition: 'width 1s linear',
+                }} />
+              )}
+            </div>
+            {i < progressSegments.length-1 && (
+              <div className="absolute" style={{left: (ps.start+ps.width)+'%', top:-2, width:1, height:6, background:'rgba(255,255,255,0.12)'}} />
+            )}
+          </React.Fragment>
+        ))}
+      </div>
+
+      {/* Content */}
+      {renderSegment()}
+
+      {/* Pause overlay */}
+      {paused && (
+        <div className="absolute inset-0 flex items-center justify-center z-60" style={{background:'rgba(0,0,0,0.6)', backdropFilter:'blur(12px)'}}>
+          <div className="text-center screen-transition">
+            <div className="font-body mb-6" style={{fontSize:32, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.1em'}}>Пауза</div>
+            <button onClick={() => setPaused(false)} className="px-8 py-3 rounded-full font-body" style={{fontWeight:500, background:'rgba(79,209,197,0.15)', border:'1px solid rgba(79,209,197,0.3)', color:'#4fd1c5', backdropFilter:'blur(8px)'}}>
+              Продолжить
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ===== MAIN APP =====
+function App() {
+  const [stats, setStats] = useState(() => loadData() || defaultStats());
+  const [screen, setScreen] = useState(stats.onboarded ? 'home' : 'splash');
+  const [onboardStep, setOnboardStep] = useState(0);
+  const [selectedCat, setSelectedCat] = useState(null);
+  const [selectedScenario, setSelectedScenario] = useState(null);
+  const [selectedDuration, setSelectedDuration] = useState(null);
+  const [activeSession, setActiveSession] = useState(null);
+  const [selectedProgram, setSelectedProgram] = useState(null);
+  const [selectedDay, setSelectedDay] = useState(null);
+  const [tab, setTab] = useState('home');
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [showCompletion, setShowCompletion] = useState(false);
+  const [completionData, setCompletionData] = useState(null);
+  const ambientRef = useRef(new AmbientEngine());
+  const world = stats.world || 'ocean';
+  const palette = WORLDS[world].palette;
+
+  // Save stats
+  useEffect(() => { saveData(stats); }, [stats]);
+
+  // Apply CSS vars
+  useEffect(() => {
+    const p = WORLDS[world].palette;
+    const r = document.documentElement;
+    r.style.setProperty('--bg-start', p.bgStart);
+    r.style.setProperty('--bg-mid', p.bgMid);
+    r.style.setProperty('--bg-end', p.bgEnd);
+    r.style.setProperty('--accent', p.accent);
+    r.style.setProperty('--glow', p.glow);
+    r.style.setProperty('--card', p.card);
+    r.style.setProperty('--text', p.text);
+  }, [world]);
+
+  // Streak check on mount
+  useEffect(() => {
+    if (!stats.lastSessionDate) return;
+    const last = new Date(stats.lastSessionDate);
+    const today = new Date();
+    const diffDays = Math.floor((today - last) / 86400000);
+    if (diffDays > 1) {
+      setStats(s => ({...s, streak: 0}));
+    }
+  }, []);
+
+  const updateStats = useCallback((sessionInfo) => {
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    const hour = now.getHours();
+    setStats(prev => {
+      const newTechs = [...new Set([...(prev.techniquesUsed||[]), ...(sessionInfo.techniques||[])])];
+      const newCats = [...new Set([...(prev.categoriesUsed||[]), sessionInfo.category].filter(Boolean))];
+      const isNight = hour >= 21 || hour <= 5;
+      const isMorning = hour >= 5 && hour < 9;
+      let streak = prev.streak;
+      if (prev.lastSessionDate !== today) {
+        const last = prev.lastSessionDate ? new Date(prev.lastSessionDate) : null;
+        const diff = last ? Math.floor((new Date(today) - last) / 86400000) : 2;
+        streak = diff === 1 ? prev.streak + 1 : 1;
+      }
+      const depth = (sessionInfo.duration || 0) / 60 * (sessionInfo.multiplier || 1);
+      return {
+        ...prev,
+        totalSessions: prev.totalSessions + 1,
+        streak, lastSessionDate: today,
+        totalDepth: Math.round((prev.totalDepth + depth) * 10) / 10,
+        totalMinutes: prev.totalMinutes + Math.round((sessionInfo.duration || 0) / 60),
+        techniquesUsed: newTechs, categoriesUsed: newCats,
+        nightSessions: prev.nightSessions + (isNight ? 1 : 0),
+        morningSessions: prev.morningSessions + (isMorning ? 1 : 0),
+        history: [...prev.history, { date: now.toISOString(), scenario: sessionInfo.scenario, duration: sessionInfo.duration, category: sessionInfo.category }].slice(-100),
+      };
+    });
+  }, []);
+
+  const startSession = (segments, meta = {}) => {
+    setActiveSession({ segments, meta });
+    // Start ambient
+    if (stats.soundEnabled) {
+      ambientRef.current.init(WORLDS[world].ambient);
+      ambientRef.current.fadeIn();
+    }
+  };
+
+  const endSession = (completed = true) => {
+    ambientRef.current.fadeOut();
+    setTimeout(() => ambientRef.current.destroy(), 2500);
+    if (completed && activeSession) {
+      const segs = activeSession.segments;
+      const totalDur = segs.reduce((s, seg) => s + seg.duration, 0);
+      const techs = [...new Set(segs.filter(s => s.type === 'breathing').map(s => s.technique))];
+      const maxMult = Math.max(...segs.filter(s => s.type === 'breathing').map(s => TECHNIQUES[s.technique]?.multiplier || 1), 1);
+      updateStats({
+        duration: totalDur, techniques: techs, category: activeSession.meta?.category,
+        scenario: activeSession.meta?.scenario, multiplier: maxMult,
+      });
+      // Program progress
+      if (activeSession.meta?.programId && activeSession.meta?.day !== undefined) {
+        setStats(prev => {
+          const pp = {...(prev.programProgress || {})};
+          if (!pp[activeSession.meta.programId]) pp[activeSession.meta.programId] = [];
+          if (!pp[activeSession.meta.programId].includes(activeSession.meta.day)) {
+            pp[activeSession.meta.programId] = [...pp[activeSession.meta.programId], activeSession.meta.day];
+          }
+          const prog = PROGRAMS[activeSession.meta.programId];
+          const programsCompleted = prog && pp[activeSession.meta.programId].length >= prog.days
+            ? prev.programsCompleted + 1 : prev.programsCompleted;
+          return {...prev, programProgress: pp, programsCompleted};
+        });
+      }
+      setCompletionData({
+        duration: totalDur, techniques: techs, depth: Math.round(totalDur / 60 * maxMult * 10) / 10,
+      });
+      setShowCompletion(true);
+    }
+    setActiveSession(null);
+  };
+
+  const checkAccess = (item) => {
+    if (stats.isPremium) return true;
+    return item.free || false;
+  };
+
+  const selectWorld = (w) => {
+    setStats(s => ({...s, world: w}));
+  };
+
+  // ===== SCREENS =====
+
+  // Premium layered background
+  const bg = `radial-gradient(ellipse at 20% 50%, ${palette.accent}14 0%, transparent 50%), radial-gradient(ellipse at 80% 20%, ${palette.accent}0a 0%, transparent 40%), linear-gradient(180deg, ${palette.bgStart} 0%, ${palette.bgMid} 50%, ${palette.bgEnd} 100%)`;
+
+  // Splash
+  if (screen === 'splash') {
+    return (
+      <div className="fixed inset-0 flex flex-col items-center justify-center" style={{background:bg}}>
+        <Particles world={world} />
+        <div className="screen-transition text-center z-10">
+          <div className="font-body" style={{fontSize:48, fontWeight:200, color:'var(--text)', letterSpacing:'0.25em', textTransform:'uppercase'}}>DIVE</div>
+          <div className="font-body mt-3" style={{fontSize:13, fontWeight:400, color:'var(--text-2)', letterSpacing:'0.06em'}}>Breathe. Focus. Perform.</div>
+          <button className="mt-16 flex items-center justify-center mx-auto font-body"
+            style={{height:52, padding:'0 32px', borderRadius:12, background:'rgba(94,170,168,0.12)', border:'1px solid rgba(94,170,168,0.25)', color:'var(--accent-text)', fontSize:15, fontWeight:500, letterSpacing:'0.04em'}}
+            onClick={() => setScreen('onboarding')}>
+            Begin
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Onboarding
+  if (screen === 'onboarding') {
+    const step = ONBOARDING_STEPS[onboardStep];
+    if (onboardStep < ONBOARDING_STEPS.length) {
+      return (
+        <div className="fixed inset-0 flex flex-col items-center justify-center px-8" style={{background:bg}}>
+          <Particles world={world} />
+          <div className="screen-transition text-center z-10" key={onboardStep}>
+            <div className="font-body mb-3" style={{fontSize:36, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.1em'}}>{step.title}</div>
+            <div className="font-body mb-5" style={{fontSize:16, fontWeight:500, color:palette.accent, letterSpacing:'0.03em'}}>{step.sub}</div>
+            <div className="font-body mb-12" style={{fontSize:14, fontWeight:400, color:'var(--text-2)', maxWidth:300, lineHeight:1.7, margin:'0 auto'}}>{step.desc}</div>
+            <div className="flex gap-2 justify-center mb-10">
+              {ONBOARDING_STEPS.map((_, i) => (
+                <div key={i} className="rounded-full transition-all" style={{width: i === onboardStep ? 24 : 6, height:6, borderRadius:3, background: i === onboardStep ? palette.accent : 'rgba(255,255,255,0.15)', transition:'all 300ms ease'}} />
+              ))}
+              <div className="rounded-full" style={{width:6, height:6, borderRadius:3, background:'rgba(255,255,255,0.15)'}} />
+            </div>
+            <button className="px-10 py-3 rounded-full font-body"
+              style={{fontWeight:500, background:`${palette.accent}26`, border:`1px solid ${palette.accent}4d`, color:palette.accent, backdropFilter:'blur(8px)'}}
+              onClick={() => setOnboardStep(onboardStep + 1)}>
+              Далее
+            </button>
+          </div>
+        </div>
+      );
+    }
+    // World selection
+    return (
+      <div className="fixed inset-0 flex flex-col items-center justify-center px-6" style={{background:bg}}>
+        <div className="screen-transition text-center z-10 w-full max-w-sm">
+          <div className="font-body mb-2" style={{fontSize:28, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.1em'}}>Выберите мир</div>
+          <div className="font-body mb-10" style={{fontSize:13, fontWeight:400, color:'var(--text-3)'}}>Можно сменить в настройках</div>
+          <div className="space-y-3">
+            {Object.entries(WORLDS).map(([key, w]) => (
+              <button key={key} className="w-full glass p-5 flex items-center gap-4 text-left"
+                style={{border: world === key ? `1px solid ${w.palette.accent}4d` : '1px solid rgba(255,255,255,0.06)', boxShadow: world === key ? `0 0 20px ${w.palette.accent}1a` : undefined}}
+                onClick={() => selectWorld(key)}>
+                <span style={{color:w.palette.accent,opacity:0.6}}><Icon name="world" size={22}/></span>
+                <div>
+                  <div className="font-body" style={{fontWeight:600, fontSize:15, color:'rgba(255,255,255,0.92)'}}>{w.name}</div>
+                  <div className="font-body" style={{fontSize:12, fontWeight:400, color:'rgba(255,255,255,0.4)', marginTop:2}}>
+                    {key === 'ocean' ? 'Глубина океана, пузыри, звуки волн' : key === 'space' ? 'Бесконечный космос, звёзды, тишина' : 'Тёплые воспоминания, боке, гармония'}
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+          <button className="mt-10 px-10 py-3 rounded-full font-body"
+            style={{fontWeight:500, background:`${WORLDS[world].palette.accent}26`, border:`1px solid ${WORLDS[world].palette.accent}4d`, color:WORLDS[world].palette.accent, backdropFilter:'blur(8px)'}}
+            onClick={() => { setStats(s => ({...s, onboarded:true})); setScreen('home'); setTab('home'); }}>
+            Начать
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Active session
+  if (activeSession) {
+    return <SessionPlayer segments={activeSession.segments} world={world} onComplete={() => endSession(true)} onExit={() => endSession(false)} />;
+  }
+
+  // Completion — surfacing animation with light rays
+  if (showCompletion && completionData) {
+    const earnedBadges = BADGES.filter(b => b.condition(stats));
+    return (
+      <div className="fixed inset-0 flex flex-col items-center justify-center px-8" style={{background:bg}}>
+        {/* Light rays from above */}
+        <div style={{position:'absolute',top:'-50%',left:'50%',width:'200%',height:'100%',transform:'translateX(-50%)',
+          background:`radial-gradient(ellipse at 50% 0%, ${palette.accent}14 0%, transparent 60%)`,
+          animation:'rays-appear 2s ease-out forwards', pointerEvents:'none', zIndex:0}} />
+        <Particles world={world} />
+        <div className="screen-transition text-center z-10">
+          <div style={{marginBottom:20, color:'var(--accent-text)', opacity:0.4}}><Icon name="check" size={32}/></div>
+          <div className="font-body mb-3" style={{fontSize:32, fontWeight:300, color:'rgba(226,232,240,0.95)', }}>session complete</div>
+          <div className="font-body mb-8" style={{fontSize:13, fontWeight:400, color:'var(--text-2)'}}>Сессия завершена</div>
+          <div className="flex gap-8 justify-center mb-10">
+            {[[Math.round(completionData.duration / 60),'минут'],[completionData.depth,WORLDS[world].depthUnit],[stats.streak,'streak']].map(([val,label],i) => (
+              <div key={i} className="text-center" style={{animation:`count-up 600ms ${i*150}ms ease-out both`}}>
+                <div className="font-mono" style={{fontSize:28, fontWeight:300, color:palette.accent}}>{val}</div>
+                <div className="font-body" style={{fontSize:11, fontWeight:400, color:'var(--text-3)', marginTop:4, letterSpacing:'0.05em'}}>{label}</div>
+              </div>
+            ))}
+          </div>
+          {earnedBadges.length > 0 && (
+            <div className="flex gap-2 justify-center flex-wrap mb-8">
+              {earnedBadges.slice(-3).map((b, i) => (
+                <div key={b.id} className="glass px-4 py-2 flex items-center gap-2" style={{animation:`badge-pop 400ms ${300+i*100}ms ease-out both`}}>
+                  <span style={{color:'var(--accent-text)',opacity:0.6}}><Icon name="check" size={14}/></span>
+                  <span className="font-body" style={{fontSize:12, fontWeight:500, color:'rgba(226,232,240,0.85)'}}>{b.name}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          <button className="px-10 py-3 rounded-full font-body"
+            style={{fontWeight:500, background:`${palette.accent}26`, border:`1px solid ${palette.accent}4d`, color:palette.accent, backdropFilter:'blur(8px)'}}
+            onClick={() => { setShowCompletion(false); setCompletionData(null); }}>
+            Готово
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ===== PAYWALL =====
+  const PaywallModal = () => (
+    <div className="fixed inset-0 z-50 flex items-end justify-center" style={{background:'rgba(0,0,0,0.7)', backdropFilter:'blur(12px)'}}>
+      <div className="glass w-full max-w-sm mx-6 mb-8 p-6 screen-transition" style={{borderRadius:24}}>
+        <div className="text-center mb-5">
+          <div className="font-body mb-2" style={{fontSize:24, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.08em'}}>Unlock Everything</div>
+          <div className="font-body" style={{fontSize:13, fontWeight:400, color:'var(--text-3)'}}>Полный доступ ко всем сценариям и программам</div>
+        </div>
+        <div className="space-y-2.5 mb-5">
+          {['20 сценариев на все случаи жизни','3 программы с видео-уроками','Все 7 техник дыхания','3 визуальных мира','Без рекламы'].map(f => (
+            <div key={f} className="flex items-center gap-3 font-body" style={{fontSize:13, fontWeight:400, color:'rgba(226,232,240,0.75)'}}><span style={{color:palette.accent, fontSize:12}}>✓</span>{f}</div>
+          ))}
+        </div>
+        <div className="flex gap-3 mb-5">
+          <div className="flex-1 glass p-4 text-center cursor-pointer" style={{border:'1px solid rgba(255,255,255,0.06)'}}>
+            <div className="font-body" style={{fontWeight:600, fontSize:14, color:'rgba(226,232,240,0.7)'}}>$6.99/мес</div>
+          </div>
+          <div className="flex-1 glass p-4 text-center cursor-pointer" style={{border:`1px solid ${palette.accent}4d`, boxShadow:`0 0 15px ${palette.accent}1a`}}>
+            <div className="font-body" style={{fontWeight:600, fontSize:14, color:palette.accent}}>$49.99/год</div>
+            <div className="font-body" style={{fontSize:11, fontWeight:400, color:palette.accent, opacity:0.7, marginTop:2}}>Save 40%</div>
+          </div>
+        </div>
+        <button className="w-full py-3.5 rounded-full font-body mb-3"
+          style={{fontWeight:500, background:`${palette.accent}26`, border:`1px solid ${palette.accent}4d`, color:palette.accent, backdropFilter:'blur(8px)'}}>
+          Start 7-day free trial
+        </button>
+        <button className="w-full py-2 font-body" style={{fontSize:12, fontWeight:400, color:'var(--text-3)'}}
+          onClick={() => { setStats(s => ({...s, isPremium:true})); setShowPaywall(false); }}>
+          Unlock for demo
+        </button>
+        <button className="w-full py-2 font-body" style={{fontSize:12, fontWeight:400, color:'rgba(226,232,240,0.2)'}}
+          onClick={() => setShowPaywall(false)}>
+          Закрыть
+        </button>
+      </div>
+    </div>
+  );
+
+  // ===== TAB CONTENT =====
+  // Category gradient overlays
+  const catGradients = {
+    focus:'linear-gradient(135deg, rgba(99,179,237,0.12), transparent)',
+    stress:'linear-gradient(135deg, rgba(252,129,129,0.1), rgba(159,122,234,0.08))',
+    energy:'linear-gradient(135deg, rgba(246,173,85,0.12), rgba(252,129,129,0.06))',
+    recovery:'linear-gradient(135deg, rgba(104,211,145,0.1), rgba(79,209,197,0.08))',
+    deep:'linear-gradient(135deg, rgba(159,122,234,0.12), rgba(99,179,237,0.06))',
+  };
+
+  const renderHome = () => (
+    <div className="screen-transition overflow-y-auto h-full no-scrollbar" style={{padding:'env(safe-area-inset-top, 48px) 24px 100px 24px'}}>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <div className="font-body" style={{fontSize:24, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.15em', textTransform:'uppercase'}}>DIVE</div>
+          <div className="font-body mt-1" style={{fontSize:12, fontWeight:400, color:'var(--text-3)'}}>
+            {stats.streak > 0 ? `${stats.streak} дней подряд` : 'Начните серию сессий'}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span style={{color:'var(--text-3)'}}><Icon name="world" size={20}/></span>
+        </div>
+      </div>
+
+      {/* Quick start */}
+      <div className="mb-8">
+        <div className="font-body mb-4" style={{fontSize:13, fontWeight:600, color:'rgba(226,232,240,0.6)', letterSpacing:'0.06em', textTransform:'uppercase'}}>Быстрый старт</div>
+        <div className="grid grid-cols-2 gap-3">
+          {[['meeting',5],['hard_day',5],['cant_focus',5],['morning',5]].map(([id,dur]) => {
+            const sc = SCENARIOS[id];
+            return (
+              <button key={id} className="glass p-5 text-left" style={{position:'relative',overflow:'hidden',minHeight:110}} onClick={() => {
+                if (!checkAccess(sc)) { setShowPaywall(true); return; }
+                const segs = SESSION_CONTENT[id]?.[dur];
+                if (segs) startSession(segs, {scenario:id, category:sc.cat});
+              }}>
+                <div style={{position:'absolute',inset:0,borderRadius:14,background:catGradients[sc.cat],opacity:0.08,pointerEvents:'none'}} />
+                <div style={{marginBottom:8, color:'var(--accent-text)', opacity:0.7}}><Icon name={sc.svgIcon || id} size={24}/></div>
+                <div className="font-body" style={{fontWeight:600, fontSize:15, color:'rgba(255,255,255,0.92)', marginBottom:4}}>{sc.name}</div>
+                <div style={{display:'inline-block',padding:'3px 10px',borderRadius:12,fontSize:11,fontWeight:500,background:'rgba(255,255,255,0.08)',color:'rgba(255,255,255,0.6)',marginTop:6}} className="font-body">{dur} мин</div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Categories */}
+      <div className="mb-8">
+        <div className="font-body mb-4" style={{fontSize:13, fontWeight:600, color:'rgba(226,232,240,0.6)', letterSpacing:'0.06em', textTransform:'uppercase'}}>Категории</div>
+        <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
+          {Object.entries(CATEGORIES).map(([key, cat]) => (
+            <button key={key} className="glass px-5 py-3 flex-shrink-0 flex items-center gap-2"
+              onClick={() => { setSelectedCat(key); setScreen('category'); }}>
+              <span style={{color:'var(--accent-text)',opacity:0.6}}><Icon name={cat.svgIcon || key} size={18}/></span>
+              <span className="font-body" style={{fontSize:13, fontWeight:500, color:'rgba(255,255,255,0.75)'}}>{cat.name}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Programs preview */}
+      <div className="mb-8">
+        <div className="font-body mb-4" style={{fontSize:13, fontWeight:600, color:'rgba(226,232,240,0.6)', letterSpacing:'0.06em', textTransform:'uppercase'}}>Программы</div>
+        <div className="space-y-3">
+          {Object.entries(PROGRAMS).map(([key, prog]) => {
+            const progress = (stats.programProgress?.[key] || []).length;
+            return (
+              <button key={key} className="glass p-5 w-full text-left flex items-center gap-4"
+                onClick={() => { setSelectedProgram(key); setScreen('program_view'); }}>
+                <span style={{color:'var(--accent-text)',opacity:0.5}}><Icon name={key === 'first_dive' ? 'prog_bubble' : key === 'stress_shield' ? 'prog_shield' : 'prog_target'} size={24}/></span>
+                <div className="flex-1">
+                  <div className="font-body" style={{fontWeight:600, fontSize:15, color:'rgba(255,255,255,0.92)'}}>{prog.name}</div>
+                  <div className="font-body" style={{fontSize:12, fontWeight:400, color:'rgba(255,255,255,0.4)', marginTop:2}}>{prog.subtitle}</div>
+                  {progress > 0 && (
+                    <div className="mt-3" style={{height:2, borderRadius:1, background:'rgba(255,255,255,0.06)'}}>
+                      <div style={{height:'100%', borderRadius:1, width:`${progress/prog.days*100}%`, background:`linear-gradient(90deg, ${palette.accent}, rgba(255,255,255,0.3))`, transition:'width 1s ease'}} />
+                    </div>
+                  )}
+                </div>
+                {!stats.isPremium && !prog.free && <span className="font-body" style={{fontSize:11, fontWeight:500, color:palette.accent, opacity:0.7, letterSpacing:'0.05em'}}>PRO</span>}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderCategory = () => {
+    const scenarios = Object.entries(SCENARIOS).filter(([_, s]) => s.cat === selectedCat);
+    const cat = CATEGORIES[selectedCat];
+    return (
+      <div className="screen-transition overflow-y-auto h-full no-scrollbar" style={{padding:'env(safe-area-inset-top, 48px) 24px 100px 24px'}}>
+        <button className="flex items-center gap-2 mb-5" onClick={() => setScreen('home')} style={{color:'var(--text-3)'}}>
+          <Icon name="back" size={16}/><span className="font-body" style={{fontSize:13, fontWeight:400}}>Назад</span>
+        </button>
+        <div className="flex items-center gap-3 mb-8">
+          <span style={{color:'var(--accent-text)',opacity:0.6}}><Icon name={selectedCat} size={24}/></span>
+          <div className="font-body" style={{fontSize:24, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.08em'}}>{cat?.name}</div>
+        </div>
+        <div className="space-y-3">
+          {scenarios.map(([id, sc]) => (
+            <button key={id} className="glass p-5 w-full text-left flex items-center gap-4" style={{position:'relative',overflow:'hidden'}}
+              onClick={() => {
+                if (!checkAccess(sc)) { setShowPaywall(true); return; }
+                setSelectedScenario(id);
+                setScreen('session_pre');
+              }}>
+              <div style={{position:'absolute',inset:0,borderRadius:14,background:catGradients[sc.cat],opacity:0.08,pointerEvents:'none'}} />
+              <span style={{color:'var(--accent-text)',opacity:0.6}}><Icon name={sc.svgIcon || id} size={24}/></span>
+              <div className="flex-1">
+                <div className="font-body" style={{fontWeight:600, fontSize:15, color:'rgba(255,255,255,0.92)'}}>{sc.name}</div>
+                <div className="font-body" style={{fontSize:12, fontWeight:400, color:'rgba(255,255,255,0.45)', marginTop:3}}>
+                  {sc.durations.map(d => d + ' мин').join(' · ')}
+                </div>
+              </div>
+              {!checkAccess(sc) && <span style={{color:'var(--text-3)',opacity:0.5}}><Icon name="lock" size={16}/></span>}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const renderSessionPre = () => {
+    const sc = SCENARIOS[selectedScenario];
+    if (!sc) { setScreen('home'); return null; }
+    return (
+      <div className="screen-transition overflow-y-auto h-full no-scrollbar flex flex-col items-center justify-center" style={{padding:'24px'}}>
+        <button className="absolute left-6 flex items-center gap-2" style={{top:'env(safe-area-inset-top, 48px)', color:'var(--text-3)'}} onClick={() => setScreen('category')}>
+          <Icon name="back" size={16}/>
+        </button>
+        <div className="text-center">
+          <div style={{marginBottom:20, color:'var(--accent-text)', opacity:0.5}}><Icon name={sc.svgIcon || selectedScenario} size={40}/></div>
+          <div className="font-body mb-2" style={{fontSize:26, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.08em'}}>{sc.name}</div>
+          <div className="font-body mb-10" style={{fontSize:13, fontWeight:400, color:'var(--text-3)'}}>
+            {CATEGORIES[sc.cat]?.name}
+          </div>
+          <div className="flex gap-3 justify-center mb-10">
+            {sc.durations.map(d => (
+              <button key={d} className="glass px-7 py-3 font-body"
+                style={{fontWeight:500, fontSize:14, color: selectedDuration === d ? palette.accent : 'rgba(226,232,240,0.5)', border: selectedDuration === d ? `1px solid ${palette.accent}4d` : '1px solid rgba(255,255,255,0.06)', boxShadow: selectedDuration === d ? `0 0 15px ${palette.accent}1a` : 'none'}}
+                onClick={() => setSelectedDuration(d)}>
+                {d} мин
+              </button>
+            ))}
+          </div>
+          <button className="flex items-center justify-center mx-auto font-body"
+            style={{height:52, padding:'0 32px', borderRadius:12, fontWeight:500, fontSize:15, background:'rgba(94,170,168,0.12)', border:'1px solid rgba(94,170,168,0.25)', color:'var(--accent-text)', letterSpacing:'0.04em'}}
+            onClick={() => {
+              const dur = selectedDuration || sc.durations[0];
+              const segs = SESSION_CONTENT[selectedScenario]?.[dur];
+              if (segs) startSession(segs, {scenario:selectedScenario, category:sc.cat});
+              else alert('Сессия не найдена');
+            }}>
+            Begin
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  const renderQuickDive = () => (
+    <div className="screen-transition overflow-y-auto h-full no-scrollbar" style={{padding:'env(safe-area-inset-top, 48px) 24px 100px 24px'}}>
+      <div className="font-body mb-8" style={{fontSize:24, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.1em'}}>Quick Dive</div>
+      <div className="space-y-3">
+        {Object.entries(SCENARIOS).map(([id, sc]) => (
+          <button key={id} className="glass p-5 w-full text-left flex items-center gap-4" style={{position:'relative',overflow:'hidden'}}
+            onClick={() => {
+              if (!checkAccess(sc)) { setShowPaywall(true); return; }
+              setSelectedScenario(id);
+              setSelectedDuration(sc.durations[0]);
+              setSelectedCat(sc.cat);
+              setScreen('session_pre');
+            }}>
+            <div style={{position:'absolute',inset:0,borderRadius:14,background:catGradients[sc.cat],opacity:0.08,pointerEvents:'none'}} />
+            <span style={{color:'var(--accent-text)',opacity:0.6}}><Icon name={sc.svgIcon || id} size={24}/></span>
+            <div className="flex-1">
+              <div className="font-body" style={{fontWeight:600, fontSize:15, color:'rgba(255,255,255,0.92)'}}>{sc.name}</div>
+              <div className="font-body" style={{fontSize:12, fontWeight:400, color:'rgba(255,255,255,0.4)', marginTop:3}}>
+                {CATEGORIES[sc.cat]?.name} · {sc.durations.map(d => d+'м').join('/')}
+              </div>
+            </div>
+            {!checkAccess(sc) && <span style={{color:'var(--text-3)',opacity:0.5}}><Icon name="lock" size={16}/></span>}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  const renderProgramView = () => {
+    const prog = PROGRAMS[selectedProgram];
+    if (!prog) { setScreen('home'); return null; }
+    const progress = stats.programProgress?.[selectedProgram] || [];
+    return (
+      <div className="screen-transition overflow-y-auto h-full no-scrollbar" style={{padding:'env(safe-area-inset-top, 48px) 24px 100px 24px'}}>
+        <button className="flex items-center gap-2 mb-5" onClick={() => { setScreen('home'); setTab('programs'); }} style={{color:'var(--text-3)'}}>
+          <Icon name="back" size={16}/><span className="font-body" style={{fontSize:13, fontWeight:400}}>Назад</span>
+        </button>
+        <div className="text-center mb-8">
+          <div style={{color:'var(--accent-text)', opacity:0.4}}><Icon name={selectedProgram === 'first_dive' ? 'prog_bubble' : selectedProgram === 'stress_shield' ? 'prog_shield' : 'prog_target'} size={36}/></div>
+          <div className="font-body mt-3" style={{fontSize:24, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.08em'}}>{prog.name}</div>
+          <div className="font-body mt-1" style={{fontSize:13, fontWeight:400, color:'var(--text-3)'}}>{prog.subtitle}</div>
+          <div className="mt-4 mx-auto" style={{height:2, borderRadius:1, background:'rgba(255,255,255,0.06)', maxWidth:200}}>
+            <div style={{height:'100%', borderRadius:1, width:`${progress.length/prog.days*100}%`, background:`linear-gradient(90deg, ${palette.accent}, rgba(255,255,255,0.3))`, transition:'width 1s ease'}} />
+          </div>
+          <div className="font-body mt-2" style={{fontSize:12, fontWeight:400, color:palette.accent, opacity:0.8}}>{progress.length} / {prog.days} дней</div>
+        </div>
+        <div className="space-y-3">
+          {prog.sessions.map((daySegs, i) => {
+            const completed = progress.includes(i);
+            const locked = !stats.isPremium && i >= prog.trialDay;
+            return (
+              <button key={i} className="glass p-5 w-full text-left flex items-center gap-4"
+                onClick={() => {
+                  if (locked) { setShowPaywall(true); return; }
+                  startSession(daySegs, {programId:selectedProgram, day:i, category:'program'});
+                }}>
+                <div className="flex items-center justify-center rounded-full font-mono"
+                  style={{width:40, height:40, fontWeight:300, fontSize:14, background: completed ? `${palette.accent}26` : 'rgba(255,255,255,0.06)', border: completed ? `1px solid ${palette.accent}4d` : '1px solid rgba(255,255,255,0.06)', color: completed ? palette.accent : 'rgba(226,232,240,0.5)'}}>
+                  {completed ? '✓' : i + 1}
+                </div>
+                <div className="flex-1">
+                  <div className="font-body" style={{fontWeight:600, fontSize:15, color:'rgba(255,255,255,0.92)'}}>День {i + 1}</div>
+                  <div className="font-body" style={{fontSize:12, fontWeight:400, color:'rgba(255,255,255,0.4)', marginTop:3}}>
+                    {daySegs.filter(s=>s.type==='breathing').map(s=>TECHNIQUES[s.technique]?.name).filter(Boolean).join(', ')}
+                  </div>
+                </div>
+                {locked && <span style={{color:'var(--text-3)',opacity:0.5}}><Icon name="lock" size={16}/></span>}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  const renderPrograms = () => (
+    <div className="screen-transition overflow-y-auto h-full no-scrollbar" style={{padding:'env(safe-area-inset-top, 48px) 24px 100px 24px'}}>
+      <div className="font-body mb-8" style={{fontSize:24, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.1em'}}>Программы</div>
+      <div className="space-y-4">
+        {Object.entries(PROGRAMS).map(([key, prog]) => {
+          const progress = (stats.programProgress?.[key] || []).length;
+          return (
+            <button key={key} className="glass p-6 w-full text-left"
+              onClick={() => { setSelectedProgram(key); setScreen('program_view'); }}>
+              <div className="flex items-center gap-4 mb-4">
+                <span style={{color:'var(--accent-text)',opacity:0.5}}><Icon name={key === 'first_dive' ? 'prog_bubble' : key === 'stress_shield' ? 'prog_shield' : 'prog_target'} size={28}/></span>
+                <div>
+                  <div className="font-body" style={{fontWeight:600, fontSize:16, color:'rgba(255,255,255,0.92)'}}>{prog.name}</div>
+                  <div className="font-body" style={{fontSize:12, fontWeight:400, color:'rgba(255,255,255,0.4)', marginTop:2}}>{prog.subtitle}</div>
+                </div>
+              </div>
+              <div style={{height:2, borderRadius:1, background:'rgba(255,255,255,0.06)'}}>
+                <div style={{height:'100%', borderRadius:1, width:`${progress/prog.days*100}%`, background:`linear-gradient(90deg, ${palette.accent}, rgba(255,255,255,0.3))`, transition:'width 1s ease'}} />
+              </div>
+              <div className="font-body mt-2" style={{fontSize:12, fontWeight:400, color:palette.accent, opacity:0.7}}>{progress}/{prog.days} дней</div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  const renderProfile = () => {
+    const earned = BADGES.filter(b => b.condition(stats));
+    return (
+      <div className="screen-transition overflow-y-auto h-full no-scrollbar" style={{padding:'env(safe-area-inset-top, 48px) 24px 100px 24px'}}>
+        <div className="font-body mb-8" style={{fontSize:24, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.1em'}}>Профиль</div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-3 mb-8">
+          {[
+            [stats.totalDepth, WORLDS[world].depthUnit, WORLDS[world].depthLabel],
+            [stats.streak, 'дней', 'streak'],
+            [stats.totalSessions, '', 'сессий'],
+          ].map(([val, unit, label], i) => (
+            <div key={i} className="glass p-5 text-center" style={{animation:`count-up 600ms ${i*150}ms ease-out both`}}>
+              <div className="font-mono" style={{fontSize:22, fontWeight:300, color:palette.accent}}>{val}{unit && <span style={{fontSize:11, marginLeft:2}}>{unit}</span>}</div>
+              <div className="font-body mt-2" style={{fontSize:11, fontWeight:400, color:'var(--text-3)', letterSpacing:'0.05em'}}>{label}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* World switch */}
+        <div className="mb-8">
+          <div className="font-body mb-4" style={{fontSize:13, fontWeight:600, color:'rgba(226,232,240,0.6)', letterSpacing:'0.06em', textTransform:'uppercase'}}>Мир</div>
+          <div className="flex gap-3">
+            {Object.entries(WORLDS).map(([key, w]) => (
+              <button key={key} className="glass flex-1 p-4 text-center"
+                style={{border: world === key ? `1px solid ${w.palette.accent}4d` : '1px solid rgba(255,255,255,0.06)', boxShadow: world === key ? `0 0 15px ${w.palette.accent}1a` : 'none'}}
+                onClick={() => selectWorld(key)}>
+                <div style={{color:w.palette.accent,opacity:0.5}}><Icon name="world" size={20}/></div>
+                <div className="font-body mt-2" style={{fontSize:12, fontWeight:400, color:'rgba(226,232,240,0.6)'}}>{w.name}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Badges */}
+        <div className="mb-8">
+          <div className="font-body mb-4" style={{fontSize:13, fontWeight:600, color:'rgba(226,232,240,0.6)', letterSpacing:'0.06em', textTransform:'uppercase'}}>Достижения ({earned.length}/{BADGES.length})</div>
+          <div className="grid grid-cols-4 gap-2">
+            {BADGES.map(b => {
+              const has = b.condition(stats);
+              return (
+                <div key={b.id} className="glass p-3 text-center" style={{opacity: has ? 1 : 0.25}}>
+                  <div style={{color: has ? 'var(--accent-text)' : 'var(--text-3)', opacity: has ? 0.8 : 0.4}}><Icon name="check" size={20}/></div>
+                  <div className="font-body mt-1" style={{fontSize:10, fontWeight:400, color:'rgba(226,232,240,0.6)'}}>{b.name}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Settings */}
+        <div className="mb-8">
+          <div className="font-body mb-4" style={{fontSize:13, fontWeight:600, color:'rgba(226,232,240,0.6)', letterSpacing:'0.06em', textTransform:'uppercase'}}>Настройки</div>
+          <div className="glass p-5 space-y-4">
+            {[
+              ['Ambient звук', 'soundEnabled'],
+              ['Вибрация', 'vibrateEnabled'],
+            ].map(([label, key]) => (
+              <div key={key} className="flex items-center justify-between">
+                <span className="font-body" style={{fontSize:14, fontWeight:400, color:'rgba(226,232,240,0.75)'}}>{label}</span>
+                <button className="relative rounded-full" style={{width:44, height:24, background: stats[key] ? `${palette.accent}40` : 'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.06)', transition:'all 200ms ease'}}
+                  onClick={() => setStats(s => ({...s, [key]:!s[key]}))}>
+                  <div className="absolute rounded-full transition-all" style={{top:3, width:16, height:16, background: stats[key] ? palette.accent : 'rgba(255,255,255,0.3)', left: stats[key] ? 'calc(100% - 20px)' : '4px'}} />
+                </button>
+              </div>
+            ))}
+            <div className="flex items-center justify-between">
+              <span className="font-body" style={{fontSize:14, fontWeight:400, color:'rgba(226,232,240,0.75)'}}>Premium</span>
+              <span className="font-body" style={{fontSize:13, fontWeight:500, color: stats.isPremium ? palette.accent : 'var(--text-3)'}}>{stats.isPremium ? 'Active' : 'Free'}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* History */}
+        {stats.history.length > 0 && (
+          <div className="mb-8">
+            <div className="font-body mb-4" style={{fontSize:13, fontWeight:600, color:'rgba(226,232,240,0.6)', letterSpacing:'0.06em', textTransform:'uppercase'}}>История</div>
+            <div className="space-y-2">
+              {stats.history.slice(-5).reverse().map((h, i) => (
+                <div key={i} className="glass p-4 flex items-center gap-3">
+                  <span style={{color:'var(--accent-text)',opacity:0.4}}><Icon name={SCENARIOS[h.scenario]?.svgIcon || 'check'} size={16}/></span>
+                  <div className="flex-1">
+                    <div className="font-body" style={{fontSize:14, fontWeight:500, color:'rgba(226,232,240,0.85)'}}>{SCENARIOS[h.scenario]?.name || h.scenario}</div>
+                    <div className="font-body" style={{fontSize:11, fontWeight:400, color:'var(--text-3)', marginTop:2}}>{new Date(h.date).toLocaleDateString('ru')}</div>
+                  </div>
+                  <div className="font-mono" style={{fontSize:12, fontWeight:300, color:palette.accent}}>{Math.round(h.duration/60)}м</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Reset */}
+        <button className="w-full py-3 font-body rounded-full" style={{fontSize:13, fontWeight:400, color:'rgba(252,129,129,0.6)', border:'1px solid rgba(252,129,129,0.15)'}}
+          onClick={() => { if (confirm('Сбросить весь прогресс?')) { setStats(defaultStats()); setScreen('splash'); }}}>
+          Сбросить прогресс
+        </button>
+      </div>
+    );
+  };
+
+  // Render current screen
+  const renderScreen = () => {
+    if (screen === 'category') return renderCategory();
+    if (screen === 'session_pre') return renderSessionPre();
+    if (screen === 'program_view') return renderProgramView();
+
+    switch (tab) {
+      case 'home': return renderHome();
+      case 'quick': return renderQuickDive();
+      case 'programs': return renderPrograms();
+      case 'profile': return renderProfile();
+      default: return renderHome();
+    }
+  };
+
+  const showTabs = !['category','session_pre','program_view'].includes(screen);
+
+  return (
+    <div className="fixed inset-0" style={{background:bg}}>
+      <Particles world={world} />
+      <div className="relative z-10 h-full">
+        {renderScreen()}
+      </div>
+
+      {/* Tab bar — premium */}
+      {showTabs && (
+        <div className="fixed bottom-0 left-0 right-0 z-40" style={{background:'rgba(7,12,21,0.85)', backdropFilter:'blur(20px)', WebkitBackdropFilter:'blur(20px)', borderTop:'1px solid rgba(255,255,255,0.04)'}}>
+          <div className="flex justify-around" style={{paddingTop:12, paddingBottom:'env(safe-area-inset-bottom, 24px)'}}>
+            {[
+              {id:'home', svgIcon:'home', label:'Home'},
+              {id:'quick', svgIcon:'quick', label:'Explore'},
+              {id:'programs', svgIcon:'programs', label:'Programs'},
+              {id:'profile', svgIcon:'profile', label:'Profile'},
+            ].map(t => (
+              <button key={t.id} className="flex flex-col items-center py-1 px-3" style={{gap:3}}
+                onClick={() => { setTab(t.id); if (['category','session_pre','program_view'].includes(screen)) setScreen('home'); }}>
+                <span style={{color: tab === t.id ? 'var(--accent-text)' : 'var(--text-3)', transition:'color 200ms ease'}}><Icon name={t.svgIcon} size={20}/></span>
+                <span className="font-body" style={{fontSize:10, fontWeight:500, letterSpacing:'0.03em', color: tab === t.id ? 'var(--accent-text)' : 'var(--text-3)', transition:'color 200ms ease'}}>{t.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {showPaywall && <PaywallModal />}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
