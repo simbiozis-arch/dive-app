@@ -62,6 +62,29 @@ html[lang="zh"] body, html[lang="zh"] #root { font-family:'Noto Sans SC','DM San
   background: radial-gradient(ellipse, rgba(var(--accent-rgb),0.04) 0%, transparent 70%);
   pointer-events:none; z-index:0;
 }
+
+/* Session text segments: circle hides, text takes center */
+.session-text-segment {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: calc(100% - 48px);
+  max-width: 340px;
+  text-align: center;
+  z-index: 10;
+}
+.session-text-content {
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 300;
+  font-size: 18px;
+  line-height: 1.8;
+  color: rgba(220, 225, 235, 0.88);
+  letter-spacing: 0.01em;
+}
+.circle-hidden { opacity: 0; transform: scale(0.8); transition: opacity 400ms ease, transform 400ms ease; }
+.circle-visible { opacity: 1; transform: scale(1); transition: opacity 400ms ease, transform 400ms ease; }
+.text-fade-out { opacity: 0; filter: blur(3px); transition: opacity 300ms ease, filter 300ms ease; }
 </style>
 </head>
 <body>
@@ -124,6 +147,21 @@ const LANG = {
     onb3title:'20 scenarios',onb3sub:'For every occasion',onb3desc:'Before a meeting, after a conflict, insomnia, morning anxiety — find the right one.',
     onb4title:'3 programs',onb4sub:'Step-by-step learning',onb4desc:'First Dive. Stress Shield. Deep Focus. With video coaching.',
     paywallFeatures:['20 scenarios for every situation','3 programs with video lessons','All 7 breathing techniques','3 visual worlds','No ads'],
+    morningIntro:'Good morning. Five minutes of breathing before coffee. Your body will wake up faster.',
+    overloadIntro:'Put your phone down. Close extra tabs. Close your eyes.',
+    conflictIntro:'Stop. Before replaying it in your head — breathe. Adrenaline leaves your blood in 3 to 5 minutes. Let it pass.',
+    deadlineIntro:'Three minutes. Then back to the task. But calmly.',
+    trafficIntro:'Eyes open, hands on the wheel. Only breathing.',
+    sleepIntro:'Lie on your back. Cover yourself. Close your eyes. Nothing to do. Just follow the breath.',
+    focusIntro:'Put your phone away. Close your eyes. For the next five minutes — zero incoming information.',
+    decisionIntro:'Important decisions come from calm, not anxiety. Give yourself five minutes.',
+    workoutIntro:'Activating your body. Mobilizing resources.',
+    postWorkoutIntro:'Workout done. Switching your body to recovery mode.',
+    anxiousIntro:'Morning anxiety is cortisol. It peaks in the first 30 minutes after waking. We will lower it now.',
+    betweenIntro:'Micro-reset. Three minutes — and you are brand new.',
+    speechIntro:'Stand or sit. Shoulders back. Chin up.',
+    relaxIntro:'No goal. No task. Just — breathe.',
+    deepIntro:'Advanced practice. All techniques. Full immersion.',
   },
   ru: {
     appName:'DIVE',tagline:'Дыши. Погружайся. Действуй.',chooseLanguage:'Выберите язык',chooseWorld:'Выберите мир',
@@ -176,6 +214,21 @@ const LANG = {
     onb3title:'20 сценариев',onb3sub:'На каждый случай',onb3desc:'Перед встречей, после конфликта, бессонница, утренняя тревога — найдётся нужный.',
     onb4title:'3 программы',onb4sub:'Пошаговое обучение',onb4desc:'Первое погружение. Стресс-щит. Глубокий фокус. С видео-уроками тренера.',
     paywallFeatures:['20 сценариев на все случаи жизни','3 программы с видео-уроками','Все 7 техник дыхания','3 визуальных мира','Без рекламы'],
+    morningIntro:'Доброе утро. Перед кофе — 5 минут дыхания. Тело проснётся быстрее.',
+    overloadIntro:'Отложите телефон. Закройте лишние вкладки. Закройте глаза.',
+    conflictIntro:'Стоп. Прежде чем прокручивать — продышите. Адреналин уходит за 3-5 минут.',
+    deadlineIntro:'Три минуты. Потом к задаче. Но спокойно.',
+    trafficIntro:'Глаза открыты, руки на руле. Только дыхание.',
+    sleepIntro:'Лягте на спину. Накройтесь. Закройте глаза. Просто следуйте за дыханием.',
+    focusIntro:'Отложите телефон. Закройте глаза. Ноль входящей информации.',
+    decisionIntro:'Важные решения — из спокойствия, не из тревоги. Дайте себе 5 минут.',
+    workoutIntro:'Активируем тело. Мобилизуем ресурсы.',
+    postWorkoutIntro:'Тренировка окончена. Переключаем тело в восстановление.',
+    anxiousIntro:'Утренняя тревога — это кортизол. Пик в первые 30 минут. Снижаем.',
+    betweenIntro:'Микро-перезагрузка. Три минуты — и вы новый.',
+    speechIntro:'Встаньте или сядьте. Плечи расправьте. Подбородок вверх.',
+    relaxIntro:'Нет цели. Нет задачи. Просто дышать.',
+    deepIntro:'Продвинутая практика. Все техники. Полное погружение.',
   },
   zh: {
     appName:'DIVE',tagline:'呼吸。沉浸。行动。',chooseLanguage:'选择语言',chooseWorld:'选择你的世界',
@@ -224,6 +277,21 @@ const LANG = {
     onb3title:'20种场景',onb3sub:'应对各种情况',onb3desc:'会议前、争吵后、失眠、早晨焦虑——总有适合的。',
     onb4title:'3个课程',onb4sub:'循序渐进学习',onb4desc:'初次沉浸。压力护盾。深度专注。含教练视频。',
     paywallFeatures:['20种场景','3个视频课程','全部7种呼吸技巧','3个视觉世界','无广告'],
+    morningIntro:'早安。咖啡之前五分钟呼吸。身体会更快醒来。',
+    overloadIntro:'放下手机。关闭多余标签。闭上眼睛。',
+    conflictIntro:'停。在脑中重播之前——先呼吸。肾上腺素3到5分钟就会消退。',
+    deadlineIntro:'三分钟。然后回到任务。但要平静。',
+    trafficIntro:'睁开眼，手握方向盘。只有呼吸。',
+    sleepIntro:'仰卧。盖好被子。闭眼。什么都不用做。跟随呼吸。',
+    focusIntro:'放下手机。闭眼。接下来五分钟零信息输入。',
+    decisionIntro:'重要决定来自平静，不是焦虑。给自己五分钟。',
+    workoutIntro:'激活身体。调动资源。',
+    postWorkoutIntro:'训练结束。切换到恢复模式。',
+    anxiousIntro:'晨间焦虑是皮质醇。醒后30分钟达到峰值。现在降低它。',
+    betweenIntro:'微型重启。三分钟焕然一新。',
+    speechIntro:'站好或坐好。肩膀打开。抬起下巴。',
+    relaxIntro:'没有目标。没有任务。只是呼吸。',
+    deepIntro:'进阶练习。所有技巧。完全沉浸。',
   },
   ar: {
     appName:'DIVE',tagline:'تنفّس. انغمس. انطلق.',chooseLanguage:'اختر اللغة',chooseWorld:'اختر عالمك',
@@ -272,6 +340,21 @@ const LANG = {
     onb3title:'20 سيناريو',onb3sub:'لكل مناسبة',onb3desc:'قبل اجتماع، بعد خلاف، أرق، قلق صباحي — ستجد المناسب.',
     onb4title:'3 برامج',onb4sub:'تعلّم خطوة بخطوة',onb4desc:'الغوصة الأولى. درع التوتر. تركيز عميق. مع فيديو المدرب.',
     paywallFeatures:['20 سيناريو','3 برامج فيديو','كل التقنيات السبع','3 عوالم بصرية','بلا إعلانات'],
+    morningIntro:'صباح الخير. خمس دقائق تنفس قبل القهوة. جسمك سيستيقظ أسرع.',
+    overloadIntro:'ضع هاتفك. أغلق التبويبات. أغلق عينيك.',
+    conflictIntro:'توقف. قبل إعادة التفكير — تنفّس. الأدرينالين يختفي في ٣-٥ دقائق.',
+    deadlineIntro:'ثلاث دقائق. ثم عد للمهمة. لكن بهدوء.',
+    trafficIntro:'عيون مفتوحة، يدان على المقود. فقط التنفس.',
+    sleepIntro:'استلقِ. تغطّ. أغلق عينيك. فقط تابع التنفس.',
+    focusIntro:'ضع الهاتف. أغلق عينيك. صفر معلومات واردة.',
+    decisionIntro:'القرارات المهمة تأتي من الهدوء. امنح نفسك خمس دقائق.',
+    workoutIntro:'تنشيط الجسم. تعبئة الموارد.',
+    postWorkoutIntro:'انتهى التمرين. التحول لوضع الاستعادة.',
+    anxiousIntro:'قلق الصباح هو الكورتيزول. ذروته في أول ٣٠ دقيقة. سنخفضه الآن.',
+    betweenIntro:'إعادة ضبط مصغرة. ثلاث دقائق وتصبح جديداً.',
+    speechIntro:'قف أو اجلس. افرد كتفيك. ارفع ذقنك.',
+    relaxIntro:'لا هدف. لا مهمة. فقط تنفّس.',
+    deepIntro:'ممارسة متقدمة. كل التقنيات. انغماس كامل.',
   }
 };
 
@@ -428,237 +511,215 @@ const CATEGORIES = {
   deep:     { svgIcon:'deep', color:'#5eaaa8' },
 };
 
-// ===== SESSION CONTENT (Russian meditation scripts preserved exactly) =====
-const SESSION_CONTENT = {
+// ===== SESSION CONTENT (now a function for i18n) =====
+const getSessionContent = (t, world) => ({
   meeting: {
     5: [
-      { type:'text', duration:10, text:'Сядьте. Спина ровная. Руки на коленях. Закройте глаза.' },
+      { type:'text', duration:10, text:t.sitDown },
       { type:'breathing', technique:'box', duration:96, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
-      { type:'text', duration:20, text:'Представьте встречу. Вы входите уверенно. Ваш голос ровный. Каждое слово — на месте.' },
+      { type:'text', duration:20, text:t.visOceanCalm },
       { type:'breathing', technique:'ujjayi', duration:130, params:{inhale:5,exhale:8} },
-      { type:'text', duration:8, text:'Откройте глаза. Вы готовы.' },
+      { type:'text', duration:8, text:t.openEyes },
     ],
     10: [
-      { type:'text', duration:10, text:'Найдите тихое место. Сядьте с прямой спиной. Глаза закрыты.' },
+      { type:'text', duration:10, text:t.sitDown },
       { type:'breathing', technique:'tidal', duration:90, params:{inhale:4,exhale:6,pause:2} },
       { type:'breathing', technique:'box', duration:128, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
-      { type:'bodyscan', duration:40, parts:[
-        {text:'Лоб — расслабьте',hold:8},{text:'Челюсть — отпустите',hold:8},{text:'Плечи — тяжёлые',hold:8},{text:'Руки — тёплые',hold:8},{text:'Живот — мягкий',hold:8}
-      ]},
+      { type:'bodyscan', duration:40, text:t.bodyScanFull },
       { type:'breathing', technique:'ujjayi', duration:150, params:{inhale:5,exhale:10} },
-      { type:'visualization', duration:30, texts:{
-        ocean:'Вы в переговорной. Хозяин ситуации. Аргументы выстроены. Голос спокоен. Вы контролируете ритм.',
-        space:'Вы в кабине управления. Перед вами — панель. Каждый индикатор горит зелёным. Миссия ясна.',
-        memory:'Вспомните момент, когда вы были абсолютно уверены. Это ощущение — здесь и сейчас.'
-      }},
+      { type:'visualization', duration:30, texts:{ocean:t.visOceanCalm, space:t.visSpaceCalm, memory:t.visMemoryCalm} },
       { type:'breathing', technique:'diaphragmatic', duration:90, params:{inhale:5,exhale:10} },
-      { type:'text', duration:8, text:'Действуйте.' },
+      { type:'text', duration:8, text:t.openEyes },
     ]
   },
   presentation: {
     5: [
-      { type:'text', duration:10, text:'Встаньте или сядьте. Расправьте плечи. Поднимите подбородок.' },
+      { type:'text', duration:10, text:t.speechIntro },
       { type:'breathing', technique:'physiological_sigh', duration:60, params:{inhale1:2,inhale2:1,exhale:7} },
       { type:'breathing', technique:'box', duration:96, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
-      { type:'text', duration:20, text:'Страх сцены — нормально. Это адреналин. Он вам поможет. Просто направьте его.' },
+      { type:'text', duration:20, text:t.conflictIntro },
       { type:'breathing', technique:'diaphragmatic', duration:90, params:{inhale:4,exhale:8} },
-      { type:'text', duration:8, text:'Выходите. Вы это сделаете.' },
+      { type:'text', duration:8, text:t.openEyes },
     ]
   },
   call: {
     3: [
-      { type:'text', duration:5, text:'Остановитесь. 3 минуты.' },
+      { type:'text', duration:5, text:t.deadlineIntro },
       { type:'breathing', technique:'physiological_sigh', duration:40, params:{inhale1:2,inhale2:1,exhale:7} },
       { type:'breathing', technique:'box', duration:80, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
-      { type:'text', duration:15, text:'Вы знаете, что сказать. Голос ровный. Позиция ясна.' },
+      { type:'text', duration:15, text:t.openEyes },
       { type:'breathing', technique:'diaphragmatic', duration:30, params:{inhale:4,exhale:8} },
-      { type:'text', duration:5, text:'Звоните.' },
+      { type:'text', duration:5, text:t.openEyes },
     ]
   },
   cant_focus: {
     5: [
-      { type:'text', duration:10, text:'Отложите телефон. Закройте лишние вкладки. Закройте глаза.' },
-      { type:'breathing', technique:'tidal', duration:90, params:{inhale:4,exhale:5,pause:2}, hint:'Считайте вдохи от 1 до 10. Сбились — начните сначала.' },
+      { type:'text', duration:10, text:t.focusIntro },
+      { type:'breathing', technique:'tidal', duration:90, params:{inhale:4,exhale:5,pause:2} },
       { type:'breathing', technique:'box', duration:100, params:{inhale:5,holdIn:5,exhale:5,holdOut:5} },
-      { type:'text', duration:15, text:'Когда ум отвлекается — замечайте и возвращайте. Это не провал, это тренировка.' },
+      { type:'text', duration:15, text:t.focusIntro },
       { type:'breathing', technique:'ujjayi', duration:60, params:{inhale:5,exhale:8} },
-      { type:'text', duration:8, text:'Теперь — одна задача. Только одна.' },
+      { type:'text', duration:8, text:t.openEyes },
     ]
   },
   decision: {
     5: [
-      { type:'text', duration:10, text:'Важные решения принимаются из спокойствия, не из тревоги. Дайте себе 5 минут.' },
+      { type:'text', duration:10, text:t.decisionIntro },
       { type:'breathing', technique:'diaphragmatic', duration:90, params:{inhale:5,exhale:10} },
-      { type:'text', duration:20, text:'Уберите эмоции. Представьте решение как шахматную партию. Какой следующий ход?' },
+      { type:'text', duration:20, text:t.decisionIntro },
       { type:'breathing', technique:'box', duration:100, params:{inhale:4,holdIn:6,exhale:4,holdOut:6} },
-      { type:'text', duration:15, text:'Два варианта. Какой из них вы бы посоветовали другу? Это и есть ваш ответ.' },
+      { type:'text', duration:15, text:t.decisionIntro },
       { type:'breathing', technique:'tidal', duration:30, params:{inhale:4,exhale:6,pause:2} },
-      { type:'text', duration:5, text:'Решайте.' },
+      { type:'text', duration:5, text:t.openEyes },
     ]
   },
   hard_day: {
     5: [
-      { type:'text', duration:10, text:'День закончен. Всё, что нужно было сделать — сделано или подождёт. Сейчас — только вы.' },
+      { type:'text', duration:10, text:t.relaxIntro },
       { type:'breathing', technique:'tidal', duration:80, params:{inhale:4,exhale:6,pause:2} },
       { type:'breathing', technique:'diaphragmatic', duration:120, params:{inhale:5,exhale:10} },
-      { type:'bodyscan', duration:60, parts:[
-        {text:'Отпустите напряжение в лбу',hold:6},{text:'Виски — мягкие',hold:5},{text:'Глаза — тяжёлые',hold:5},{text:'Челюсть — приоткрыта, язык свободен',hold:6},{text:'Шея — отпустите',hold:5},{text:'Плечи — опустите от ушей',hold:6},{text:'Руки — тяжёлые, как после бассейна',hold:6},{text:'Живот — мягкий',hold:5},{text:'Ноги — тяжёлые, тёплые',hold:5},{text:'Ступни — расслаблены',hold:5}
-      ]},
-      { type:'text', duration:8, text:'День отпущен. Вечер — ваш.' },
+      { type:'bodyscan', duration:60, text:t.bodyScanFull },
+      { type:'text', duration:8, text:t.openEyes },
     ]
   },
   conflict: {
     5: [
-      { type:'text', duration:15, text:'Стоп. Прежде чем прокручивать в голове — продышите. Адреналин уходит за 3-5 минут. Дайте ему уйти.' },
+      { type:'text', duration:15, text:t.conflictIntro },
       { type:'breathing', technique:'physiological_sigh', duration:60, params:{inhale1:2,inhale2:1,exhale:7} },
       { type:'breathing', technique:'diaphragmatic', duration:90, params:{inhale:4,exhale:8} },
-      { type:'text', duration:20, text:'Конфликт — это информация, не приговор. Когда тело успокоится, вы увидите ситуацию яснее.' },
+      { type:'text', duration:20, text:t.conflictIntro },
       { type:'breathing', technique:'ujjayi', duration:80, params:{inhale:5,exhale:8} },
-      { type:'text', duration:8, text:'Теперь можно думать.' },
+      { type:'text', duration:8, text:t.openEyes },
     ]
   },
   traffic: {
     5: [
-      { type:'text', duration:10, text:'Глаза открыты, руки на руле. Только дыхание.' },
+      { type:'text', duration:10, text:t.trafficIntro },
       { type:'breathing', technique:'tidal', duration:90, params:{inhale:4,exhale:6,pause:2} },
       { type:'breathing', technique:'diaphragmatic', duration:120, params:{inhale:5,exhale:10} },
-      { type:'text', duration:15, text:'Пробка — не потеря времени. Это 5 минут, которые вы подарили своему телу.' },
+      { type:'text', duration:15, text:t.trafficIntro },
       { type:'breathing', technique:'diaphragmatic', duration:60, params:{inhale:5,exhale:10} },
-      { type:'text', duration:5, text:'Приехали в лучшей форме.' },
+      { type:'text', duration:5, text:t.openEyes },
     ]
   },
   deadline: {
     3: [
-      { type:'text', duration:5, text:'Три минуты. Потом — обратно к задаче. Но уже спокойно.' },
+      { type:'text', duration:5, text:t.deadlineIntro },
       { type:'breathing', technique:'physiological_sigh', duration:40, params:{inhale1:2,inhale2:1,exhale:7} },
       { type:'breathing', technique:'box', duration:64, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
       { type:'breathing', technique:'diaphragmatic', duration:48, params:{inhale:4,exhale:8} },
-      { type:'text', duration:8, text:'Дедлайн никуда не ушёл. Но вы теперь думаете, а не паникуете.' },
+      { type:'text', duration:8, text:t.openEyes },
     ]
   },
   overload: {
     5: [
-      { type:'text', duration:15, text:'Закройте ноутбук. Отложите телефон. Закройте глаза. Следующие 5 минут — ноль входящей информации.' },
+      { type:'text', duration:15, text:t.overloadIntro },
       { type:'breathing', technique:'tidal', duration:90, params:{inhale:4,exhale:6,pause:3} },
-      { type:'bodyscan', duration:50, parts:[
-        {text:'Внимание на тело. Не на мысли.',hold:6},{text:'Лоб — расслабьте',hold:7},{text:'Глаза — мягко закрыты',hold:7},{text:'Челюсть — свободна',hold:7},{text:'Шея — отпустите',hold:7},{text:'Плечи — опустите',hold:7},{text:'Каждую зону — расслабляем',hold:7}
-      ]},
+      { type:'bodyscan', duration:50, text:t.bodyScanFull },
       { type:'breathing', technique:'ujjayi', duration:100, params:{inhale:5,exhale:10} },
-      { type:'text', duration:10, text:'Ваш мозг обработает информацию фоном. Ему просто нужна была пауза.' },
+      { type:'text', duration:10, text:t.overloadIntro },
     ]
   },
   morning: {
     5: [
-      { type:'text', duration:10, text:'Доброе утро. Перед кофе — 5 минут дыхания. Тело проснётся быстрее.' },
+      { type:'text', duration:10, text:t.morningIntro },
       { type:'breathing', technique:'segmented', duration:90, params:{belly:3,ribs:3,chest:3,exhale:6} },
       { type:'breathing', technique:'recovery', duration:60, params:{inhale:3,holdIn:1,exhale:2} },
       { type:'breathing', technique:'box', duration:96, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
-      { type:'text', duration:15, text:'Кровь разогнана. Мозг получил кислород. Кофе будет вкусный, но необязательный.' },
-      { type:'text', duration:5, text:'Хорошего дня.' },
+      { type:'text', duration:15, text:t.morningIntro },
+      { type:'text', duration:5, text:t.openEyes },
     ]
   },
   afternoon: {
     3: [
-      { type:'text', duration:5, text:'Три минуты вместо третьего кофе.' },
+      { type:'text', duration:5, text:t.betweenIntro },
       { type:'breathing', technique:'recovery', duration:45, params:{inhale:3,holdIn:1,exhale:2} },
       { type:'breathing', technique:'segmented', duration:60, params:{belly:3,ribs:3,chest:3,exhale:6} },
       { type:'breathing', technique:'box', duration:48, params:{inhale:3,holdIn:3,exhale:3,holdOut:3} },
-      { type:'text', duration:8, text:'Энергия — не в кофеине. Она в кислороде.' },
+      { type:'text', duration:8, text:t.openEyes },
     ]
   },
   pre_workout: {
     5: [
-      { type:'text', duration:10, text:'Активируем тело. Мобилизуем ресурсы.' },
+      { type:'text', duration:10, text:t.workoutIntro },
       { type:'breathing', technique:'segmented', duration:90, params:{belly:3,ribs:3,chest:3,exhale:5} },
       { type:'breathing', technique:'recovery', duration:60, params:{inhale:3,holdIn:1,exhale:2} },
       { type:'breathing', technique:'ujjayi', duration:60, params:{inhale:4,exhale:6} },
-      { type:'text', duration:15, text:'Тело разогрето. Лёгкие раскрыты. Мышцы получат больше кислорода.' },
-      { type:'text', duration:5, text:'Вперёд.' },
+      { type:'text', duration:15, text:t.workoutIntro },
+      { type:'text', duration:5, text:t.openEyes },
     ]
   },
   quick_reset: {
     3: [
-      { type:'text', duration:5, text:'Экспресс-мобилизация. Три минуты.' },
+      { type:'text', duration:5, text:t.betweenIntro },
       { type:'breathing', technique:'recovery', duration:45, params:{inhale:3,holdIn:1,exhale:2} },
       { type:'breathing', technique:'box', duration:48, params:{inhale:3,holdIn:3,exhale:3,holdOut:3} },
       { type:'breathing', technique:'physiological_sigh', duration:40, params:{inhale1:2,inhale2:1,exhale:7} },
-      { type:'text', duration:8, text:'Собрались.' },
+      { type:'text', duration:8, text:t.openEyes },
     ]
   },
   post_workout: {
     5: [
-      { type:'text', duration:10, text:'Тренировка окончена. Переключаем тело в режим восстановления.' },
+      { type:'text', duration:10, text:t.postWorkoutIntro },
       { type:'breathing', technique:'tidal', duration:90, params:{inhale:4,exhale:6,pause:3} },
       { type:'breathing', technique:'diaphragmatic', duration:120, params:{inhale:5,exhale:12} },
-      { type:'bodyscan', duration:50, parts:[
-        {text:'Пройдитесь вниманием по мышцам, которые работали',hold:10},{text:'Отпустите каждую',hold:8},{text:'Они сделали свою работу',hold:8},{text:'Плечи — расслаблены',hold:8},{text:'Спина — свободна',hold:8},{text:'Ноги — тяжёлые, тёплые',hold:8}
-      ]},
-      { type:'text', duration:8, text:'Восстановление запущено. Мышцы скажут спасибо.' },
+      { type:'bodyscan', duration:50, text:t.bodyScanFull },
+      { type:'text', duration:8, text:t.openEyes },
     ]
   },
   insomnia: {
     10: [
-      { type:'text', duration:15, text:'Лягте на спину. Накройтесь. Закройте глаза. Ничего не нужно делать. Просто следуйте за дыханием.' },
+      { type:'text', duration:15, text:t.sleepIntro },
       { type:'breathing', technique:'tidal', duration:120, params:{inhale:4,exhale:6,pause:3} },
       { type:'breathing', technique:'diaphragmatic', duration:150, params:{inhale:4,exhale:12} },
-      { type:'bodyscan', duration:120, parts:[
-        {text:'Лоб тяжёлый...',hold:10},{text:'Веки тяжёлые...',hold:10},{text:'Челюсть свободна...',hold:10},{text:'Шея расслаблена...',hold:10},{text:'Плечи вдавлены в кровать...',hold:10},{text:'Руки тяжёлые... они тонут в матрас...',hold:12},{text:'Живот мягкий...',hold:10},{text:'Поясница расслаблена...',hold:10},{text:'Бёдра тяжёлые...',hold:10},{text:'Ступни тяжёлые... пальцы ног — свободны...',hold:10}
-      ]},
+      { type:'bodyscan', duration:120, text:t.bodyScanFull },
       { type:'breathing', technique:'diaphragmatic', duration:120, params:{inhale:4,exhale:14} },
-      { type:'text', duration:10, text:'Если вы это слышите — вы ещё не уснули. Ничего. Продолжайте дышать. Сон придёт.' },
+      { type:'text', duration:10, text:t.sleepEnd },
     ]
   },
   anxious_wake: {
     5: [
-      { type:'text', duration:15, text:'Утренняя тревога — это кортизол. Его пик приходится на первые 30 минут. Сейчас мы его снизим.' },
+      { type:'text', duration:15, text:t.anxiousIntro },
       { type:'breathing', technique:'physiological_sigh', duration:60, params:{inhale1:2,inhale2:1,exhale:7} },
       { type:'breathing', technique:'diaphragmatic', duration:90, params:{inhale:5,exhale:10} },
-      { type:'text', duration:20, text:'Тревога — не предсказание. Это химическая реакция. Вы только что изменили химию своего тела.' },
+      { type:'text', duration:20, text:t.anxiousIntro },
       { type:'breathing', technique:'tidal', duration:60, params:{inhale:4,exhale:6,pause:2} },
-      { type:'text', duration:8, text:'Начните день спокойно.' },
+      { type:'text', duration:8, text:t.openEyes },
     ]
   },
   between: {
     3: [
-      { type:'text', duration:5, text:'Micro-reset. Три минуты — и вы как новый.' },
+      { type:'text', duration:5, text:t.betweenIntro },
       { type:'breathing', technique:'physiological_sigh', duration:30, params:{inhale1:2,inhale2:1,exhale:7} },
       { type:'breathing', technique:'box', duration:64, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
       { type:'breathing', technique:'diaphragmatic', duration:48, params:{inhale:4,exhale:8} },
-      { type:'text', duration:8, text:'Reset complete. Следующая встреча — с чистой головой.' },
+      { type:'text', duration:8, text:t.openEyes },
     ]
   },
   just_relax: {
     10: [
-      { type:'text', duration:15, text:'Нет цели. Нет задачи. Просто — дышать.' },
+      { type:'text', duration:15, text:t.relaxIntro },
       { type:'breathing', technique:'tidal', duration:120, params:{inhale:4,exhale:6,pause:2} },
       { type:'breathing', technique:'diaphragmatic', duration:120, params:{inhale:5,exhale:10} },
       { type:'breathing', technique:'ujjayi', duration:180, params:{inhale:6,exhale:12} },
-      { type:'bodyscan', duration:90, parts:[
-        {text:'Макушка — мягкое тепло',hold:9},{text:'Лоб — расслабьте все морщины',hold:9},{text:'Глаза — тяжёлые веки',hold:9},{text:'Челюсть — приоткрыта',hold:9},{text:'Шея — длинная, расслабленная',hold:9},{text:'Плечи — опустите от ушей',hold:9},{text:'Руки — тяжёлые, тёплые',hold:9},{text:'Живот — мягкий, свободный',hold:9},{text:'Ноги — тяжёлые',hold:9},{text:'Ступни — тёплые',hold:9}
-      ]},
-      { type:'text', duration:10, text:'Вы нигде и одновременно — точно там, где нужно.' },
+      { type:'bodyscan', duration:90, text:t.bodyScanFull },
+      { type:'text', duration:10, text:t.relaxIntro },
     ]
   },
   deep_dive: {
     10: [
-      { type:'text', duration:10, text:'Продвинутая практика. Все техники. Полное погружение.' },
+      { type:'text', duration:10, text:t.deepIntro },
       { type:'breathing', technique:'tidal', duration:60, params:{inhale:4,exhale:6,pause:2} },
       { type:'breathing', technique:'segmented', duration:90, params:{belly:4,ribs:3,chest:3,exhale:8} },
       { type:'breathing', technique:'box', duration:100, params:{inhale:5,holdIn:5,exhale:5,holdOut:5} },
       { type:'breathing', technique:'ujjayi', duration:108, params:{inhale:6,exhale:12} },
-      { type:'visualization', duration:40, texts:{
-        ocean:'Вы в бесконечной тёплой воде. Невесомость. Тишина. Только пульс — ровный, медленный. Вы — часть этой тишины.',
-        space:'Вы в открытом космосе. Невесомость. Тишина. Под вами — Земля. Все проблемы — на той маленькой точке. А вы — здесь. В покое.',
-        memory:'Вспомните место абсолютного покоя. Тёплый вечер. Запах скошенной травы. Звуки сверчков. Просто — есть.'
-      }},
+      { type:'visualization', duration:40, texts:{ocean:t.visOceanCalm, space:t.visSpaceCalm, memory:t.visMemoryCalm} },
       { type:'breathing', technique:'physiological_sigh', duration:50, params:{inhale1:2,inhale2:1,exhale:7} },
-      { type:'bodyscan', duration:60, parts:[
-        {text:'Лоб — расслабьте',hold:7},{text:'Глаза — мягко',hold:6},{text:'Челюсть — свободна',hold:6},{text:'Плечи — тяжёлые',hold:7},{text:'Руки — тёплые',hold:6},{text:'Живот — мягкий',hold:7},{text:'Ноги — тяжёлые',hold:7},{text:'Ступни — тёплые',hold:7}
-      ]},
-      { type:'text', duration:10, text:'Поверхность. Вы вернулись.' },
+      { type:'bodyscan', duration:60, text:t.bodyScanFull },
+      { type:'text', duration:10, text:t.openEyes },
     ]
   },
-};
+});
 
 // ===== PROGRAMS (preserved exactly) =====
 const PROGRAMS = {
@@ -910,37 +971,87 @@ class AmbientEngine {
       this.running = true;
     } catch(e) { console.warn('Audio init failed', e); }
   }
-  duck(dur=0.5) { if (!this.ctx||!this.masterGain) return; this.masterGain.gain.cancelScheduledValues(this.ctx.currentTime); this.masterGain.gain.setValueAtTime(this.masterGain.gain.value,this.ctx.currentTime); this.masterGain.gain.linearRampToValueAtTime(0.06,this.ctx.currentTime+dur); }
-  unduck(dur=2) { if (!this.ctx||!this.masterGain) return; this.masterGain.gain.cancelScheduledValues(this.ctx.currentTime); this.masterGain.gain.setValueAtTime(this.masterGain.gain.value,this.ctx.currentTime); this.masterGain.gain.linearRampToValueAtTime(0.15,this.ctx.currentTime+dur); }
+  duck(dur=0.5) { if (!this.ctx||!this.masterGain) return; this.masterGain.gain.cancelScheduledValues(this.ctx.currentTime); this.masterGain.gain.setValueAtTime(this.masterGain.gain.value,this.ctx.currentTime); this.masterGain.gain.linearRampToValueAtTime(0.04,this.ctx.currentTime+dur); }
+  unduck(dur=1.5) { if (!this.ctx||!this.masterGain) return; this.masterGain.gain.cancelScheduledValues(this.ctx.currentTime); this.masterGain.gain.setValueAtTime(this.masterGain.gain.value,this.ctx.currentTime); this.masterGain.gain.linearRampToValueAtTime(0.12,this.ctx.currentTime+dur); }
   fadeIn(dur=3) { if (!this.ctx||!this.masterGain) return; if (this.ctx.state==='suspended') this.ctx.resume(); this.masterGain.gain.cancelScheduledValues(this.ctx.currentTime); this.masterGain.gain.setValueAtTime(this.masterGain.gain.value,this.ctx.currentTime); this.masterGain.gain.linearRampToValueAtTime(0.15,this.ctx.currentTime+dur); }
   fadeOut(dur=2) { if (!this.ctx||!this.masterGain) return; this.masterGain.gain.cancelScheduledValues(this.ctx.currentTime); this.masterGain.gain.setValueAtTime(this.masterGain.gain.value,this.ctx.currentTime); this.masterGain.gain.linearRampToValueAtTime(0,this.ctx.currentTime+dur); }
   destroy() { this.fadeOut(0.5); setTimeout(() => { try { this.ctx?.close(); } catch {} this.ctx = null; this.running = false; }, 600); }
 }
 
-// ===== VOICE AUDIO SYSTEM =====
-function useVoiceAudio(seg, segElapsed, voiceEnabled, ambientRef) {
-  const audioRef = useRef(null);
-  const playedRef = useRef(false);
-  useEffect(() => {
-    playedRef.current = false;
-    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
-  }, [seg]);
-  useEffect(() => {
-    if (!voiceEnabled || !seg?.audio?.src || playedRef.current) return;
-    const startAt = seg.audio.startAt || 0;
-    if (segElapsed >= startAt && !playedRef.current) {
-      playedRef.current = true;
-      const a = new Audio(seg.audio.src);
-      a.volume = seg.audio.volume || 0.8;
-      audioRef.current = a;
-      ambientRef.current?.duck();
-      a.play().catch(() => {});
-      a.onended = () => { ambientRef.current?.unduck(); };
-      a.onerror = () => { ambientRef.current?.unduck(); };
-    }
-  }, [segElapsed, seg, voiceEnabled]);
-  useEffect(() => { return () => { if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; } }; }, []);
+// ===== AUDIO MAP =====
+const AUDIO_MAP = {
+  'intro_sit': '/audio/intro_sit.mp3',
+  'intro_hands': '/audio/intro_hands.mp3',
+  'session_end': '/audio/session_end.mp3',
+  'session_end_sleep': '/audio/session_end_sleep.mp3',
+  'diaphragmatic_cue': '/audio/diaphragmatic_cue.mp3',
+  'diaphragmatic_exhale': '/audio/diaphragmatic_exhale.mp3',
+  'box_intro': '/audio/box_intro.mp3',
+  'box_cue_inhale': '/audio/box_cue_inhale.mp3',
+  'box_cue_hold': '/audio/box_cue_hold.mp3',
+  'box_cue_exhale': '/audio/box_cue_exhale.mp3',
+  'box_cue_pause': '/audio/box_cue_pause.mp3',
+  'segmented_intro': '/audio/segmented_intro.mp3',
+  'segmented_belly': '/audio/segmented_belly.mp3',
+  'segmented_ribs': '/audio/segmented_ribs.mp3',
+  'segmented_chest': '/audio/segmented_chest.mp3',
+  'segmented_exhale': '/audio/segmented_exhale.mp3',
+  'ujjayi_intro': '/audio/ujjayi_intro.mp3',
+  'ujjayi_cue': '/audio/ujjayi_cue.mp3',
+  'ujjayi_exhale': '/audio/ujjayi_exhale.mp3',
+  'recovery_intro': '/audio/recovery_intro.mp3',
+  'recovery_cue': '/audio/recovery_cue.mp3',
+  'recovery_exhale': '/audio/recovery_exhale.mp3',
+  'sigh_intro': '/audio/sigh_intro.mp3',
+  'sigh_cue': '/audio/sigh_cue.mp3',
+  'sigh_exhale': '/audio/sigh_exhale.mp3',
+  'tidal_intro': '/audio/tidal_intro.mp3',
+  'tidal_cue': '/audio/tidal_cue.mp3',
+  'tidal_exhale': '/audio/tidal_exhale.mp3',
+  'bodyscan_short': '/audio/bodyscan_short.mp3',
+  'bodyscan_full': '/audio/bodyscan_full.mp3',
+  'bodyscan_sleep': '/audio/bodyscan_sleep.mp3',
+  'vis_ocean_calm': '/audio/vis_ocean_calm.mp3',
+  'vis_space_calm': '/audio/vis_space_calm.mp3',
+  'vis_memory_calm': '/audio/vis_memory_calm.mp3',
+};
+
+// ===== VOICE PLAYER =====
+class VoicePlayer {
+  constructor() {
+    this.current = null;
+    this.enabled = true;
+  }
+  play(audioKey, volume = 0.85) {
+    if (!this.enabled) return null;
+    if (!AUDIO_MAP[audioKey]) return null;
+    if (this.current) { this.current.pause(); this.current = null; }
+    const audio = new Audio(AUDIO_MAP[audioKey]);
+    audio.volume = volume;
+    audio.onerror = () => { this.current = null; };
+    audio.play().catch(() => {});
+    this.current = audio;
+    return audio;
+  }
+  fadeOut(duration = 2000) {
+    if (!this.current) return;
+    const audio = this.current;
+    const step = audio.volume / (duration / 50);
+    const fade = setInterval(() => {
+      if (audio.volume > step) { audio.volume -= step; }
+      else { audio.pause(); audio.volume = 0; clearInterval(fade); }
+    }, 50);
+  }
+  stop() {
+    if (this.current) { this.current.pause(); this.current = null; }
+  }
+  toggle() {
+    this.enabled = !this.enabled;
+    if (!this.enabled) this.stop();
+    return this.enabled;
+  }
 }
+const voicePlayer = new VoicePlayer();
 
 // ===== PARTICLES =====
 function OceanParticles({ world, diveProgress }) {
@@ -1104,7 +1215,7 @@ function BreathingCircle({ technique, params, elapsed, phaseName, phaseTime, pha
 }
 
 // ===== SESSION PLAYER =====
-function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, ambientRef }) {
+function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, ambientRef, currentLang }) {
   const [segIdx, setSegIdx] = useState(0);
   const [segElapsed, setSegElapsed] = useState(0);
   const [totalElapsed, setTotalElapsed] = useState(0);
@@ -1112,6 +1223,7 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
   const [phaseName, setPhaseName] = useState('');
   const [phaseRemaining, setPhaseRemaining] = useState(0);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [voiceOn, setVoiceOn] = useState(voiceEnabled && currentLang === 'en');
   const rafRef = useRef(null);
   const lastTimeRef = useRef(null);
 
@@ -1136,9 +1248,53 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
     }
   }, [depthProgress, world]);
 
-  useVoiceAudio(seg, segElapsed, voiceEnabled, ambientRef);
+  // Sync voicePlayer with voiceOn state
+  useEffect(() => { voicePlayer.enabled = voiceOn; if (!voiceOn) voicePlayer.stop(); }, [voiceOn]);
 
-  // Phase computation
+  // Voice audio: play matching audio for text/bodyscan/visualization segments
+  const voicePlayedForSegRef = useRef(false);
+  useEffect(() => {
+    voicePlayedForSegRef.current = false;
+    voicePlayer.stop();
+  }, [segIdx]);
+
+  useEffect(() => {
+    if (!voiceOn || voicePlayedForSegRef.current) return;
+    if (!seg || currentLang !== 'en') return;
+    let audioKey = null;
+    if (seg.type === 'text') {
+      if (seg.text === t.sitDown) audioKey = 'intro_sit';
+      else if (seg.text === t.sleepEnd) audioKey = 'session_end_sleep';
+      else if (seg.text === t.openEyes) audioKey = 'session_end';
+    } else if (seg.type === 'bodyscan') {
+      audioKey = 'bodyscan_full';
+    } else if (seg.type === 'visualization') {
+      if (world === 'ocean') audioKey = 'vis_ocean_calm';
+      else if (world === 'space') audioKey = 'vis_space_calm';
+      else audioKey = 'vis_memory_calm';
+    }
+    if (audioKey) {
+      voicePlayedForSegRef.current = true;
+      const a = voicePlayer.play(audioKey, 0.85);
+      if (a && ambientRef.current) {
+        ambientRef.current.duck();
+        a.onended = () => { ambientRef.current?.unduck(); };
+        a.onerror = () => { ambientRef.current?.unduck(); };
+      }
+      // Fade out 2 sec before segment ends
+      const fadeTimeout = setTimeout(() => { voicePlayer.fadeOut(2000); }, Math.max(0, (seg.duration - 2) * 1000));
+      return () => clearTimeout(fadeTimeout);
+    }
+  }, [segIdx, seg, voiceOn, currentLang, world]);
+
+  // Phase computation with audio sync
+  const [cycleNumber, setCycleNumber] = useState(0);
+  const lastPhaseRef = useRef('');
+  const breathIntroPlayedRef = useRef(false);
+
+  // Reset breath intro flag on segment change
+  useEffect(() => { breathIntroPlayedRef.current = false; lastPhaseRef.current = ''; setCycleNumber(0); }, [segIdx]);
+
   useEffect(() => {
     if (!seg || seg.type !== 'breathing') return;
     const tech = TECHNIQUES[seg.technique];
@@ -1146,24 +1302,78 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
     const p = seg.params || tech.defaults;
     const phases = tech.phases;
     const cycleDur = phases.reduce((s, ph) => s + (p[ph] || tech.defaults[ph] || 4), 0);
+    const currentCycle = Math.floor(segElapsed / cycleDur);
     const cyclePos = segElapsed % cycleDur;
+    setCycleNumber(currentCycle);
     let acc = 0;
+    let currentPhase = phases[0];
+    let remaining = p[phases[0]] || tech.defaults[phases[0]] || 4;
     for (const ph of phases) {
       const dur = p[ph] || tech.defaults[ph] || 4;
-      if (cyclePos < acc + dur) { setPhaseName(ph); setPhaseRemaining(dur - (cyclePos - acc)); return; }
+      if (cyclePos < acc + dur) { currentPhase = ph; remaining = dur - (cyclePos - acc); break; }
       acc += dur;
     }
-    setPhaseName(phases[0]);
-    setPhaseRemaining(p[phases[0]] || tech.defaults[phases[0]] || 4);
-  }, [segElapsed, seg]);
+    setPhaseName(currentPhase);
+    setPhaseRemaining(remaining);
+
+    // Play technique intro audio once at start of breathing segment
+    if (!breathIntroPlayedRef.current && currentLang === 'en' && voiceOn) {
+      breathIntroPlayedRef.current = true;
+      const techKey = seg.technique === 'physiological_sigh' ? 'sigh' : seg.technique;
+      const introKey = `${techKey}_intro`;
+      if (AUDIO_MAP[introKey]) {
+        const a = voicePlayer.play(introKey, 0.8);
+        if (a && ambientRef.current) {
+          ambientRef.current.duck();
+          a.onended = () => { ambientRef.current?.unduck(); };
+          a.onerror = () => { ambientRef.current?.unduck(); };
+        }
+      }
+    }
+
+    // Play phase audio cues (only first 2 cycles, only English)
+    if (currentPhase !== lastPhaseRef.current) {
+      lastPhaseRef.current = currentPhase;
+      if (currentCycle < 2 && currentLang === 'en' && voiceOn) {
+        const techKey = seg.technique === 'physiological_sigh' ? 'sigh' : seg.technique;
+        // Map phase names to audio key suffixes
+        const phaseAudioMap = {
+          inhale: 'inhale', exhale: 'exhale', holdIn: 'hold', holdOut: 'pause',
+          belly: 'belly', ribs: 'ribs', chest: 'chest',
+          inhale1: 'inhale', inhale2: 'inhale', pause: 'pause'
+        };
+        const phaseSuffix = phaseAudioMap[currentPhase] || currentPhase;
+        const audioKey = `${techKey}_cue_${phaseSuffix}`;
+        if (AUDIO_MAP[audioKey]) {
+          voicePlayer.play(audioKey, 0.8);
+        }
+      }
+      // Haptic
+      if (navigator.vibrate) {
+        try { navigator.vibrate(currentPhase === 'exhale' ? 150 : 80); } catch {}
+      }
+    }
+  }, [segElapsed, seg, currentLang, voiceOn]);
 
   const [bodyScanIdx, setBodyScanIdx] = useState(0);
+  const bodyScanSentences = useMemo(() => {
+    if (!seg || seg.type !== 'bodyscan') return [];
+    if (seg.parts) return seg.parts.map(p => p.text);
+    if (seg.text) return seg.text.split('. ').map(s => s.replace(/\.$/, '').trim()).filter(Boolean);
+    return [];
+  }, [seg]);
   useEffect(() => {
     if (!seg || seg.type !== 'bodyscan') return;
-    let acc = 0;
-    for (let i = 0; i < seg.parts.length; i++) { acc += seg.parts[i].hold; if (segElapsed < acc) { setBodyScanIdx(i); return; } }
-    setBodyScanIdx(seg.parts.length - 1);
-  }, [segElapsed, seg]);
+    if (seg.parts) {
+      let acc = 0;
+      for (let i = 0; i < seg.parts.length; i++) { acc += seg.parts[i].hold; if (segElapsed < acc) { setBodyScanIdx(i); return; } }
+      setBodyScanIdx(seg.parts.length - 1);
+    } else if (bodyScanSentences.length > 0) {
+      const holdPerSentence = seg.duration / bodyScanSentences.length;
+      const idx = Math.min(Math.floor(segElapsed / holdPerSentence), bodyScanSentences.length - 1);
+      setBodyScanIdx(idx);
+    }
+  }, [segElapsed, seg, bodyScanSentences]);
 
   // Animation loop
   useEffect(() => {
@@ -1184,12 +1394,10 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
       rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
-    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); voicePlayer.stop(); };
   }, [paused, segIdx, seg, segments.length]);
 
-  useEffect(() => {
-    if (seg?.type === 'breathing' && navigator.vibrate) { try { navigator.vibrate(30); } catch {} }
-  }, [phaseName]);
+  // Haptic now handled inside phase computation above
 
   const progressSegments = useMemo(() => {
     let acc = 0;
@@ -1198,13 +1406,17 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
 
   const subInstruction = seg?.type === 'breathing' ? (t[PHASE_SUB_LANG_KEY[seg.technique]?.[phaseName]] || '') : '';
 
+  const isTextSegment = seg && ['text','bodyscan','visualization'].includes(seg.type);
+
   const renderSegment = () => {
     if (!seg) return null;
     switch (seg.type) {
       case 'breathing':
         return (
           <div className="flex-1 flex flex-col items-center justify-center">
-            <BreathingCircle technique={seg.technique} params={seg.params || TECHNIQUES[seg.technique]?.defaults} elapsed={segElapsed} phaseName={phaseName} phaseTime={0} phaseRemaining={phaseRemaining} t={t} accentRgb={accentRgb} />
+            <div className={isTextSegment ? 'circle-hidden' : 'circle-visible'}>
+              <BreathingCircle technique={seg.technique} params={seg.params || TECHNIQUES[seg.technique]?.defaults} elapsed={segElapsed} phaseName={phaseName} phaseTime={0} phaseRemaining={phaseRemaining} t={t} accentRgb={accentRgb} />
+            </div>
             {subInstruction && (
               <div className="font-body text-center mt-5 px-8" style={{fontSize:13,fontWeight:300,color:'var(--text-2)',maxWidth:280,lineHeight:1.6}}>
                 {subInstruction}
@@ -1219,30 +1431,38 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
         );
       case 'text':
         return (
-          <div className="flex-1 flex items-center justify-center px-8">
-            <div className="font-body text-center text-deblur" style={{fontSize:17, fontWeight:300, lineHeight:1.75, color:'var(--text)', maxWidth:300, letterSpacing:'0.01em'}} key={seg.text.slice(0,20)}>
-              {seg.text}
+          <div className="flex-1 flex items-center justify-center" style={{position:'relative'}}>
+            <div className="session-text-segment">
+              <div className="session-text-content text-deblur" key={seg.text?.slice(0,20)}>
+                {seg.text}
+              </div>
             </div>
           </div>
         );
-      case 'bodyscan':
-        const part = seg.parts[bodyScanIdx];
+      case 'bodyscan': {
+        const bsText = bodyScanSentences[bodyScanIdx] || '';
         return (
-          <div className="flex-1 flex items-center justify-center px-8">
-            <div className="font-body text-center text-deblur" style={{fontSize:17, fontWeight:300, lineHeight:1.75, color:'var(--text)', maxWidth:300, letterSpacing:'0.01em'}} key={bodyScanIdx}>
-              {part?.text}
+          <div className="flex-1 flex items-center justify-center" style={{position:'relative'}}>
+            <div className="session-text-segment">
+              <div className="session-text-content text-deblur" key={bodyScanIdx}>
+                {bsText}
+              </div>
             </div>
           </div>
         );
-      case 'visualization':
-        const vText = seg.texts[world] || seg.texts.ocean || '';
+      }
+      case 'visualization': {
+        const vText = seg.texts?.[world] || seg.texts?.ocean || '';
         return (
-          <div className="flex-1 flex items-center justify-center px-8">
-            <div className="font-body text-center text-deblur" style={{fontSize:17, fontWeight:300, lineHeight:1.75, color:'var(--text)', maxWidth:300, letterSpacing:'0.01em'}} key={vText.slice(0,20)}>
-              {vText}
+          <div className="flex-1 flex items-center justify-center" style={{position:'relative'}}>
+            <div className="session-text-segment">
+              <div className="session-text-content text-deblur" key={vText?.slice(0,20)}>
+                {vText}
+              </div>
             </div>
           </div>
         );
+      }
       case 'video':
         // Video placeholder (no real videos yet)
         return (
@@ -1277,9 +1497,16 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
           <div className="font-mono" style={{fontSize:13, fontWeight:300, color:'rgba(226,232,240,0.5)'}}>
             {Math.floor(totalElapsed / 60)}:{String(Math.floor(totalElapsed % 60)).padStart(2,'0')} / {Math.floor(totalDuration / 60)}:{String(Math.floor(totalDuration % 60)).padStart(2,'0')}
           </div>
-          <button onClick={() => setPaused(!paused)} className="flex items-center justify-center rounded-full" style={{width:44,height:44,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.06)'}}>
-            <Icon name={paused ? 'play' : 'pause'} size={16}/>
-          </button>
+          <div className="flex items-center gap-2">
+            {currentLang === 'en' && (
+              <button onClick={() => setVoiceOn(v => !v)} className="flex items-center justify-center rounded-full" style={{width:44,height:44,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.06)', color: voiceOn ? palette.accent : 'var(--text-3)'}}>
+                <Icon name={voiceOn ? 'mic' : 'mic_off'} size={16}/>
+              </button>
+            )}
+            <button onClick={() => setPaused(!paused)} className="flex items-center justify-center rounded-full" style={{width:44,height:44,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.06)'}}>
+              <Icon name={paused ? 'play' : 'pause'} size={16}/>
+            </button>
+          </div>
         </div>
 
         {/* Progress bar */}
@@ -1545,7 +1772,7 @@ function App() {
 
   // Active session
   if (activeSession) {
-    return <SessionPlayer segments={activeSession.segments} world={world} onComplete={() => endSession(true)} onExit={() => endSession(false)} t={t} voiceEnabled={stats.voiceEnabled} ambientRef={ambientRef} />;
+    return <SessionPlayer segments={activeSession.segments} world={world} onComplete={() => endSession(true)} onExit={() => endSession(false)} t={t} voiceEnabled={stats.voiceEnabled} ambientRef={ambientRef} currentLang={currentLang} />;
   }
 
   // Completion
@@ -1648,7 +1875,7 @@ function App() {
             return (
               <button key={id} className="glass p-5 text-left" style={{position:'relative',overflow:'hidden',minHeight:110}} onClick={() => {
                 if (!checkAccess(sc)) { setShowPaywall(true); return; }
-                const segs = SESSION_CONTENT[id]?.[dur];
+                const segs = getSessionContent(t, world)[id]?.[dur];
                 if (segs) startSession(segs, {scenario:id, category:sc.cat});
               }}>
                 <div style={{marginBottom:8, color:palette.accent, opacity:0.7}}><Icon name={sc.svgIcon || id} size={24}/></div>
@@ -1759,7 +1986,7 @@ function App() {
             style={{height:52, padding:'0 32px', borderRadius:12, fontWeight:500, fontSize:15, background:`rgba(${accentRgb},0.12)`, border:`1px solid rgba(${accentRgb},0.25)`, color:palette.accent, letterSpacing:'0.04em'}}
             onClick={() => {
               const dur = selectedDuration || sc.durations[0];
-              const segs = SESSION_CONTENT[selectedScenario]?.[dur];
+              const segs = getSessionContent(t, world)[selectedScenario]?.[dur];
               if (segs) startSession(segs, {scenario:selectedScenario, category:sc.cat});
             }}>
             {t.begin}
