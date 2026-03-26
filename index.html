@@ -37,6 +37,15 @@ html[lang="zh"] body, html[lang="zh"] #root { font-family:'Noto Sans SC','DM San
 @keyframes twinkle { 0%,100%{opacity:var(--base-opacity)} 50%{opacity:0.05} }
 @keyframes bokeh-drift { 0%{transform:translate(0,0)} 25%{transform:translate(10px,-15px)} 50%{transform:translate(-8px,12px)} 75%{transform:translate(15px,5px)} 100%{transform:translate(0,0)} }
 @keyframes caustic-drift { 0%{transform:translateX(0)} 100%{transform:translateX(30px)} }
+@keyframes causticsDrift { 0%{transform:translateX(-3%) skewX(-1deg)} 100%{transform:translateX(3%) skewX(1deg)} }
+.ocean-caustics {
+  position:fixed; top:0; left:0; right:0; height:35vh; pointer-events:none; z-index:1; opacity:0.4;
+  mix-blend-mode:soft-light;
+  background:
+    repeating-linear-gradient(-45deg, transparent 0px, transparent 8px, rgba(94,170,168,0.015) 8px, rgba(94,170,168,0.015) 9px),
+    repeating-linear-gradient(30deg, transparent 0px, transparent 12px, rgba(94,170,168,0.012) 12px, rgba(94,170,168,0.012) 13px);
+  animation: causticsDrift 12s ease-in-out infinite alternate;
+}
 @keyframes tentacle-sway { 0% { transform: rotate(-3deg) scaleY(1); } 100% { transform: rotate(3deg) scaleY(1.05); } }
 @keyframes light-emerge { 0% { width:4px; height:4px; opacity:0; } 100% { width:min(80vw,320px); height:min(80vw,320px); opacity:1; } }
 @keyframes text-emerge { from { color:rgba(220,225,235,0); } to { color:rgba(220,225,235,0.6); } }
@@ -3520,6 +3529,7 @@ function App() {
 
   return (
     <div className="fixed inset-0" style={{background:bg}}>
+      {world === 'ocean' && <div className="ocean-caustics" />}
       <Particles world={world} />
       <div className="relative z-10 h-full">
         {renderScreen()}
