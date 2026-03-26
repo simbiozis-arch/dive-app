@@ -1167,14 +1167,13 @@ function Particles({ world, diveProgress = 0 }) {
 
 
 // ===== BREATHING OBJECTS (static — scaled by parent wrapper via JS) =====
-function OceanBubble({ glowIntensity }) {
-  const gi = glowIntensity || 0.1;
+const OceanBubble = React.forwardRef((props, ref) => {
   return (
-    <div style={{
+    <div ref={ref} style={{
       width: '100%', height: '100%', borderRadius: '50%',
       background: 'radial-gradient(circle at 40% 35%, rgba(94,170,168,0.10) 0%, rgba(94,170,168,0.04) 40%, transparent 70%)',
       border: '1.5px solid rgba(255,255,255,0.12)',
-      boxShadow: `0 0 ${60+gi*200}px rgba(94,170,168,${gi}), 0 0 ${120+gi*300}px rgba(94,170,168,${gi*0.5}), inset 0 0 60px rgba(94,170,168,0.06)`,
+      boxShadow: '0 0 80px rgba(94,170,168,0.1), 0 0 150px rgba(94,170,168,0.05), inset 0 0 60px rgba(94,170,168,0.06)',
       position: 'relative',
     }}>
       <div style={{
@@ -1189,59 +1188,57 @@ function OceanBubble({ glowIntensity }) {
       }} />
     </div>
   );
-}
+});
 
-function PulsarObject({ glowIntensity }) {
-  const gi = glowIntensity || 0.1;
-  const ringOpacity = 0.5 + gi * 2;
+const PulsarObject = React.forwardRef((props, ref) => {
+  // ref targets a wrapper div for glow updates; rings use static initial styles
   return (
     <React.Fragment>
       {/* Ring 3 (outermost) */}
-      <div style={{
+      <div className="pulsar-ring3" style={{
         position:'absolute', borderRadius:'50%',
-        border:`1px solid rgba(139,126,200,${0.10 + gi*0.3})`,
-        boxShadow:`0 0 20px rgba(139,126,200,${gi*0.3})`,
+        border:'1px solid rgba(139,126,200,0.13)',
+        boxShadow:'0 0 20px rgba(139,126,200,0.03)',
         top:'50%', left:'50%', width:'92%', height:'92%',
         transform:'translate(-50%,-50%)',
-        opacity: ringOpacity * 0.7,
+        opacity: 0.42,
       }} />
       {/* Ring 2 */}
-      <div style={{
+      <div className="pulsar-ring2" style={{
         position:'absolute', borderRadius:'50%',
-        border:`1.5px solid rgba(139,126,200,${0.15 + gi*0.4})`,
-        boxShadow:`0 0 15px rgba(139,126,200,${gi*0.4})`,
+        border:'1.5px solid rgba(139,126,200,0.19)',
+        boxShadow:'0 0 15px rgba(139,126,200,0.04)',
         top:'50%', left:'50%', width:'65%', height:'65%',
         transform:'translate(-50%,-50%)',
-        opacity: ringOpacity * 0.85,
+        opacity: 0.51,
       }} />
       {/* Ring 1 (innermost) */}
-      <div style={{
+      <div className="pulsar-ring1" style={{
         position:'absolute', borderRadius:'50%',
-        border:`1.5px solid rgba(139,126,200,${0.25 + gi*0.5})`,
-        boxShadow:`0 0 12px rgba(139,126,200,${gi*0.5})`,
+        border:'1.5px solid rgba(139,126,200,0.30)',
+        boxShadow:'0 0 12px rgba(139,126,200,0.05)',
         top:'50%', left:'50%', width:'40%', height:'40%',
         transform:'translate(-50%,-50%)',
-        opacity: ringOpacity,
+        opacity: 0.6,
       }} />
-      {/* Core */}
-      <div style={{
+      {/* Core — ref targets this for glow manipulation */}
+      <div ref={ref} style={{
         width:24, height:24, borderRadius:'50%',
         background:'rgba(139,126,200,0.95)',
-        boxShadow:`0 0 ${20+gi*60}px rgba(139,126,200,${0.3+gi*2}), 0 0 ${60+gi*80}px rgba(139,126,200,${0.15+gi*1.5}), 0 0 ${100+gi*100}px rgba(139,126,200,${gi})`,
+        boxShadow:'0 0 26px rgba(139,126,200,0.5), 0 0 68px rgba(139,126,200,0.3), 0 0 110px rgba(139,126,200,0.1)',
         zIndex:3,
       }} />
     </React.Fragment>
   );
-}
+});
 
-function MemoryOrb({ glowIntensity }) {
-  const gi = glowIntensity || 0.1;
+const MemoryOrb = React.forwardRef((props, ref) => {
   return (
-    <div style={{
+    <div ref={ref} style={{
       width: '100%', height: '100%', borderRadius: '50%',
       background: 'radial-gradient(circle, rgba(255,200,120,0.30) 0%, rgba(255,200,120,0.10) 40%, transparent 70%)',
       filter: 'blur(2px)',
-      boxShadow: `0 0 ${60+gi*200}px rgba(255,200,120,${gi}), 0 0 ${120+gi*300}px rgba(196,149,106,${gi*0.5}), inset 0 0 60px rgba(255,200,120,0.06)`,
+      boxShadow: '0 0 80px rgba(255,200,120,0.1), 0 0 150px rgba(196,149,106,0.05), inset 0 0 60px rgba(255,200,120,0.06)',
       position: 'relative',
     }}>
       <div style={{
@@ -1251,7 +1248,7 @@ function MemoryOrb({ glowIntensity }) {
       }} />
     </div>
   );
-}
+});
 
 // ===== SESSION TEXT (fixed full-screen centered) =====
 function SessionText({ text, bodyScanSentences, bodyScanIdx, visible }) {
@@ -1377,15 +1374,29 @@ class SessionEngine {
     const t = this.phaseDuration > 0 ? Math.min(this.phaseElapsed / this.phaseDuration, 1) : 0;
     const eased = t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2;
     const p = this.currentPhase;
-    if (p==='inhale'||p==='inhale1'||p==='belly') {
+    if (p==='inhale') {
       this.breathScale = 1.0 + 0.5*eased;
       this.glowIntensity = 0.1 + 0.15*eased;
-    } else if (p==='inhale2'||p==='ribs') {
-      this.breathScale = 1.15 + 0.15*eased;
-      this.glowIntensity = 0.2 + 0.05*eased;
-    } else if (p==='chest') {
+    } else if (p==='inhale1') {
+      // physiological sigh: first inhale 1.0 → 1.3
+      this.breathScale = 1.0 + 0.3*eased;
+      this.glowIntensity = 0.1 + 0.10*eased;
+    } else if (p==='inhale2') {
+      // physiological sigh: second inhale 1.3 → 1.5
       this.breathScale = 1.3 + 0.2*eased;
-      this.glowIntensity = 0.25;
+      this.glowIntensity = 0.2 + 0.05*eased;
+    } else if (p==='belly') {
+      // segmented: belly 1.0 → 1.17
+      this.breathScale = 1.0 + 0.17*eased;
+      this.glowIntensity = 0.1 + 0.05*eased;
+    } else if (p==='ribs') {
+      // segmented: ribs 1.17 → 1.33
+      this.breathScale = 1.17 + 0.16*eased;
+      this.glowIntensity = 0.15 + 0.05*eased;
+    } else if (p==='chest') {
+      // segmented: chest 1.33 → 1.5
+      this.breathScale = 1.33 + 0.17*eased;
+      this.glowIntensity = 0.20 + 0.05*eased;
     } else if (p==='holdIn'||p==='hold') {
       this.breathScale = 1.5;
       this.glowIntensity = 0.25 + Math.sin(this.phaseElapsed*2)*0.03;
@@ -1445,25 +1456,31 @@ class SessionEngine {
 // ===== SESSION PLAYER (engine-driven) =====
 function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, ambientRef, currentLang }) {
   const engineRef = useRef(null);
-  const [state, setState] = useState({
-    segmentIndex: 0, segmentType: segments[0]?.type || 'text',
-    segmentElapsed: 0, segmentDuration: segments[0]?.duration || 0,
-    segmentProgress: 0,
-    phase: null, phaseElapsed: 0, phaseDuration: 0, phaseProgress: 0,
-    cycleCount: 0, breathScale: 1.0, glowIntensity: 0.1,
-    totalElapsed: 0, totalDuration: segments.reduce((s, seg) => s + seg.duration, 0),
-    diveProgress: 0,
-  });
+  // Refs for 60fps direct DOM updates (no React re-render)
+  const wrapperRef = useRef(null);
+  const glowTargetRef = useRef(null);
+  const phaseLabelRef = useRef(null);
+  const phaseTimerRef = useRef(null);
+  const phaseSubRef = useRef(null);
+  const progressFillRef = useRef(null);
+  const timeDisplayRef = useRef(null);
+  // React state only for structural/low-frequency changes
+  const [segIndex, setSegIndex] = useState(0);
+  const [segType, setSegType] = useState(segments[0]?.type || 'text');
+  const [currentSeg, setCurrentSeg] = useState(segments[0]);
+  const totalDuration = useMemo(() => segments.reduce((s, seg) => s + seg.duration, 0), [segments]);
+  const [diveProgress, setDiveProgress] = useState(0);
   const [paused, setPaused] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [voiceOn, setVoiceOn] = useState(voiceEnabled && currentLang === 'en');
   const [bodyScanIdx, setBodyScanIdx] = useState(0);
   const lastPhaseRef = useRef('');
+  const lastDiveProgressRef = useRef(0);
 
   const w = WORLDS[world];
   const palette = w.palette;
   const accentRgb = palette.accentRgb;
-  const seg = segments[state.segmentIndex];
+  const seg = currentSeg;
 
   // Body scan sentences
   const bodyScanSentences = useMemo(() => {
@@ -1537,19 +1554,69 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
     engineRef.current = engine;
 
     engine.onUpdate = (s) => {
-      setState(s);
+      // === HIGH FREQUENCY: direct DOM manipulation (every frame, no React) ===
+      // Breathing object scale
+      if (wrapperRef.current) {
+        wrapperRef.current.style.transform = `translate(-50%, -50%) scale(${s.breathScale})`;
+      }
+      // Glow on the breathing object
+      if (glowTargetRef.current) {
+        const gi = s.glowIntensity;
+        if (world === 'ocean') {
+          glowTargetRef.current.style.boxShadow = `0 0 ${60+gi*200}px rgba(94,170,168,${gi}), 0 0 ${120+gi*300}px rgba(94,170,168,${gi*0.5}), inset 0 0 60px rgba(94,170,168,0.06)`;
+        } else if (world === 'space') {
+          glowTargetRef.current.style.boxShadow = `0 0 ${20+gi*60}px rgba(139,126,200,${0.3+gi*2}), 0 0 ${60+gi*80}px rgba(139,126,200,${0.15+gi*1.5}), 0 0 ${100+gi*100}px rgba(139,126,200,${gi})`;
+        } else {
+          glowTargetRef.current.style.boxShadow = `0 0 ${60+gi*200}px rgba(255,200,120,${gi}), 0 0 ${120+gi*300}px rgba(196,149,106,${gi*0.5}), inset 0 0 60px rgba(255,200,120,0.06)`;
+        }
+      }
+      // Phase label
+      if (phaseLabelRef.current && s.phase) {
+        const label = t[PHASE_LANG_KEY[s.phase]] || s.phase;
+        phaseLabelRef.current.textContent = label;
+      }
+      // Phase timer countdown
+      if (phaseTimerRef.current && s.phaseDuration > 0) {
+        phaseTimerRef.current.textContent = Math.ceil(Math.max(0, s.phaseDuration - s.phaseElapsed));
+      }
+      // Sub-instruction text
+      if (phaseSubRef.current) {
+        const subSeg = segments[s.segmentIndex];
+        const sub = subSeg?.technique ? (t[PHASE_SUB_LANG_KEY[subSeg.technique]?.[s.phase]] || '') : '';
+        phaseSubRef.current.textContent = sub;
+      }
+      // Time display
+      if (timeDisplayRef.current) {
+        const m = Math.floor(s.totalElapsed/60);
+        const sec = Math.floor(s.totalElapsed%60);
+        const tm = Math.floor(s.totalDuration/60);
+        const ts = Math.floor(s.totalDuration%60);
+        timeDisplayRef.current.textContent = `${m}:${String(sec).padStart(2,'0')} / ${tm}:${String(ts).padStart(2,'0')}`;
+      }
+      // Progress bar fill
+      if (progressFillRef.current) {
+        progressFillRef.current.style.width = `${s.diveProgress*100}%`;
+      }
+
+      // === LOW FREQUENCY: React state (only when values actually change) ===
+      // diveProgress for background darkening (throttled to ~2x/sec)
+      const dp = Math.round(s.diveProgress * 100) / 100;
+      if (Math.abs(dp - lastDiveProgressRef.current) > 0.005) {
+        lastDiveProgressRef.current = dp;
+        setDiveProgress(dp);
+      }
       // Body scan index from segmentProgress
-      const currentSeg = segments[s.segmentIndex];
-      if (currentSeg && currentSeg.type === 'bodyscan') {
-        if (currentSeg.parts) {
+      const curSeg = segments[s.segmentIndex];
+      if (curSeg && curSeg.type === 'bodyscan') {
+        if (curSeg.parts) {
           let acc = 0;
-          for (let i = 0; i < currentSeg.parts.length; i++) {
-            acc += currentSeg.parts[i].hold;
+          for (let i = 0; i < curSeg.parts.length; i++) {
+            acc += curSeg.parts[i].hold;
             if (s.segmentElapsed < acc) { setBodyScanIdx(i); break; }
-            if (i === currentSeg.parts.length - 1) setBodyScanIdx(i);
+            if (i === curSeg.parts.length - 1) setBodyScanIdx(i);
           }
         } else {
-          const sentences = currentSeg.text ? currentSeg.text.split('. ').filter(Boolean) : [];
+          const sentences = curSeg.text ? curSeg.text.split('. ').filter(Boolean) : [];
           if (sentences.length > 0) {
             const holdPerSentence = 5;
             const idx = Math.min(Math.floor(s.segmentElapsed / holdPerSentence), sentences.length - 1);
@@ -1566,7 +1633,13 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
       }
     };
 
-    engine.onSegmentChange = handleSegmentTransition;
+    // SEGMENT CHANGE: React state update (infrequent)
+    engine.onSegmentChange = (index, seg) => {
+      setSegIndex(index);
+      setSegType(seg.type);
+      setCurrentSeg(seg);
+      handleSegmentTransition(index, seg);
+    };
     engine.onComplete = () => onComplete();
 
     // Also trigger audio for first segment if it's a non-breathing segment
@@ -1592,7 +1665,7 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
 
   // Dive darkening background
   const bgStyle = useMemo(() => {
-    const darken = state.diveProgress;
+    const darken = diveProgress;
     if (world === 'ocean') {
       return { background: `linear-gradient(180deg, rgba(14,61,92,${1-darken*0.8}) 0%, rgba(2,10,16,${0.8+darken*0.2}) 100%)` };
     } else if (world === 'space') {
@@ -1600,12 +1673,10 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
     } else {
       return { background: `rgba(26,21,16,${0.7+darken*0.3})` };
     }
-  }, [state.diveProgress, world]);
+  }, [diveProgress, world]);
 
-  const subInstruction = seg?.type === 'breathing' ? (t[PHASE_SUB_LANG_KEY[seg.technique]?.[state.phase]] || '') : '';
-  const phaseLabel = state.phase ? (t[PHASE_LANG_KEY[state.phase]] || state.phase) : '';
+  // techLabel is low-frequency (only changes on segment change)
   const techLabel = seg?.type === 'breathing' ? (t[TECHNIQUE_LANG_KEY[seg.technique]] || seg.technique) : '';
-  const phaseRemaining = state.phaseDuration > 0 ? Math.max(0, state.phaseDuration - state.phaseElapsed) : 0;
 
   const isTextSegment = seg && ['text','bodyscan','visualization'].includes(seg.type);
 
@@ -1615,42 +1686,37 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
       case 'breathing':
         return (
           <div className="flex-1 flex flex-col items-center justify-center" style={{position:'relative'}}>
-            {/* Breathing object wrapper — NO transition, scaled by JS */}
-            <div style={{
+            {/* Breathing object wrapper — NO transition, scaled directly by ref */}
+            <div ref={wrapperRef} style={{
               position: 'absolute', top: '45%', left: '50%',
               width: 'min(80vw, 320px)', aspectRatio: '1',
               willChange: 'transform',
-              transform: `translate(-50%, -50%) scale(${state.breathScale})`,
+              transform: 'translate(-50%, -50%) scale(1)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
-              {world === 'ocean' && <OceanBubble glowIntensity={state.glowIntensity} />}
-              {world === 'space' && <PulsarObject glowIntensity={state.glowIntensity} />}
-              {world === 'memory' && <MemoryOrb glowIntensity={state.glowIntensity} />}
+              {world === 'ocean' && <OceanBubble ref={glowTargetRef} />}
+              {world === 'space' && <PulsarObject ref={glowTargetRef} />}
+              {world === 'memory' && <MemoryOrb ref={glowTargetRef} />}
             </div>
             {/* Phase info below the object */}
             <div style={{ textAlign:'center', marginTop: 'min(80vw, 320px)', paddingTop: 24, zIndex:5, position:'relative' }}>
-              <div className="font-body" style={{
+              <div ref={phaseLabelRef} className="font-body" style={{
                 fontWeight:500, fontSize:14, letterSpacing:'0.1em', textTransform:'uppercase',
                 color:'rgba(220,225,235,0.7)', marginBottom:4,
               }}>
-                {phaseLabel}
               </div>
-              <div className="font-mono" style={{
+              <div ref={phaseTimerRef} className="font-mono" style={{
                 fontWeight:300, fontSize:32, color:'rgba(220,225,235,0.5)',
                 fontVariantNumeric:'tabular-nums',
               }}>
-                {Math.ceil(phaseRemaining)}
               </div>
               <div className="font-body" style={{fontSize:13, fontWeight:400, color:'var(--text-2)', marginTop:8}}>
                 {techLabel}
               </div>
             </div>
-            {subInstruction && (
-              <div className="font-body text-center mt-5 px-8" style={{fontSize:13,fontWeight:300,color:'var(--text-2)',maxWidth:280,lineHeight:1.6,position:'relative',zIndex:5}}>
-                {subInstruction}
-              </div>
-            )}
-            {seg.hint && state.segmentElapsed < 15 && !subInstruction && (
+            <div ref={phaseSubRef} className="font-body text-center mt-5 px-8" style={{fontSize:13,fontWeight:300,color:'var(--text-2)',maxWidth:280,lineHeight:1.6,position:'relative',zIndex:5}}>
+            </div>
+            {seg.hint && (
               <div className="font-body text-center mt-5 px-8 text-deblur" style={{fontSize:13, fontWeight:300, lineHeight:1.6, color:'var(--text-2)', maxWidth:280, position:'relative', zIndex:5}}>
                 {seg.hint}
               </div>
@@ -1699,15 +1765,15 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
 
   return (
     <div className="fixed inset-0 flex flex-col z-50" style={{...bgStyle, transition:'background 2s ease'}}>
-      <Particles world={world} diveProgress={state.diveProgress} />
+      <Particles world={world} diveProgress={diveProgress} />
       <div className="relative z-10 flex flex-col h-full">
         {/* Top bar */}
         <div className="flex items-center justify-between px-6" style={{paddingTop:'env(safe-area-inset-top, 48px)', paddingBottom:8}}>
           <button onClick={() => setShowExitConfirm(true)} className="flex items-center justify-center rounded-full" style={{width:44,height:44,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.06)'}}>
             <Icon name="close" size={18}/>
           </button>
-          <div className="font-mono" style={{fontSize:13, fontWeight:300, color:'rgba(226,232,240,0.5)'}}>
-            {Math.floor(state.totalElapsed / 60)}:{String(Math.floor(state.totalElapsed % 60)).padStart(2,'0')} / {Math.floor(state.totalDuration / 60)}:{String(Math.floor(state.totalDuration % 60)).padStart(2,'0')}
+          <div ref={timeDisplayRef} className="font-mono" style={{fontSize:13, fontWeight:300, color:'rgba(226,232,240,0.5)'}}>
+            0:00 / {Math.floor(totalDuration / 60)}:{String(Math.floor(totalDuration % 60)).padStart(2,'0')}
           </div>
           <div className="flex items-center gap-2">
             {currentLang === 'en' && (
@@ -1723,7 +1789,7 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
 
         {/* Progress bar */}
         <div className="relative" style={{height:2, borderRadius:1, background:'rgba(255,255,255,0.04)', margin:'0 24px 8px'}}>
-          <div className="absolute top-0 h-full" style={{width:`${state.diveProgress*100}%`, borderRadius:1, background:`rgba(${accentRgb},0.6)`, transition:'width 1s linear'}} />
+          <div ref={progressFillRef} className="absolute top-0 h-full" style={{width:'0%', borderRadius:1, background:`rgba(${accentRgb},0.6)`}} />
         </div>
 
         {renderSegment()}
