@@ -1680,7 +1680,13 @@ class SessionEngine {
   resume() { this.isPaused = false; this._lastTime = performance.now(); }
   skip() {
     const seg = this.segments[this.currentSegmentIndex];
-    if (seg) this.segmentElapsed = seg.duration > 0 ? seg.duration : 1;
+    if (!seg) return;
+    if (seg.duration > 0) {
+      this.segmentElapsed = seg.duration;
+    } else {
+      // For duration-0 segments (e.g. video placeholders), directly advance
+      this._nextSegment();
+    }
   }
   destroy() { this.isRunning = false; if (this._rafId) cancelAnimationFrame(this._rafId); }
 }
@@ -1987,7 +1993,7 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
               <div style={{textAlign:'center'}}>
                 <button className="px-8 py-3 rounded-full font-body"
                   style={{fontWeight:500, fontSize:14, background:`rgba(${accentRgb},0.12)`, border:`1px solid rgba(${accentRgb},0.25)`, color:palette.accent}}
-                  onClick={() => { if (engineRef.current) engineRef.current.skip(); }}>
+                  onClick={() => { console.log('Video skip triggered'); if (engineRef.current) engineRef.current.skip(); }}>
                   {t.continueText}
                 </button>
               </div>
@@ -2021,6 +2027,12 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
             </button>
             <button onClick={() => setPaused(!paused)} className="flex items-center justify-center rounded-full" style={{width:44,height:44,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.06)'}}>
               <Icon name={paused ? 'play' : 'pause'} size={16}/>
+            </button>
+            <button onClick={() => { if (engineRef.current) engineRef.current.skip(); }} className="flex items-center justify-center rounded-full" style={{width:44,height:44,background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.06)'}}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <polygon points="5,4 15,12 5,20" fill="rgba(226,232,240,0.8)"/>
+                <line x1="19" y1="5" x2="19" y2="19" stroke="rgba(226,232,240,0.8)" strokeWidth="2"/>
+              </svg>
             </button>
           </div>
         </div>
@@ -2232,10 +2244,10 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
     };
   }, []);
 
-  // Background interpolation: black -> ocean gradient over 65s
+  // Background interpolation: pure black -> ocean gradient over 65s
   const bgProgress = Math.min(elapsed / 65, 1);
   const cinematicBg = breathPhase === 'cinematic'
-    ? `linear-gradient(180deg, rgba(14,61,92,${bgProgress}) 0%, rgba(8,42,66,${bgProgress}) 33%, rgba(4,21,32,${bgProgress}) 66%, rgba(2,10,16,${bgProgress}) 100%)`
+    ? `linear-gradient(180deg, rgb(${Math.round(bgProgress*14)},${Math.round(bgProgress*61)},${Math.round(bgProgress*92)}) 0%, rgb(${Math.round(bgProgress*8)},${Math.round(bgProgress*42)},${Math.round(bgProgress*66)}) 33%, rgb(${Math.round(bgProgress*4)},${Math.round(bgProgress*21)},${Math.round(bgProgress*32)}) 66%, rgb(${Math.round(bgProgress*2)},${Math.round(bgProgress*10)},${Math.round(bgProgress*16)}) 100%)`
     : oceanBg;
 
   // Breath hold test depth calculation
@@ -2579,7 +2591,11 @@ function App() {
           return {...prev, programProgress: pp, programsCompleted};
         });
       }
-      setCompletionData({ duration: totalDur, techniques: techs, depth: Math.round(totalDur / 60 * maxMult * 10) / 10, _lastScenario: activeSession.meta?.scenario });
+      const breathCycles = segs.filter(s => s.type === 'breathing').reduce((total, s) => {
+        const cycleDur = Object.values(s.params).reduce((a, b) => a + b, 0);
+        return total + (cycleDur > 0 ? Math.floor(s.duration / cycleDur) : 0);
+      }, 0) || Math.round(totalDur / 16);
+      setCompletionData({ duration: totalDur, techniques: techs, depth: Math.round(totalDur / 60 * maxMult * 10) / 10, breathCycles, segments: segs, _lastScenario: activeSession.meta?.scenario });
       setShowCompletion(true);
     }
     setActiveSession(null);
@@ -2656,10 +2672,10 @@ function App() {
           <div style={{marginBottom:20, color:palette.accent, opacity:0.4}}><Icon name="check" size={32}/></div>
           <div className="font-body mb-3" style={{fontSize:28, fontWeight:300, color:'rgba(226,232,240,0.95)'}}>{t.diveComplete}</div>
           <div className="flex gap-8 justify-center mb-8 mt-8">
-            {[[Math.round(completionData.duration / 60), t.min],[completionData.depth, WORLDS[world].depthUnit],[stats.streak, t.dayStreak]].map(([val,label],i) => (
+            {[[Math.round(completionData.duration / 60), t.duration || t.min],[completionData.breathCycles || Math.round(completionData.duration / 16), t.breathCycles || 'Breaths'],[completionData.depth, WORLDS[world].depthUnit]].map(([val,label],i) => (
               <div key={i} className="text-center" style={{animation:`count-up 600ms ${i*150}ms ease-out both`}}>
                 <div className="font-mono" style={{fontSize:28, fontWeight:300, color:palette.accent}}>{val}</div>
-                <div className="font-body" style={{fontSize:11, fontWeight:400, color:'var(--text-3)', marginTop:4, letterSpacing:'0.05em'}}>{label}</div>
+                <div className="font-body" style={{fontSize:11, fontWeight:300, color:'var(--text-3)', marginTop:4, letterSpacing:'0.05em'}}>{label}</div>
               </div>
             ))}
           </div>
@@ -2809,7 +2825,27 @@ function App() {
     const d = dur || sc.durations[0];
     // Check 10min premium restriction
     if (d >= 10 && !sc.free && !stats.isPremium) { setShowPaywall(true); return; }
-    const segs = getSessionContent(t, world)[id]?.[d];
+    let segs = getSessionContent(t, world)[id]?.[d];
+    // Fallback: if no segments for this duration, generate a generic session
+    if (!segs || segs.length === 0) {
+      const scenarioContent = getSessionContent(t, world)[id];
+      const existingDurations = scenarioContent ? Object.keys(scenarioContent).map(Number) : [];
+      if (existingDurations.length > 0) {
+        // Use the closest existing duration's first breathing technique as base
+        const closest = existingDurations.reduce((a, b) => Math.abs(b - d) < Math.abs(a - d) ? b : a);
+        const baseSegs = scenarioContent[closest];
+        const firstBreathing = baseSegs.find(s => s.type === 'breathing');
+        if (firstBreathing) {
+          const targetSec = d * 60;
+          segs = [
+            { type:'text', duration:8, text:t.sitDown, textKey:'sitDown' },
+            { type:'breathing', technique:firstBreathing.technique, duration: Math.round(targetSec * 0.7), params:{...firstBreathing.params} },
+            { type:'breathing', technique:'diaphragmatic', duration: Math.round(targetSec * 0.25), params:{inhale:4, exhale:8} },
+            { type:'text', duration: Math.round(targetSec * 0.05) || 5, text:t.openEyes, textKey:'openEyes' },
+          ];
+        }
+      }
+    }
     if (segs) startSession(segs, {scenario:id, category:sc.cat});
   };
 
@@ -2847,10 +2883,10 @@ function App() {
       {/* Streak + depth below card */}
       <div className="flex gap-4 mb-6 justify-center">
         <div className="font-body" style={{fontSize:12, fontWeight:400, color:'var(--text-3)'}}>
-          {stats.streak > 0 ? `${stats.streak} ${t.dayStreak}` : t.streakStart}
+          {stats.streak > 0 ? <><span className="font-mono">{stats.streak}</span> {t.dayStreak}</> : t.streakStart}
         </div>
         <div className="font-body" style={{fontSize:12, fontWeight:400, color:'var(--text-3)'}}>
-          {stats.totalDepth} {WORLDS[world].depthUnit} {t.depth}
+          <span className="font-mono">{stats.totalDepth}</span> {WORLDS[world].depthUnit} {t.depth}
         </div>
       </div>
 
@@ -2869,7 +2905,7 @@ function App() {
                 <div className="mt-2" style={{height:2, borderRadius:1, background:'rgba(255,255,255,0.04)'}}>
                   <div style={{height:'100%', borderRadius:1, width:`${progress/prog.days*100}%`, background:`rgba(${accentRgb},0.6)`}} />
                 </div>
-                <div className="font-body mt-1" style={{fontSize:10, fontWeight:400, color:palette.accent, opacity:0.7}}>{progress}/{prog.days}</div>
+                <div className="font-mono mt-1" style={{fontSize:10, fontWeight:300, color:palette.accent, opacity:0.7}}>{progress}/{prog.days}</div>
               </button>
             );
           })}
@@ -2892,7 +2928,7 @@ function App() {
                   <button key={id} className="glass flex-shrink-0 px-4 py-3 text-left" style={{minWidth:130}}
                     onClick={() => launchScenario(id)}>
                     <div className="font-body" style={{fontWeight:500, fontSize:13, color:'rgba(255,255,255,0.85)'}}>{t[SCENARIO_LANG_KEY[id]]}</div>
-                    <div className="font-body mt-1" style={{fontSize:11, fontWeight:400, color:'rgba(255,255,255,0.35)'}}>{sc.durations[0]} {t.min}</div>
+                    <div className="font-mono mt-1" style={{fontSize:11, fontWeight:300, color:'rgba(255,255,255,0.35)'}}>{sc.durations[0]} {t.min}</div>
                     {!checkAccess(sc) && <span style={{position:'absolute', top:8, right:8, color:'var(--text-3)', opacity:0.4}}><Icon name="lock" size={12}/></span>}
                   </button>
                 ))}
@@ -2923,7 +2959,7 @@ function App() {
               <span style={{color:palette.accent,opacity:0.6}}><Icon name={sc.svgIcon || id} size={24}/></span>
               <div className="flex-1">
                 <div className="font-body" style={{fontWeight:600, fontSize:15, color:'rgba(255,255,255,0.92)'}}>{t[SCENARIO_LANG_KEY[id]]}</div>
-                <div className="font-body" style={{fontSize:12, fontWeight:400, color:'rgba(255,255,255,0.45)', marginTop:3}}>
+                <div className="font-mono" style={{fontSize:12, fontWeight:300, color:'rgba(255,255,255,0.45)', marginTop:3}}>
                   {sc.durations.map(d => d + ' ' + t.min).join(' / ')}
                 </div>
               </div>
@@ -2945,7 +2981,7 @@ function App() {
             <span style={{color:palette.accent,opacity:0.6}}><Icon name={sc.svgIcon || id} size={24}/></span>
             <div className="flex-1">
               <div className="font-body" style={{fontWeight:600, fontSize:15, color:'rgba(255,255,255,0.92)'}}>{t[SCENARIO_LANG_KEY[id]]}</div>
-              <div className="font-body" style={{fontSize:12, fontWeight:400, color:'rgba(255,255,255,0.4)', marginTop:3}}>
+              <div className="font-mono" style={{fontSize:12, fontWeight:300, color:'rgba(255,255,255,0.4)', marginTop:3}}>
                 {t[CATEGORY_LANG_KEY[sc.cat]]} / {sc.durations.map(d => d + t.min).join('/')}
               </div>
             </div>
