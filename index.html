@@ -42,6 +42,7 @@ html[lang="zh"] body, html[lang="zh"] #root { font-family:'Noto Sans SC','DM San
 @keyframes text-emerge { from { color:rgba(220,225,235,0); } to { color:rgba(220,225,235,0.6); } }
 @keyframes bg-emerge { from { background:#000; } to { background:linear-gradient(180deg, #0e3d5c 0%, #082a42 33%, #041520 66%, #020a10 100%); } }
 @keyframes hold-counter-pulse { 0%,100% { transform:scale(1); } 50% { transform:scale(1.03); } }
+@keyframes slowRotate { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
 
 .font-display { font-family:'DM Sans',sans-serif; }
 .font-mono { font-family:'JetBrains Mono',monospace; font-variant-numeric:tabular-nums; }
@@ -197,6 +198,8 @@ const LANG = {
     moodImprove:'{pre} \u2192 {post} \u00b7 \u2212{delta} points',moodSame:'Consistency builds resilience.',moodWorse:'Some sessions plant seeds for later.',
     techniques:'Techniques',masteryNone:'\u2014',masteryLearning:'Learning',masteryComfortable:'Comfortable',masteryMastered:'Mastered',
     unlockSpaceStreak:'Unlock with premium or 30-day streak',unlockSpaceDaysLeft:'{N} more days to unlock',
+    goodMorning:'Good morning',goodAfternoon:'Good afternoon',goodEvening:'Good evening',goodNight:'Good night',
+    day1Free:'Day 1 free',premiumLabel:'Premium',
   },
   ru: {
     appName:'DIVE',tagline:'Дыши. Погружайся. Действуй.',chooseLanguage:'Выберите язык',chooseWorld:'Выберите мир',
@@ -240,7 +243,7 @@ const LANG = {
     oceanDesc:'Глубина океана, пузыри, звуки волн',spaceDesc:'Бесконечный космос, звёзды, тишина',memoryDesc:'Тёплые воспоминания, боке, гармония',
     canChangeLater:'Можно сменить в настройках',quickStart:'Быстрый старт',categories:'Категории',
     back:'Назад',close:'Закрыть',done:'Готово',sessions:'сессий',days:'дней',
-    ambientSound:'Ambient звук',vibration:'Вибрация',premium:'Premium',active:'Активен',free:'Бесплатно',
+    ambientSound:'Окружающий звук',vibration:'Вибрация',premium:'Premium',active:'Активен',free:'Бесплатно',
     history:'История',resetProgress:'Сбросить прогресс',resetConfirm:'Сбросить весь прогресс?',
     language:'Язык',world:'Мир',voiceNarration:'Голосовое сопровождение',
     streakStart:'Начните серию сессий',streakDays:'дней подряд',next:'Далее',
@@ -285,6 +288,8 @@ const LANG = {
     moodImprove:'{pre} \u2192 {post} \u00b7 \u2212{delta} баллов',moodSame:'Стабильность укрепляет.',moodWorse:'Некоторые сессии работают позже.',
     techniques:'Техники',masteryNone:'\u2014',masteryLearning:'Изучение',masteryComfortable:'Уверенно',masteryMastered:'Мастерство',
     unlockSpaceStreak:'Premium или 30-дневная серия',unlockSpaceDaysLeft:'Ещё {N} дней',
+    goodMorning:'Доброе утро',goodAfternoon:'Добрый день',goodEvening:'Добрый вечер',goodNight:'Доброй ночи',
+    day1Free:'День 1 бесплатно',premiumLabel:'Премиум',
   },
   zh: {
     appName:'DIVE',tagline:'呼吸。沉浸。行动。',chooseLanguage:'选择语言',chooseWorld:'选择你的世界',
@@ -369,6 +374,8 @@ const LANG = {
     moodImprove:'{pre} \u2192 {post} \u00b7 \u2212{delta} 分',moodSame:'稳定性培养韧性。',moodWorse:'有些练习会在之后生效。',
     techniques:'技巧',masteryNone:'\u2014',masteryLearning:'学习中',masteryComfortable:'熟练',masteryMastered:'精通',
     unlockSpaceStreak:'Premium或30天连续解锁',unlockSpaceDaysLeft:'还需{N}天',
+    goodMorning:'早上好',goodAfternoon:'下午好',goodEvening:'晚上好',goodNight:'晚安',
+    day1Free:'第1天免费',premiumLabel:'高级版',
   },
   ar: {
     appName:'DIVE',tagline:'تنفّس. انغمس. انطلق.',chooseLanguage:'اختر اللغة',chooseWorld:'اختر عالمك',
@@ -453,6 +460,8 @@ const LANG = {
     moodImprove:'{pre} \u2192 {post} \u00b7 \u2212{delta} نقاط',moodSame:'الثبات يبني المرونة.',moodWorse:'بعض الجلسات تزرع بذوراً للمستقبل.',
     techniques:'التقنيات',masteryNone:'\u2014',masteryLearning:'تعلّم',masteryComfortable:'مريح',masteryMastered:'متقن',
     unlockSpaceStreak:'Premium أو سلسلة 30 يوم',unlockSpaceDaysLeft:'{N} يوم للفتح',
+    goodMorning:'صباح الخير',goodAfternoon:'مساء الخير',goodEvening:'مساء الخير',goodNight:'تصبح على خير',
+    day1Free:'اليوم 1 مجاني',premiumLabel:'مميز',
   }
 };
 
@@ -1733,6 +1742,8 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
   const [bodyScanIdx, setBodyScanIdx] = useState(0);
   const lastPhaseRef = useRef('');
   const lastDiveProgressRef = useRef(0);
+  const [controlOpacity, setControlOpacity] = useState(1);
+  const controlFadeRef = useRef(null);
 
   const w = WORLDS[world];
   const palette = w.palette;
@@ -1751,6 +1762,17 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
   useEffect(() => { voicePlayer.enabled = voiceOn; if (!voiceOn) voicePlayer.stop(); }, [voiceOn]);
   // Haptic sync
   useEffect(() => { hapticEnabledRef.current = hapticOn; if (!hapticOn && navigator.vibrate) try { navigator.vibrate(0); } catch {} }, [hapticOn]);
+
+  // Control bar auto-fade during breathing segments
+  useEffect(() => {
+    if (controlFadeRef.current) clearTimeout(controlFadeRef.current);
+    if (segType === 'breathing' && !paused) {
+      controlFadeRef.current = setTimeout(() => setControlOpacity(0.15), 3000);
+    } else {
+      setControlOpacity(1);
+    }
+    return () => { if (controlFadeRef.current) clearTimeout(controlFadeRef.current); };
+  }, [segType, paused]);
 
   // Handle audio for segment transitions
   const handleSegmentTransition = useCallback((segIndex, newSeg) => {
@@ -1953,6 +1975,13 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
               transform: 'translate(-50%, -50%) scale(1)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
+              {/* Slow-rotating dashed ring */}
+              <div style={{
+                position:'absolute', inset:'-12px', borderRadius:'50%',
+                border:`1px dashed rgba(${accentRgb},0.06)`,
+                animation:'slowRotate 60s linear infinite',
+                pointerEvents:'none',
+              }} />
               {world === 'ocean' && <OceanBubble ref={glowTargetRef} />}
               {world === 'space' && <PulsarObject ref={glowTargetRef} />}
             </div>
@@ -2022,11 +2051,13 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
   };
 
   return (
-    <div className="fixed inset-0 flex flex-col z-50" style={{...bgStyle, transition:'background 2s ease'}}>
+    <div className="fixed inset-0 flex flex-col z-50" style={{...bgStyle, transition:'background 2s ease'}}
+      onTouchStart={() => { setControlOpacity(1); if (controlFadeRef.current) clearTimeout(controlFadeRef.current); if (segType === 'breathing' && !paused) controlFadeRef.current = setTimeout(() => setControlOpacity(0.15), 3000); }}
+      onClick={() => { setControlOpacity(1); if (controlFadeRef.current) clearTimeout(controlFadeRef.current); if (segType === 'breathing' && !paused) controlFadeRef.current = setTimeout(() => setControlOpacity(0.15), 3000); }}>
       <Particles world={world} diveProgress={diveProgress} />
       <div className="relative z-10 flex flex-col h-full">
         {/* Top bar */}
-        <div className="flex items-center justify-between px-6" style={{paddingTop:'env(safe-area-inset-top, 48px)', paddingBottom:8}}>
+        <div className="flex items-center justify-between px-6" style={{paddingTop:'env(safe-area-inset-top, 48px)', paddingBottom:8, opacity:controlOpacity, transition:'opacity 600ms ease'}}>
           <button onClick={() => setShowExitConfirm(true)} className="flex items-center justify-center rounded-full" style={{width:44,height:44,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.06)'}}>
             <Icon name="close" size={18}/>
           </button>
@@ -2526,6 +2557,7 @@ function App() {
     return 'first_breath';
   });
   const [selectedCat, setSelectedCat] = useState(null);
+  const [quickDiveCat, setQuickDiveCat] = useState('focus');
 
 
   const [activeSession, setActiveSession] = useState(null);
@@ -2948,6 +2980,14 @@ function App() {
     if (segs) startSession(segs, {scenario:id, category:sc.cat});
   };
 
+  function getGreeting(t) {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) return t.goodMorning;
+    if (hour >= 12 && hour < 17) return t.goodAfternoon;
+    if (hour >= 17 && hour < 22) return t.goodEvening;
+    return t.goodNight;
+  }
+
   const renderHome = () => {
     const rec = getDailyRecommendation(stats, t);
     return (
@@ -2958,22 +2998,24 @@ function App() {
         </div>
       </div>
 
+      {/* Time-based greeting */}
+      <div className="font-body mb-3" style={{fontSize:14, fontWeight:300, color:'var(--text-3)', textAlign:'left'}}>{getGreeting(t)}</div>
+
       {/* Daily recommendation card — 60% viewport */}
       <button className="w-full text-left mb-6" style={{
-        minHeight:200, height:'min(60vh, 280px)', borderRadius:18, padding:'32px 24px', position:'relative', overflow:'hidden',
+        minHeight:180, borderRadius:18, padding:'28px 24px', position:'relative', overflow:'hidden',
         background:`linear-gradient(135deg, rgba(${accentRgb},0.10) 0%, rgba(${accentRgb},0.03) 100%)`,
         border:`1px solid rgba(${accentRgb},0.22)`,
-        boxShadow:`0 0 60px rgba(${accentRgb},0.08), inset 0 0 60px rgba(${accentRgb},0.04)`,
         display:'flex', flexDirection:'column', justifyContent:'space-between',
       }} onClick={() => launchScenario(rec.scenario, rec.duration)}>
         <div>
           <div className="font-body mb-2" style={{fontSize:12, fontWeight:500, color:palette.accent, opacity:0.7, letterSpacing:'0.08em', textTransform:'uppercase'}}>{t.todaysDiveLabel}</div>
           <div className="font-body mb-3" style={{fontSize:22, fontWeight:400, color:'rgba(226,232,240,0.95)', letterSpacing:'0.04em'}}>{rec.title}</div>
-          <div className="font-body" style={{fontSize:14, fontWeight:400, color:'var(--text-2)'}}>{rec.sub}</div>
+          <div className="font-body" style={{fontSize:14, fontWeight:300, color:'var(--text-2)'}}>{rec.sub}</div>
         </div>
-        <div style={{textAlign:'center'}}>
+        <div style={{textAlign:'center', marginTop:16}}>
           <div className="inline-flex items-center justify-center font-body"
-            style={{height:44, padding:'0 32px', borderRadius:12, fontWeight:500, fontSize:15, background:`rgba(${accentRgb},0.15)`, border:`1px solid rgba(${accentRgb},0.3)`, color:palette.accent, letterSpacing:'0.04em'}}>
+            style={{height:44, padding:'0 28px', borderRadius:10, fontWeight:500, fontSize:15, background:`rgba(${accentRgb},0.15)`, border:`1px solid rgba(${accentRgb},0.3)`, color:palette.accent, letterSpacing:'0.04em'}}>
             {t.begin}
           </div>
         </div>
@@ -2996,11 +3038,17 @@ function App() {
           {Object.entries(PROGRAMS).map(([key, prog]) => {
             const progress = (stats.programProgress?.[key] || []).length;
             const nameKey = key === 'first_dive' ? 'firstDive' : key === 'stress_shield' ? 'stressShield' : 'deepFocus';
+            const hasTrialDay = prog.trialDay !== undefined;
+            const hasPremiumContent = !stats.isPremium && prog.days > (prog.trialDay + 1);
             return (
               <button key={key} className="glass flex-shrink-0 p-4 text-left" style={{width:150, minHeight:100}}
                 onClick={() => { setSelectedProgram(key); setScreen('program_view'); }}>
                 <span style={{color:palette.accent,opacity:0.5}}><Icon name={key === 'first_dive' ? 'prog_bubble' : key === 'stress_shield' ? 'prog_shield' : 'prog_target'} size={20}/></span>
                 <div className="font-body mt-2" style={{fontWeight:600, fontSize:13, color:'rgba(255,255,255,0.92)'}}>{t[nameKey]}</div>
+                <div className="flex gap-1 mt-2 flex-wrap">
+                  {hasTrialDay && <span style={{padding:'3px 10px', borderRadius:6, background:'rgba(94,170,168,0.08)', border:'1px solid rgba(94,170,168,0.15)', fontSize:11, color:'rgba(94,170,168,0.7)'}}>{t.day1Free}</span>}
+                  {hasPremiumContent && <span style={{padding:'3px 10px', borderRadius:6, background:'rgba(139,126,200,0.06)', border:'1px solid rgba(139,126,200,0.12)', fontSize:11, color:'rgba(139,126,200,0.5)'}}>{t.premiumLabel}</span>}
+                </div>
                 <div className="mt-2" style={{height:2, borderRadius:1, background:'rgba(255,255,255,0.04)'}}>
                   <div style={{height:'100%', borderRadius:1, width:`${progress/prog.days*100}%`, background:`rgba(${accentRgb},0.6)`}} />
                 </div>
@@ -3011,30 +3059,34 @@ function App() {
         </div>
       </div>
 
-      {/* Quick Dives — by category */}
+      {/* Quick Dives — category pills */}
       <div className="mb-8">
         <div className="font-body mb-3" style={{fontSize:13, fontWeight:600, color:'rgba(226,232,240,0.6)', letterSpacing:'0.06em', textTransform:'uppercase'}}>{t.quickDives}</div>
-        {Object.entries(CATEGORIES).map(([catKey, cat]) => {
-          const catScenarios = Object.entries(SCENARIOS).filter(([_, s]) => s.cat === catKey);
-          return (
-            <div key={catKey} className="mb-4">
-              <div className="flex items-center gap-2 mb-2">
-                <span style={{color:palette.accent,opacity:0.5}}><Icon name={cat.svgIcon || catKey} size={16}/></span>
-                <span className="font-body" style={{fontSize:12, fontWeight:500, color:'rgba(226,232,240,0.55)', letterSpacing:'0.04em'}}>{t[CATEGORY_LANG_KEY[catKey]]}</span>
+        <div className="flex gap-2 overflow-x-auto no-scrollbar mb-4">
+          {Object.keys(CATEGORIES).map(catKey => (
+            <button key={catKey} className="flex-shrink-0 font-body" style={{
+              padding:'6px 16px', borderRadius:20, fontSize:13,
+              background: quickDiveCat === catKey ? `rgba(${accentRgb},0.10)` : 'transparent',
+              border: quickDiveCat === catKey ? `1px solid rgba(${accentRgb},0.20)` : '1px solid rgba(255,255,255,0.06)',
+              color: quickDiveCat === catKey ? palette.accent : 'var(--text-2)',
+            }} onClick={() => setQuickDiveCat(catKey)}>
+              {t[CATEGORY_LANG_KEY[catKey]]}
+            </button>
+          ))}
+        </div>
+        <div className="space-y-2">
+          {Object.entries(SCENARIOS).filter(([_, s]) => s.cat === quickDiveCat).map(([id, sc]) => (
+            <button key={id} className="glass w-full text-left flex items-center gap-3 px-4 py-3" style={{position:'relative'}}
+              onClick={() => launchScenario(id)}>
+              <span style={{color:palette.accent,opacity:0.5}}><Icon name={sc.svgIcon || id} size={18}/></span>
+              <div className="flex-1">
+                <div className="font-body" style={{fontWeight:500, fontSize:13, color:'rgba(255,255,255,0.85)'}}>{t[SCENARIO_LANG_KEY[id]]}</div>
+                <div className="font-mono mt-1" style={{fontSize:11, fontWeight:300, color:'rgba(255,255,255,0.35)'}}>{sc.durations[0]} {t.min}</div>
               </div>
-              <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-                {catScenarios.map(([id, sc]) => (
-                  <button key={id} className="glass flex-shrink-0 px-4 py-3 text-left" style={{minWidth:130}}
-                    onClick={() => launchScenario(id)}>
-                    <div className="font-body" style={{fontWeight:500, fontSize:13, color:'rgba(255,255,255,0.85)'}}>{t[SCENARIO_LANG_KEY[id]]}</div>
-                    <div className="font-mono mt-1" style={{fontSize:11, fontWeight:300, color:'rgba(255,255,255,0.35)'}}>{sc.durations[0]} {t.min}</div>
-                    {!checkAccess(sc) && <span style={{position:'absolute', top:8, right:8, color:'var(--text-3)', opacity:0.4}}><Icon name="lock" size={12}/></span>}
-                  </button>
-                ))}
-              </div>
-            </div>
-          );
-        })}
+              {!checkAccess(sc) && <span style={{color:'var(--text-3)', opacity:0.4}}><Icon name="lock" size={12}/></span>}
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );
