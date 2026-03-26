@@ -2063,7 +2063,7 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
 }
 
 // ===== FIRST BREATH SCREEN =====
-function FirstBreathScreen({ palette, accentRgb, t, onComplete }) {
+function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
   const [breathPhase, setBreathPhase] = useState('cinematic'); // 'cinematic' | 'done' | 'feeling' | 'holdTest' | 'goal'
   const [elapsed, setElapsed] = useState(0);
   const [currentPhase, setCurrentPhase] = useState(null);
@@ -2071,17 +2071,20 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete }) {
   const [holdTestPhase, setHoldTestPhase] = useState('intro'); // 'intro' | 'holding' | 'result'
   const [holdTime, setHoldTime] = useState(0);
   const holdStartRef = useRef(null);
-  const holdRafRef = useRef(null);
-  const ambientInitRef = useRef(false);
-  const totalDuration = 30;
+  const holdIntervalRef = useRef(null);
+  const ambientFadeStarted = useRef(false);
+  // 42s total: 0-2 black, 2-4 light, 4-14 cycle1, 14-24 cycle2, 24-34 cycle3, 34-42 cycle4
+  const totalDuration = 42;
   const phases = ['inhale1','inhale2','exhale'];
-  const phaseDurations = {inhale1:2,inhale2:1,exhale:7};
+  // Cycle durations: cycles 1-3 have exhale:7, cycle 4 has exhale:5
+  const phaseDurationsNormal = {inhale1:2,inhale2:1,exhale:7};
+  const phaseDurationsLast = {inhale1:2,inhale2:1,exhale:5};
   const phaseLabels = {inhale1:t.inhale,inhale2:t.inhale2,exhale:t.exhale};
   const fbWorld = 'ocean';
   const fbW = WORLDS.ocean;
   const oceanBg = fbW.bgGradient;
 
-  // Cinematic breathing timeline
+  // Cinematic breathing timeline — 4 cycles of cyclic sigh
   useEffect(() => {
     if (breathPhase !== 'cinematic') return;
     let el = 0;
@@ -2098,25 +2101,34 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete }) {
       lastTime = now;
       el += dt;
       setElapsed(el);
-      // At 3s, start ambient
-      if (el >= 3 && !ambientInitRef.current) {
-        ambientInitRef.current = true;
-        // Ambient ocean sound fades in (lightweight approach)
+      // At 2s, start ambient fade-in
+      if (el >= 2 && !ambientFadeStarted.current) {
+        ambientFadeStarted.current = true;
+        if (ambientRef?.current?.masterGain && ambientRef?.current?.ctx) {
+          const audioNow = ambientRef.current.ctx.currentTime;
+          ambientRef.current.masterGain.gain.linearRampToValueAtTime(0.04, audioNow + 2);
+          ambientRef.current.masterGain.gain.linearRampToValueAtTime(0.10, audioNow + 38);
+        }
       }
       // At 4s, breathing begins
       if (el >= 4) {
         if (!breathingStarted) { breathingStarted = true; setCurrentPhase('inhale1'); }
         phaseElapsed += dt;
+        const isLastCycle = cycles >= 3;
+        const durations = isLastCycle ? phaseDurationsLast : phaseDurationsNormal;
         const curPhase = phases[phaseIdx];
-        const dur = phaseDurations[curPhase];
+        const dur = durations[curPhase];
         if (phaseElapsed >= dur) {
           phaseElapsed -= dur;
           phaseIdx++;
           if (phaseIdx >= phases.length) { phaseIdx = 0; cycles++; }
+          if (cycles >= 4) { setBreathPhase('done'); return; }
           setCurrentPhase(phases[phaseIdx]);
         }
         const p = phases[phaseIdx];
-        const prog = dur > 0 ? Math.min(phaseElapsed / dur, 1) : 0;
+        const isLastCycleNow = cycles >= 3;
+        const durNow = (isLastCycleNow ? phaseDurationsLast : phaseDurationsNormal)[p];
+        const prog = durNow > 0 ? Math.min(phaseElapsed / durNow, 1) : 0;
         const eased = prog < 0.5 ? 4*prog*prog*prog : 1 - Math.pow(-2*prog+2,3)/2;
         if (p === 'inhale1') setBreathScale(1.0 + 0.5 * eased);
         else if (p === 'inhale2') setBreathScale(1.5 + 0.2 * eased);
@@ -2137,37 +2149,44 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete }) {
     }
   }, [breathPhase]);
 
-  // Background interpolation: black -> ocean gradient over 30s
-  const bgProgress = Math.min(elapsed / totalDuration, 1);
-  // Blend from #000 to ocean gradient
+  // Cleanup hold test interval on unmount
+  useEffect(() => {
+    return () => {
+      if (holdIntervalRef.current) { clearInterval(holdIntervalRef.current); holdIntervalRef.current = null; }
+    };
+  }, []);
+
+  // Background interpolation: black -> ocean gradient over 40s
+  const bgProgress = Math.min(elapsed / 40, 1);
   const cinematicBg = breathPhase === 'cinematic'
     ? `linear-gradient(180deg, rgba(14,61,92,${bgProgress}) 0%, rgba(8,42,66,${bgProgress}) 33%, rgba(4,21,32,${bgProgress}) 66%, rgba(2,10,16,${bgProgress}) 100%)`
     : oceanBg;
 
   // Breath hold test depth calculation
   const getDepthContext = (time) => {
-    if (time < 10) return t.holdTestSwimmingPool || 'A swimming pool';
-    if (time < 20) return t.holdTestCoralReef || 'A coral reef';
-    if (time < 35) return t.holdTestShipwreck || 'A shallow shipwreck';
-    if (time < 60) return t.holdTestSunlightFades || 'Where sunlight fades';
+    const safeTime = Math.max(0, time || 0);
+    if (safeTime < 10) return t.holdTestSwimmingPool || 'A swimming pool';
+    if (safeTime < 20) return t.holdTestCoralReef || 'A coral reef';
+    if (safeTime < 35) return t.holdTestShipwreck || 'A shallow shipwreck';
+    if (safeTime < 60) return t.holdTestSunlightFades || 'Where sunlight fades';
     return t.holdTestTwilightZone || 'The twilight zone';
   };
 
   const startHoldTest = () => {
     setHoldTestPhase('holding');
-    holdStartRef.current = performance.now();
-    const tickHold = () => {
+    setHoldTime(0);
+    holdStartRef.current = Date.now();
+    holdIntervalRef.current = setInterval(() => {
       if (!holdStartRef.current) return;
-      const h = (performance.now() - holdStartRef.current) / 1000;
+      const h = (Date.now() - holdStartRef.current) / 1000;
       setHoldTime(h);
-      holdRafRef.current = requestAnimationFrame(tickHold);
-    };
-    holdRafRef.current = requestAnimationFrame(tickHold);
+    }, 100);
   };
 
   const stopHoldTest = () => {
-    if (holdRafRef.current) cancelAnimationFrame(holdRafRef.current);
-    const finalTime = (performance.now() - holdStartRef.current) / 1000;
+    if (holdIntervalRef.current) { clearInterval(holdIntervalRef.current); holdIntervalRef.current = null; }
+    if (!holdStartRef.current) { setHoldTestPhase('result'); return; }
+    const finalTime = (Date.now() - holdStartRef.current) / 1000;
     holdStartRef.current = null;
     setHoldTime(finalTime);
     setHoldTestPhase('result');
@@ -2194,9 +2213,9 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete }) {
     );
   }
 
-  // Breath hold test screen (WOW 4)
+  // Breath hold test screen
   if (breathPhase === 'holdTest') {
-    const holdDepth = Math.round(holdTime);
+    const holdDepth = Math.max(1, Math.round(holdTime));
     if (holdTestPhase === 'intro') {
       return (
         <div className="fixed inset-0 flex flex-col items-center justify-center px-8" style={{background:oceanBg}}>
@@ -2214,7 +2233,7 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete }) {
       );
     }
     if (holdTestPhase === 'holding') {
-      const holdProgress = Math.min(holdTime / 120, 1); // max 120s for bar
+      const holdProgress = Math.min(holdTime / 120, 1);
       const darken = Math.min(holdTime / 60, 0.5);
       return (
         <div className="fixed inset-0 flex flex-col items-center justify-center px-8" style={{background:`linear-gradient(180deg, rgba(14,61,92,${1-darken}) 0%, rgba(2,10,16,${0.8+darken}) 100%)`}} onClick={stopHoldTest}>
@@ -2272,14 +2291,14 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete }) {
   const showText = elapsed >= 2;
   const showBubble = elapsed >= 4;
   const bubbleOpacity = elapsed >= 4 ? Math.min((elapsed - 4) * 0.5, 1) : 0;
-  const lightSize = elapsed >= 1 ? Math.min((elapsed - 1) * 100, 320) : 0;
-  const lightOpacity = elapsed >= 1 ? Math.min((elapsed - 1) * 0.4, 1) : 0;
+  const lightSize = elapsed >= 2 ? Math.min((elapsed - 2) * 160, 320) : 0;
+  const lightOpacity = elapsed >= 2 ? Math.min((elapsed - 2) * 0.5, 1) : 0;
   const textOpacity = elapsed >= 2 ? Math.min((elapsed - 2) * 0.3, 0.6) : 0;
 
   return (
     <div className="fixed inset-0 flex flex-col items-center justify-center" style={{background:cinematicBg, transition:'background 1s linear'}}>
-      {/* Teal light point */}
-      {elapsed >= 1 && !showBubble && (
+      {/* Teal light point emerges 2-4s */}
+      {elapsed >= 2 && !showBubble && (
         <div style={{
           position:'absolute', top:'50%', left:'50%', transform:'translate(-50%, -50%)',
           width: lightSize, height: lightSize, borderRadius:'50%',
@@ -2297,7 +2316,7 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete }) {
           transition:'top 1s ease, color 2s ease',
         }}>{t.takeOneBreath}</div>
       )}
-      {/* Breathing bubble */}
+      {/* Breathing bubble — animates during all 4 cycles */}
       {showBubble && (
         <div style={{opacity:bubbleOpacity, transition:'opacity 1s ease', width:'100%', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center'}}>
           <div style={{position:'relative', width:'min(70vw, 260px)', aspectRatio:'1', margin:'0 auto', display:'flex', alignItems:'center', justifyContent:'center',
@@ -2328,9 +2347,8 @@ function App() {
   const [screen, setScreen] = useState(() => {
     if (!currentLang) return 'lang_select';
     if (stats.onboarded) return 'home';
-    return 'splash';
+    return 'first_breath';
   });
-  const [onboardStep, setOnboardStep] = useState(0);
   const [selectedCat, setSelectedCat] = useState(null);
 
 
@@ -2340,7 +2358,6 @@ function App() {
   const [showPaywall, setShowPaywall] = useState(false);
   const [showCompletion, setShowCompletion] = useState(false);
   const [completionData, setCompletionData] = useState(null);
-  // firstBreathDone removed — onboarding goes directly to home after first_breath
   const [completionFeeling, setCompletionFeeling] = useState(null);
   const [completionStep, setCompletionStep] = useState('stats'); // 'stats' | 'feeling' | 'reminder' | 'done'
   const [showSurfaceBreath, setShowSurfaceBreath] = useState(false);
@@ -2486,7 +2503,17 @@ function App() {
           <div className="space-y-3">
             {[['en','English'],['ru','Русский'],['zh','中文'],['ar','العربية']].map(([code,label]) => (
               <button key={code} className="w-full glass p-4 text-center" style={{fontSize:17, fontWeight:400, color:'rgba(220,225,235,0.92)'}}
-                onClick={() => { setCurrentLang(code); setScreen(stats.onboarded ? 'home' : 'splash'); }}>
+                onClick={() => {
+                  // Initialize ambient on language selection (first user gesture)
+                  if (ambientRef.current && !ambientRef.current.ctx) {
+                    ambientRef.current.init(WORLDS.ocean.ambient);
+                    if (ambientRef.current.masterGain) {
+                      ambientRef.current.masterGain.gain.value = 0;
+                    }
+                  }
+                  setCurrentLang(code);
+                  setScreen(stats.onboarded ? 'home' : 'first_breath');
+                }}>
                 {label}
                 {code === 'en' && <div className="font-body mt-1" style={{fontSize:11, fontWeight:400, color:'rgba(220,225,235,0.30)'}}>{LANG.en.voiceGuided}</div>}
               </button>
@@ -2497,72 +2524,13 @@ function App() {
     );
   }
 
-  // ===== SPLASH =====
-  if (screen === 'splash') {
-    return (
-      <div className="fixed inset-0 flex flex-col items-center justify-center" style={{background:bg}}>
-        <Particles world={world} />
-        <div className="screen-transition text-center z-10">
-          <div className="font-body" style={{fontSize:48, fontWeight:200, color:'var(--text)', letterSpacing:'0.25em', textTransform:'uppercase'}}>{t.appName}</div>
-          <div className="font-body mt-3" style={{fontSize:13, fontWeight:400, color:'var(--text-2)', letterSpacing:'0.06em'}}>{t.tagline}</div>
-          <button className="mt-16 flex items-center justify-center mx-auto font-body"
-            style={{height:52, padding:'0 32px', borderRadius:12, background:`rgba(${accentRgb},0.12)`, border:`1px solid rgba(${accentRgb},0.25)`, color:palette.accent, fontSize:15, fontWeight:500, letterSpacing:'0.04em'}}
-            onClick={() => setScreen('onboarding')}>
-            {t.begin}
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   // ===== FIRST BREATH SCREEN =====
   if (screen === 'first_breath') {
-    return <FirstBreathScreen palette={palette} accentRgb={accentRgb} t={t}
+    return <FirstBreathScreen palette={palette} accentRgb={accentRgb} t={t} ambientRef={ambientRef}
       onComplete={(goal, holdTimeResult) => { setStats(s => ({...s, firstFeeling: goal, userGoal: goal, onboarded:true, world:'ocean', initialHoldTime: holdTimeResult ? Math.round(holdTimeResult*10)/10 : null, initialDepth: holdTimeResult ? Math.round(holdTimeResult) : null})); setScreen('home'); setTab('home'); }} />;
   }
 
-  // ===== ONBOARDING =====
-  if (screen === 'onboarding') {
-    const stepKeys = [
-      {title:t.onb1title, sub:t.onb1sub, desc:t.onb1desc},
-      {title:t.onb2title, sub:t.onb2sub, desc:t.onb2desc},
-      {title:t.onb3title, sub:t.onb3sub, desc:t.onb3desc},
-      {title:t.onb4title, sub:t.onb4sub, desc:t.onb4desc},
-    ];
-    if (onboardStep < stepKeys.length) {
-      const step = stepKeys[onboardStep];
-      return (
-        <div className="fixed inset-0 flex flex-col items-center justify-center px-8" style={{background:bg}}>
-          <Particles world={world} />
-          <div className="screen-transition text-center z-10" key={onboardStep}>
-            <div className="font-body mb-3" style={{fontSize:36, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.1em'}}>{step.title}</div>
-            <div className="font-body mb-5" style={{fontSize:16, fontWeight:500, color:palette.accent, letterSpacing:'0.03em'}}>{step.sub}</div>
-            <div className="font-body mb-12" style={{fontSize:14, fontWeight:400, color:'var(--text-2)', maxWidth:300, lineHeight:1.7, margin:'0 auto'}}>{step.desc}</div>
-            <div className="flex gap-2 justify-center mb-10">
-              {stepKeys.map((_, i) => (
-                <div key={i} className="rounded-full transition-all" style={{width: i === onboardStep ? 24 : 6, height:6, borderRadius:3, background: i === onboardStep ? palette.accent : 'rgba(255,255,255,0.15)', transition:'all 300ms ease'}} />
-              ))}
-              <div className="rounded-full" style={{width:6, height:6, borderRadius:3, background:'rgba(255,255,255,0.15)'}} />
-            </div>
-            <button className="px-10 py-3 rounded-full font-body"
-              style={{fontWeight:500, background:`rgba(${accentRgb},0.12)`, border:`1px solid rgba(${accentRgb},0.25)`, color:palette.accent}}
-              onClick={() => {
-                if (onboardStep === stepKeys.length - 1) {
-                  setScreen('first_breath');
-                } else {
-                  setOnboardStep(onboardStep + 1);
-                }
-              }}>
-              {t.next}
-            </button>
-          </div>
-        </div>
-      );
-    }
-    // World selection removed from onboarding — go to first_breath
-    setScreen('first_breath');
-    return null;
-  }
 
   // Active session
   if (activeSession) {
@@ -2729,7 +2697,7 @@ function App() {
   };
 
   // ===== HOME =====
-  const launchScenario = useCallback((id, dur) => {
+  const launchScenario = (id, dur) => {
     // Handle first session special case
     if (id === '_first_session') {
       startSession(FIRST_SESSION(t), {scenario:'first_session', category:'focus'});
@@ -2743,7 +2711,7 @@ function App() {
     if (d >= 10 && !sc.free && !stats.isPremium) { setShowPaywall(true); return; }
     const segs = getSessionContent(t, world)[id]?.[d];
     if (segs) startSession(segs, {scenario:id, category:sc.cat});
-  }, [t, world, stats.isPremium]);
+  };
 
   const renderHome = () => {
     const rec = getDailyRecommendation(stats, t);
@@ -3109,7 +3077,7 @@ function App() {
 
         {/* Reset */}
         <button className="w-full py-3 font-body rounded-full" style={{fontSize:13, fontWeight:400, color:'rgba(252,129,129,0.6)', border:'1px solid rgba(252,129,129,0.15)'}}
-          onClick={() => { if (confirm(t.resetConfirm)) { setStats(defaultStats()); setScreen('splash'); }}}>
+          onClick={() => { if (confirm(t.resetConfirm)) { setStats(defaultStats()); setScreen('lang_select'); }}}>
           {t.resetProgress}
         </button>
       </div>
