@@ -2074,31 +2074,63 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
   const holdIntervalRef = useRef(null);
   const ambientFadeStarted = useRef(false);
   const introAudioRef = useRef(null);
-  const voiceAudioRef = useRef(null);
+  const voiceClipsRef = useRef([]);
   const diveAudioRef = useRef(null);
-  // 68s total with voice guide:
-  // 00-02 black, 02-14 voice intro + light, 14-24 cycle1, 24-32 gap+voice,
-  // 32-42 cycle2, 42-46 voice, 46-56 cycle3, 56-60 voice, 60-68 cycle4+ending
-  const totalDuration = 68;
-  const breathingStart = 14; // cycles start at 14s (after voice intro)
+  const firedEventsRef = useRef(new Set());
+
+  // 70s event-driven timeline: 7 voice clips + 4 breathing cycles
+  const totalDuration = 70;
   const phases = ['inhale1','inhale2','exhale'];
-  const phaseDurationsNormal = {inhale1:2,inhale2:1,exhale:7};
-  const phaseDurationsLast = {inhale1:2,inhale2:1,exhale:5};
+  const phaseDurations = {inhale1:2,inhale2:1,exhale:7}; // 10s per cycle
   const phaseLabels = {inhale1:t.inhale,inhale2:t.inhale2,exhale:t.exhale};
   const fbWorld = 'ocean';
   const fbW = WORLDS.ocean;
   const oceanBg = fbW.bgGradient;
 
-  // Cinematic breathing timeline — 4 cycles of cyclic sigh
+  // Timeline events
+  const INTRO_EVENTS = [
+    { time:2,  type:'voice', file:'audio/intro_01_welcome.mp3' },
+    { time:6,  type:'voice', file:'audio/intro_02_freediver.mp3' },
+    { time:12, type:'voice', file:'audio/intro_03_follow.mp3' },
+    { time:18, type:'breath_start' }, // cycle 1
+    { time:28, type:'voice', file:'audio/intro_04_good.mp3' },
+    { time:31, type:'breath_start' }, // cycle 2
+    { time:41, type:'voice', file:'audio/intro_05_onemore.mp3' },
+    { time:44, type:'breath_start' }, // cycle 3
+    { time:54, type:'voice', file:'audio/intro_06_calming.mp3' },
+    { time:57, type:'breath_start' }, // cycle 4
+    { time:67, type:'voice', file:'audio/intro_07_ready.mp3' },
+    { time:70, type:'end' },
+  ];
+
+  // Voice clip player with quick fade-in
+  const playVoiceClip = (src) => {
+    try {
+      const a = new Audio(src);
+      a.volume = 0;
+      voiceClipsRef.current.push(a);
+      a.play().catch(() => {});
+      let v = 0;
+      const fi = setInterval(() => {
+        v += 0.05;
+        if (v >= 0.7) { v = 0.7; clearInterval(fi); }
+        try { a.volume = v; } catch {}
+      }, 20);
+    } catch {}
+  };
+
+  // Cinematic timeline — event-driven with 7 voice clips + 4 breathing cycles
   useEffect(() => {
     if (breathPhase !== 'cinematic') return;
     let el = 0;
-    let phaseIdx = 0;
-    let phaseElapsed = 0;
-    let cycles = 0;
     let lastTime = performance.now();
     let running = true;
-    let breathingStarted = false;
+    // Breathing state (only active during breath_start events)
+    let breathing = false;
+    let phaseIdx = 0;
+    let phaseElapsed = 0;
+    firedEventsRef.current = new Set();
+
     const tick = () => {
       if (!running) return;
       const now = performance.now();
@@ -2106,63 +2138,63 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
       lastTime = now;
       el += dt;
       setElapsed(el);
-      // At 0s, start ambient (low volume background)
+
+      // Start ambient at 0.5s
       if (el >= 0.5 && !ambientFadeStarted.current) {
         ambientFadeStarted.current = true;
         try {
           const a = new Audio('audio/dive_intro_ambient.mp3');
-          a.volume = 0;
-          introAudioRef.current = a;
+          a.volume = 0; introAudioRef.current = a;
           a.play().catch(() => {});
-          // Ambient: fade to 0.25 over 3 seconds
           let vol = 0;
-          const fadeIn = setInterval(() => {
-            vol += 0.005;
-            if (vol >= 0.25) { vol = 0.25; clearInterval(fadeIn); }
-            try { a.volume = Math.min(vol, 1); } catch {}
+          const fi = setInterval(() => {
+            vol += 0.004; if (vol >= 0.25) { vol = 0.25; clearInterval(fi); }
+            try { a.volume = vol; } catch {}
           }, 50);
         } catch {}
-        // At 2s, start voice guide (plays on top of ambient)
-        setTimeout(() => {
-          try {
-            const v = new Audio('audio/intro_voice_guide.mp3');
-            v.volume = 0;
-            voiceAudioRef.current = v;
-            v.play().catch(() => {});
-            // Voice: fade to 0.70 over 1 second
-            let vv = 0;
-            const vFade = setInterval(() => {
-              vv += 0.035;
-              if (vv >= 0.70) { vv = 0.70; clearInterval(vFade); }
-              try { v.volume = Math.min(vv, 1); } catch {}
-            }, 50);
-          } catch {}
-        }, 1500); // voice starts ~2s in
       }
-      // At breathingStart (14s), breathing begins
-      if (el >= breathingStart) {
-        if (!breathingStarted) { breathingStarted = true; phaseElapsed = 0; phaseIdx = 0; cycles = 0; setCurrentPhase('inhale1'); }
+
+      // Fire timeline events
+      for (const ev of INTRO_EVENTS) {
+        if (el >= ev.time && !firedEventsRef.current.has(ev.time + ev.type)) {
+          firedEventsRef.current.add(ev.time + ev.type);
+          if (ev.type === 'voice') playVoiceClip(ev.file);
+          else if (ev.type === 'breath_start') {
+            breathing = true; phaseIdx = 0; phaseElapsed = 0;
+            setCurrentPhase('inhale1');
+          }
+          else if (ev.type === 'end') { setBreathPhase('done'); return; }
+        }
+      }
+
+      // Animate breathing when active
+      if (breathing) {
         phaseElapsed += dt;
-        const isLastCycle = cycles >= 3;
-        const durations = isLastCycle ? phaseDurationsLast : phaseDurationsNormal;
         const curPhase = phases[phaseIdx];
-        const dur = durations[curPhase];
+        const dur = phaseDurations[curPhase];
         if (phaseElapsed >= dur) {
           phaseElapsed -= dur;
           phaseIdx++;
-          if (phaseIdx >= phases.length) { phaseIdx = 0; cycles++; }
-          if (cycles >= 4) { setBreathPhase('done'); return; }
-          setCurrentPhase(phases[phaseIdx]);
+          if (phaseIdx >= phases.length) {
+            // Cycle complete — stop breathing until next breath_start event
+            breathing = false;
+            setCurrentPhase(null);
+            setBreathScale(1.0);
+          } else {
+            setCurrentPhase(phases[phaseIdx]);
+          }
         }
-        const p = phases[phaseIdx];
-        const isLastCycleNow = cycles >= 3;
-        const durNow = (isLastCycleNow ? phaseDurationsLast : phaseDurationsNormal)[p];
-        const prog = durNow > 0 ? Math.min(phaseElapsed / durNow, 1) : 0;
-        const eased = prog < 0.5 ? 4*prog*prog*prog : 1 - Math.pow(-2*prog+2,3)/2;
-        if (p === 'inhale1') setBreathScale(1.0 + 0.5 * eased);
-        else if (p === 'inhale2') setBreathScale(1.5 + 0.2 * eased);
-        else if (p === 'exhale') setBreathScale(1.7 - 0.7 * eased);
+        if (breathing) {
+          const p = phases[phaseIdx];
+          const d = phaseDurations[p];
+          const prog = d > 0 ? Math.min(phaseElapsed / d, 1) : 0;
+          const eased = prog < 0.5 ? 4*prog*prog*prog : 1 - Math.pow(-2*prog+2,3)/2;
+          if (p === 'inhale1') setBreathScale(1.0 + 0.5 * eased);
+          else if (p === 'inhale2') setBreathScale(1.5 + 0.2 * eased);
+          else if (p === 'exhale') setBreathScale(1.7 - 0.7 * eased);
+        }
       }
+
       if (el >= totalDuration) { setBreathPhase('done'); return; }
       requestAnimationFrame(tick);
     };
@@ -2173,16 +2205,17 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
   // Done -> feeling transition + fade out all audio
   useEffect(() => {
     if (breathPhase === 'done') {
-      // Fade out ambient + voice over 2 seconds
-      [introAudioRef, voiceAudioRef].forEach(ref => {
-        if (ref.current) {
-          const a = ref.current;
-          const fadeOut = setInterval(() => {
-            if (a.volume > 0.02) { try { a.volume = Math.max(0, a.volume - 0.01); } catch {} }
-            else { a.pause(); a.volume = 0; clearInterval(fadeOut); }
-          }, 50);
-        }
-      });
+      // Fade out ambient over 2 seconds
+      if (introAudioRef.current) {
+        const a = introAudioRef.current;
+        const fo = setInterval(() => {
+          if (a.volume > 0.02) { try { a.volume = Math.max(0, a.volume - 0.01); } catch {} }
+          else { a.pause(); a.volume = 0; clearInterval(fo); }
+        }, 50);
+      }
+      // Stop any playing voice clips
+      voiceClipsRef.current.forEach(a => { try { a.pause(); } catch {} });
+      voiceClipsRef.current = [];
       const t0 = setTimeout(() => setBreathPhase('feeling'), 800);
       return () => clearTimeout(t0);
     }
@@ -2192,14 +2225,15 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
   useEffect(() => {
     return () => {
       if (holdIntervalRef.current) { clearInterval(holdIntervalRef.current); holdIntervalRef.current = null; }
-      [introAudioRef, voiceAudioRef, diveAudioRef].forEach(ref => {
-        if (ref.current) { try { ref.current.pause(); ref.current.src = ''; } catch {} ref.current = null; }
-      });
+      if (introAudioRef.current) { try { introAudioRef.current.pause(); introAudioRef.current.src = ''; } catch {} introAudioRef.current = null; }
+      if (diveAudioRef.current) { try { diveAudioRef.current.pause(); diveAudioRef.current.src = ''; } catch {} diveAudioRef.current = null; }
+      voiceClipsRef.current.forEach(a => { try { a.pause(); a.src = ''; } catch {} });
+      voiceClipsRef.current = [];
     };
   }, []);
 
-  // Background interpolation: black -> ocean gradient over 60s
-  const bgProgress = Math.min(elapsed / 60, 1);
+  // Background interpolation: black -> ocean gradient over 65s
+  const bgProgress = Math.min(elapsed / 65, 1);
   const cinematicBg = breathPhase === 'cinematic'
     ? `linear-gradient(180deg, rgba(14,61,92,${bgProgress}) 0%, rgba(8,42,66,${bgProgress}) 33%, rgba(4,21,32,${bgProgress}) 66%, rgba(2,10,16,${bgProgress}) 100%)`
     : oceanBg;
@@ -2358,9 +2392,9 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
 
   // Cinematic breathing phase
   const showText = elapsed >= 2;
-  const showBubble = elapsed >= breathingStart - 2; // bubble appears 2s before breathing starts
-  const bubbleOpacity = elapsed >= (breathingStart - 2) ? Math.min((elapsed - (breathingStart - 2)) * 0.5, 1) : 0;
-  const lightSize = elapsed >= 2 ? Math.min((elapsed - 2) * (320 / (breathingStart - 4)), 320) : 0;
+  const showBubble = elapsed >= 6; // bubble forms at 6s (with intro_02_freediver)
+  const bubbleOpacity = elapsed >= 6 ? Math.min((elapsed - 6) * 0.25, 1) : 0;
+  const lightSize = elapsed >= 2 ? Math.min((elapsed - 2) * 80, 320) : 0; // light grows 2-6s
   const lightOpacity = elapsed >= 2 ? Math.min((elapsed - 2) * 0.5, 1) : 0;
   const textOpacity = elapsed >= 2 ? Math.min((elapsed - 2) * 0.3, 0.6) : 0;
 
