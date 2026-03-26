@@ -57,7 +57,7 @@ html[lang="zh"] body, html[lang="zh"] #root { font-family:'Noto Sans SC','DM San
   padding: 18px 20px;
   transition: transform 120ms ease, background 120ms ease;
 }
-.glass:active { transform: scale(0.985); background: rgba(255,255,255,0.04); }
+.glass:active { transform: scale(0.985); background: rgba(255,255,255,0.04); box-shadow: inset 0 0 30px rgba(94,170,168,0.04); }
 
 .no-scrollbar::-webkit-scrollbar { display:none; }
 .no-scrollbar { -ms-overflow-style:none; scrollbar-width:none; }
@@ -193,6 +193,10 @@ const LANG = {
     paywallMonthly:'$9.99/mo',paywallYearly:'$49.99/yr',paywallYearlySave:'Save 58%',paywallTrialNote:"You won't be charged for 7 days. Cancel anytime.",paywallStartTrial:'Start free trial',
     spaceLockedMsg:'Unlock Space: Premium or 30-day streak',
     holdTestTitle:"Let's find your starting depth",holdTestDesc:'Exhale fully. Then hold. Tap when you need to breathe.',holdTestStart:'Start',holdTestYourDepth:'Your starting depth',holdTestSwimmingPool:'A swimming pool',holdTestCoralReef:'A coral reef',holdTestShipwreck:'A shallow shipwreck',holdTestSunlightFades:'Where sunlight fades',holdTestTwilightZone:'The twilight zone',
+    howStressed:'How stressed are you right now?',andNow:'And now?',moodLow:'low',moodHigh:'high',
+    moodImprove:'{pre} \u2192 {post} \u00b7 \u2212{delta} points',moodSame:'Consistency builds resilience.',moodWorse:'Some sessions plant seeds for later.',
+    techniques:'Techniques',masteryNone:'\u2014',masteryLearning:'Learning',masteryComfortable:'Comfortable',masteryMastered:'Mastered',
+    unlockSpaceStreak:'Unlock with premium or 30-day streak',unlockSpaceDaysLeft:'{N} more days to unlock',
   },
   ru: {
     appName:'DIVE',tagline:'Дыши. Погружайся. Действуй.',chooseLanguage:'Выберите язык',chooseWorld:'Выберите мир',
@@ -277,6 +281,10 @@ const LANG = {
     paywallMonthly:'499₽/мес',paywallYearly:'2490₽/год',paywallYearlySave:'Экономия 58%',paywallTrialNote:'7 дней бесплатно. Отмена в любой момент.',paywallStartTrial:'Начать бесплатно',
     spaceLockedMsg:'Разблокируйте Космос: Premium или 30-дневная серия',
     holdTestTitle:'Найдём вашу начальную глубину',holdTestDesc:'Выдохните полностью. Задержите дыхание. Нажмите, когда нужно вдохнуть.',holdTestStart:'Начать',holdTestYourDepth:'Ваша начальная глубина',holdTestSwimmingPool:'Бассейн',holdTestCoralReef:'Коралловый риф',holdTestShipwreck:'Затонувший корабль',holdTestSunlightFades:'Где гаснет свет',holdTestTwilightZone:'Сумеречная зона',
+    howStressed:'Насколько вы напряжены сейчас?',andNow:'А сейчас?',moodLow:'мало',moodHigh:'много',
+    moodImprove:'{pre} \u2192 {post} \u00b7 \u2212{delta} баллов',moodSame:'Стабильность укрепляет.',moodWorse:'Некоторые сессии работают позже.',
+    techniques:'Техники',masteryNone:'\u2014',masteryLearning:'Изучение',masteryComfortable:'Уверенно',masteryMastered:'Мастерство',
+    unlockSpaceStreak:'Premium или 30-дневная серия',unlockSpaceDaysLeft:'Ещё {N} дней',
   },
   zh: {
     appName:'DIVE',tagline:'呼吸。沉浸。行动。',chooseLanguage:'选择语言',chooseWorld:'选择你的世界',
@@ -357,6 +365,10 @@ const LANG = {
     paywallMonthly:'¥18/月',paywallYearly:'¥168/年',paywallYearlySave:'省58%',paywallTrialNote:'7天免费。随时取消。',paywallStartTrial:'免费开始',
     spaceLockedMsg:'解锁太空：Premium或30天连续',
     holdTestTitle:'找到你的起始深度',holdTestDesc:'完全呼气。然后屏住。需要呼吸时点击。',holdTestStart:'开始',holdTestYourDepth:'你的起始深度',holdTestSwimmingPool:'游泳池',holdTestCoralReef:'珊瑚礁',holdTestShipwreck:'浅水沉船',holdTestSunlightFades:'阳光消失处',holdTestTwilightZone:'暮光区',
+    howStressed:'你现在的压力有多大？',andNow:'现在呢？',moodLow:'低',moodHigh:'高',
+    moodImprove:'{pre} \u2192 {post} \u00b7 \u2212{delta} 分',moodSame:'稳定性培养韧性。',moodWorse:'有些练习会在之后生效。',
+    techniques:'技巧',masteryNone:'\u2014',masteryLearning:'学习中',masteryComfortable:'熟练',masteryMastered:'精通',
+    unlockSpaceStreak:'Premium或30天连续解锁',unlockSpaceDaysLeft:'还需{N}天',
   },
   ar: {
     appName:'DIVE',tagline:'تنفّس. انغمس. انطلق.',chooseLanguage:'اختر اللغة',chooseWorld:'اختر عالمك',
@@ -437,6 +449,10 @@ const LANG = {
     paywallMonthly:'$7.99/شهر',paywallYearly:'$49.99/سنة',paywallYearlySave:'وفّر 58%',paywallTrialNote:'لن يتم الخصم لمدة 7 أيام. إلغاء في أي وقت.',paywallStartTrial:'ابدأ مجاناً',
     spaceLockedMsg:'افتح الفضاء: Premium أو سلسلة ٣٠ يوم',
     holdTestTitle:'لنجد عمقك الأولي',holdTestDesc:'ازفر بالكامل. ثم احبس. انقر عندما تحتاج للتنفس.',holdTestStart:'ابدأ',holdTestYourDepth:'عمقك الأولي',holdTestSwimmingPool:'حوض سباحة',holdTestCoralReef:'شعاب مرجانية',holdTestShipwreck:'حطام سفينة',holdTestSunlightFades:'حيث يتلاشى الضوء',holdTestTwilightZone:'منطقة الشفق',
+    howStressed:'ما مستوى توترك الآن؟',andNow:'والآن؟',moodLow:'قليل',moodHigh:'كثير',
+    moodImprove:'{pre} \u2192 {post} \u00b7 \u2212{delta} نقاط',moodSame:'الثبات يبني المرونة.',moodWorse:'بعض الجلسات تزرع بذوراً للمستقبل.',
+    techniques:'التقنيات',masteryNone:'\u2014',masteryLearning:'تعلّم',masteryComfortable:'مريح',masteryMastered:'متقن',
+    unlockSpaceStreak:'Premium أو سلسلة 30 يوم',unlockSpaceDaysLeft:'{N} يوم للفتح',
   }
 };
 
@@ -1126,6 +1142,7 @@ const defaultStats = () => ({
   soundEnabled:true, vibrateEnabled:true, voiceEnabled:true, hapticEnabled:true,
   firstFeeling:null, lastFeeling:null, reminderTime:null, lastWeeklySummary:null,
   userGoal:null, initialHoldTime:null, initialDepth:null, shownInsightIds:[],
+  techniqueStats:{},
 });
 
 // ===== FIRST SESSION (cyclic sigh) =====
@@ -2454,6 +2471,50 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
 }
 
 // ===== MAIN APP =====
+// ===== MOOD SCALE COMPONENT =====
+function MoodScale({ label, onSelect, lowLabel, highLabel }) {
+  return (
+    React.createElement('div', {style:{textAlign:'center'}},
+      React.createElement('div', {className:'font-body', style:{fontSize:16, fontWeight:300, color:'var(--text)', marginBottom:20}}, label),
+      React.createElement('div', {style:{display:'flex', gap:12, justifyContent:'center'}},
+        [1,2,3,4,5].map(n =>
+          React.createElement('button', {key:n, onClick:() => onSelect(n), style:{
+            width:44, height:44, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center',
+            background:'transparent', cursor:'pointer',
+            border: '1px solid ' + (n<=2 ? 'rgba(94,170,168,0.15)' : n>=4 ? 'rgba(196,149,106,0.15)' : 'rgba(255,255,255,0.08)'),
+          }},
+            React.createElement('span', {className:'font-mono', style:{fontSize:16, fontWeight:300, color:'var(--text)'}}, n)
+          )
+        )
+      ),
+      React.createElement('div', {style:{display:'flex', justifyContent:'space-between', maxWidth:260, margin:'8px auto 0'}},
+        React.createElement('span', {className:'font-body', style:{fontSize:11, fontWeight:300, color:'var(--text-3)'}}, lowLabel || 'low'),
+        React.createElement('span', {className:'font-body', style:{fontSize:11, fontWeight:300, color:'var(--text-3)'}}, highLabel || 'high')
+      )
+    )
+  );
+}
+
+// ===== ANIMATED NUMBER COMPONENT =====
+function AnimatedNumber({ value, duration = 1200 }) {
+  const [display, setDisplay] = useState(0);
+  useEffect(() => {
+    if (!value) { setDisplay(0); return; }
+    const startTime = performance.now();
+    let raf;
+    function tick() {
+      const elapsed = performance.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setDisplay(Math.round(value * eased));
+      if (progress < 1) raf = requestAnimationFrame(tick);
+    }
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [value]);
+  return display;
+}
+
 function App() {
   const [currentLang, setCurrentLang] = useState(() => {
     return window.localStorage?.getItem('user-lang') || null;
@@ -2474,6 +2535,11 @@ function App() {
   const [showCompletion, setShowCompletion] = useState(false);
   const [completionData, setCompletionData] = useState(null);
   const [completionFeeling, setCompletionFeeling] = useState(null);
+  const [preMoodScreen, setPreMoodScreen] = useState(false);
+  const preMoodTimeoutRef = useRef(null);
+  const [pendingSession, setPendingSession] = useState(null);
+  const [currentMood, setCurrentMood] = useState({pre:null, post:null});
+  const [moodDelta, setMoodDelta] = useState(null);
   const [completionStep, setCompletionStep] = useState('stats'); // 'stats' | 'feeling' | 'reminder' | 'done'
   const [showSurfaceBreath, setShowSurfaceBreath] = useState(false);
   const [surfaceBreathStreak, setSurfaceBreathStreak] = useState(0);
@@ -2555,6 +2621,8 @@ function App() {
       }
       const longestStreak = Math.max(prev.longestStreak || 0, streak);
       const depth = (sessionInfo.duration || 0) / 60 * (sessionInfo.multiplier || 1);
+      const newTechStats = {...(prev.techniqueStats || {})};
+      (sessionInfo.techniques || []).forEach(tc => { newTechStats[tc] = (newTechStats[tc] || 0) + 1; });
       return {
         ...prev, totalSessions: prev.totalSessions + 1, streak, longestStreak, lastSessionDate: today,
         totalDepth: Math.round((prev.totalDepth + depth) * 10) / 10,
@@ -2562,14 +2630,32 @@ function App() {
         techniquesUsed: newTechs, categoriesUsed: newCats,
         nightSessions: prev.nightSessions + (isNight ? 1 : 0),
         morningSessions: prev.morningSessions + (isMorning ? 1 : 0),
+        techniqueStats: newTechStats,
         history: [...prev.history, { date: now.toISOString(), scenario: sessionInfo.scenario, duration: sessionInfo.duration, category: sessionInfo.category }].slice(-100),
       };
     });
   };
 
-  const startSession = (segments, meta = {}) => {
+  const actuallyStartSession = (segments, meta = {}) => {
     setActiveSession({ segments, meta });
     if (stats.soundEnabled) { ambientRef.current.init(WORLDS[world].ambient); ambientRef.current.fadeIn(); }
+  };
+
+  const startSession = (segments, meta = {}) => {
+    setCurrentMood({pre:null, post:null});
+    setMoodDelta(null);
+    // Go directly to session (pre-mood collected on completion screen)
+    actuallyStartSession(segments, meta);
+  };
+
+  const handlePreMoodSelect = (n) => {
+    if (preMoodTimeoutRef.current) { clearTimeout(preMoodTimeoutRef.current); preMoodTimeoutRef.current = null; }
+    setCurrentMood(m => ({...m, pre:n}));
+    setPreMoodScreen(false);
+    if (pendingSession) {
+      actuallyStartSession(pendingSession.segments, pendingSession.meta);
+      setPendingSession(null);
+    }
   };
 
   const endSession = (completed = true) => {
@@ -2651,6 +2737,8 @@ function App() {
   }
 
 
+  // Pre-mood: skipped for now (collected post-session instead)
+
   // Active session
   if (activeSession) {
     return <SessionPlayer segments={activeSession.segments} world={world} onComplete={() => endSession(true)} onExit={() => endSession(false)} t={t} voiceEnabled={stats.voiceEnabled} ambientRef={ambientRef} currentLang={currentLang} />;
@@ -2661,7 +2749,7 @@ function App() {
     const earnedBadges = BADGES.filter(b => b.condition(stats));
     // Note: no useMemo here — conditional hooks violate React rules
     const sessionInsight = getSessionInsight(stats, completionData, currentLang);
-    const closeCompletion = () => { setShowCompletion(false); setCompletionData(null); setCompletionStep('stats'); setCompletionFeeling(null); };
+    const closeCompletion = () => { setShowCompletion(false); setCompletionData(null); setCompletionStep('stats'); setCompletionFeeling(null); setMoodDelta(null); };
     return (
       <div className="fixed inset-0 flex flex-col items-center justify-center px-8" style={{background:bg}}>
         <div style={{position:'absolute',top:'-50%',left:'50%',width:'200%',height:'100%',transform:'translateX(-50%)',
@@ -2671,13 +2759,15 @@ function App() {
         <div className="screen-transition text-center z-10">
           <div style={{marginBottom:20, color:palette.accent, opacity:0.4}}><Icon name="check" size={32}/></div>
           <div className="font-body mb-3" style={{fontSize:28, fontWeight:300, color:'rgba(226,232,240,0.95)'}}>{t.diveComplete}</div>
-          <div className="flex gap-8 justify-center mb-8 mt-8">
-            {[[Math.round(completionData.duration / 60), t.duration || t.min],[completionData.breathCycles || Math.round(completionData.duration / 16), t.breathCycles || 'Breaths'],[completionData.depth, WORLDS[world].depthUnit]].map(([val,label],i) => (
-              <div key={i} className="text-center" style={{animation:`count-up 600ms ${i*150}ms ease-out both`}}>
-                <div className="font-mono" style={{fontSize:28, fontWeight:300, color:palette.accent}}>{val}</div>
-                <div className="font-body" style={{fontSize:11, fontWeight:300, color:'var(--text-3)', marginTop:4, letterSpacing:'0.05em'}}>{label}</div>
-              </div>
-            ))}
+          <div style={{borderTop:'1px solid rgba(255,255,255,0.04)', borderBottom:'1px solid rgba(255,255,255,0.04)', padding:'20px 0', margin:'24px 0'}}>
+            <div className="flex justify-center" style={{gap:0}}>
+              {[[Math.round(completionData.duration / 60), t.duration || t.min],[completionData.breathCycles || Math.round(completionData.duration / 16), t.breathCycles || 'Breaths'],[completionData.depth, WORLDS[world].depthUnit]].map(([val,label],i) => (
+                <div key={i} className="text-center flex-1" style={{animation:`count-up 600ms ${i*150}ms ease-out both`}}>
+                  <div className="font-mono" style={{fontSize:28, fontWeight:300, color:palette.accent}}>{val}</div>
+                  <div className="font-body" style={{fontSize:11, fontWeight:300, color:'var(--text-3)', marginTop:4, letterSpacing:'0.05em', textTransform:'lowercase'}}>{label}</div>
+                </div>
+              ))}
+            </div>
           </div>
           {earnedBadges.length > 0 && (
             <div className="flex gap-2 justify-center flex-wrap mb-6">
@@ -2699,26 +2789,35 @@ function App() {
             </div>
           )}
 
-          {/* Post-session feeling — Step 2: 4 buttons */}
-          {completionStep === 'stats' && (
+          {/* Post-session mood — 1-5 scale */}
+          {completionStep === 'stats' && !moodDelta && (
             <div className="mb-6 screen-transition">
-              <div className="font-body mb-4" style={{fontSize:16, fontWeight:300, color:'rgba(226,232,240,0.8)'}}>{t.howDoYouFeel}</div>
-              <div className="flex gap-2 justify-center flex-wrap">
-                {[[t.feelBetter,'better'],[t.feelLighter,'lighter'],[t.feelSame,'same'],[t.feelNotSure,'notsure']].map(([label,val]) => (
-                  <button key={val} className="glass px-4 py-2 font-body"
-                    style={{fontSize:13, fontWeight:500, color: completionFeeling === val ? palette.accent : 'rgba(226,232,240,0.6)', border: completionFeeling === val ? `1px solid rgba(${accentRgb},0.3)` : '1px solid rgba(255,255,255,0.06)'}}
-                    onClick={() => {
-                      setCompletionFeeling(val);
-                      setStats(s => ({...s, lastFeeling: val}));
-                      setTimeout(() => {
-                        if (stats.totalSessions <= 1 && !stats.reminderTime) setCompletionStep('reminder');
-                        else setCompletionStep('done');
-                      }, 600);
-                    }}>
-                    {completionFeeling === val ? '\u2713 ' : ''}{label}
-                  </button>
-                ))}
-              </div>
+              <MoodScale label={t.andNow || 'And now?'} lowLabel={t.moodLow} highLabel={t.moodHigh} onSelect={(n) => {
+                setCurrentMood(m => ({...m, post:n}));
+                const pre = currentMood.pre;
+                if (pre !== null && n !== null) {
+                  const delta = pre - n;
+                  if (delta > 0) setMoodDelta((t.moodImprove || '{pre} \u2192 {post} \u00b7 \u2212{delta} points').replace('{pre}',pre).replace('{post}',n).replace('{delta}',delta));
+                  else if (delta === 0) setMoodDelta(t.moodSame || 'Consistency builds resilience.');
+                  else setMoodDelta(t.moodWorse || 'Some sessions plant seeds for later.');
+                }
+                // Store mood in last history entry
+                setStats(s => {
+                  const hist = [...s.history];
+                  if (hist.length > 0) { hist[hist.length-1] = {...hist[hist.length-1], preMood: pre, postMood: n}; }
+                  return {...s, history: hist, lastFeeling: n};
+                });
+                setTimeout(() => {
+                  if (stats.totalSessions <= 1 && !stats.reminderTime) setCompletionStep('reminder');
+                  else setCompletionStep('done');
+                }, pre !== null ? 2000 : 600);
+              }} />
+            </div>
+          )}
+          {/* Mood delta display */}
+          {moodDelta && completionStep === 'stats' && (
+            <div className="mb-6 screen-transition">
+              <div className="font-body" style={{fontSize:15, fontWeight:300, color:'rgba(220,225,235,0.65)', lineHeight:1.7, textAlign:'center'}}>{moodDelta}</div>
             </div>
           )}
 
@@ -3095,48 +3194,64 @@ function App() {
       <div className="screen-transition overflow-y-auto h-full no-scrollbar" style={{padding:'env(safe-area-inset-top, 48px) 24px 100px 24px'}}>
         <div className="font-body mb-4" style={{fontSize:24, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.1em'}}>{t.profile}</div>
 
-        {/* Total depth — hero number */}
+        {/* Total depth — hero number with animated number */}
         <div className="text-center mb-6">
-          <div className="font-mono" style={{fontSize:48, fontWeight:200, color:palette.accent}}>{stats.totalDepth}</div>
+          <div className="font-mono" style={{fontSize:48, fontWeight:200, color:palette.accent}}><AnimatedNumber value={stats.totalDepth} /></div>
           <div className="font-body" style={{fontSize:12, fontWeight:400, color:'var(--text-3)', letterSpacing:'0.05em', marginTop:2}}>{t.totalDepth} ({WORLDS[world].depthUnit})</div>
         </div>
 
-        {/* Other stats */}
+        {/* Other stats with animated numbers */}
         <div className="grid grid-cols-2 gap-3 mb-8">
           {[
             [stats.streak, t.dayStreak],
             [stats.totalSessions, t.sessions],
           ].map(([val, label], i) => (
             <div key={i} className="glass p-4 text-center">
-              <div className="font-mono" style={{fontSize:22, fontWeight:300, color:palette.accent}}>{val}</div>
+              <div className="font-mono" style={{fontSize:22, fontWeight:300, color:palette.accent}}><AnimatedNumber value={val} /></div>
               <div className="font-body mt-2" style={{fontSize:11, fontWeight:400, color:'var(--text-3)', letterSpacing:'0.05em'}}>{label}</div>
             </div>
           ))}
         </div>
 
-        {/* World switch — only show if space is unlocked */}
+        {/* World switch — always show, Space locked if not unlocked */}
         {(() => {
-          const spaceUnlocked = stats.isPremium || (stats.longestStreak || 0) >= 30;
-          return spaceUnlocked ? (
-            <div className="mb-8">
-              <div className="font-body mb-4" style={{fontSize:13, fontWeight:600, color:'rgba(226,232,240,0.6)', letterSpacing:'0.06em', textTransform:'uppercase'}}>{t.world}</div>
+          const isSpaceUnlocked = stats.isPremium || (stats.longestStreak || stats.streak || 0) >= 30;
+          const daysToUnlock = Math.max(0, 30 - (stats.longestStreak || stats.streak || 0));
+          return (
+            <div className="mb-8" style={{borderTop:'1px solid rgba(255,255,255,0.03)', paddingTop:20}}>
+              <div className="font-body mb-4" style={{fontSize:13, fontWeight:600, color:'rgba(220,225,235,0.35)', letterSpacing:'0.06em', textTransform:'uppercase'}}>{t.world}</div>
               <div className="flex gap-3">
-                {Object.entries(WORLDS).filter(([k]) => k !== 'memory').map(([key, wd]) => (
-                  <button key={key} className="glass flex-1 p-4 text-center"
-                    style={{border: world === key ? `1px solid rgba(${wd.palette.accentRgb},0.3)` : '1px solid rgba(255,255,255,0.06)', boxShadow: world === key ? `0 0 15px rgba(${wd.palette.accentRgb},0.1)` : 'none'}}
-                    onClick={() => selectWorld(key)}>
-                    <div style={{color:wd.palette.accent,opacity:0.5}}><Icon name="world" size={20}/></div>
-                    <div className="font-body mt-2" style={{fontSize:12, fontWeight:400, color:'rgba(226,232,240,0.6)'}}>{t[key]}</div>
-                  </button>
-                ))}
+                {/* Ocean — always active */}
+                <button className="glass flex-1 p-4 text-center"
+                  style={{border: world === 'ocean' ? `1px solid rgba(${WORLDS.ocean.palette.accentRgb},0.3)` : '1px solid rgba(255,255,255,0.06)', boxShadow: world === 'ocean' ? `0 0 15px rgba(${WORLDS.ocean.palette.accentRgb},0.1)` : 'none'}}
+                  onClick={() => selectWorld('ocean')}>
+                  <div style={{color:WORLDS.ocean.palette.accent,opacity:0.5}}><Icon name="world" size={20}/></div>
+                  <div className="font-body mt-2" style={{fontSize:12, fontWeight:400, color:'rgba(226,232,240,0.6)'}}>{t.ocean}</div>
+                </button>
+                {/* Space — locked or unlocked */}
+                <button className="glass flex-1 p-4 text-center"
+                  style={{border: isSpaceUnlocked && world === 'space' ? `1px solid rgba(${WORLDS.space.palette.accentRgb},0.3)` : '1px solid rgba(255,255,255,0.06)', boxShadow: isSpaceUnlocked && world === 'space' ? `0 0 15px rgba(${WORLDS.space.palette.accentRgb},0.1)` : 'none', opacity: isSpaceUnlocked ? 1 : 0.5}}
+                  onClick={() => { if (isSpaceUnlocked) selectWorld('space'); else setShowPaywall(true); }}>
+                  <div style={{color:WORLDS.space.palette.accent,opacity:0.5}}>
+                    {isSpaceUnlocked ? <Icon name="world" size={20}/> : <Icon name="lock" size={20}/>}
+                  </div>
+                  <div className="font-body mt-2" style={{fontSize:12, fontWeight:400, color:'rgba(226,232,240,0.6)'}}>{t.space}</div>
+                  {!isSpaceUnlocked && (
+                    <div className="font-body mt-1" style={{fontSize:9, fontWeight:300, color:'var(--text-3)', lineHeight:1.3}}>
+                      {(stats.streak || 0) > 0
+                        ? (t.unlockSpaceDaysLeft || '{N} more days to unlock').replace('{N}', daysToUnlock)
+                        : (t.unlockSpaceStreak || 'Unlock with premium or 30-day streak')}
+                    </div>
+                  )}
+                </button>
               </div>
             </div>
-          ) : null;
+          );
         })()}
 
         {/* Badges */}
-        <div className="mb-8">
-          <div className="font-body mb-4" style={{fontSize:13, fontWeight:600, color:'rgba(226,232,240,0.6)', letterSpacing:'0.06em', textTransform:'uppercase'}}>{t.badges} ({earned.length}/{BADGES.length})</div>
+        <div className="mb-8" style={{borderTop:'1px solid rgba(255,255,255,0.03)', paddingTop:20}}>
+          <div className="font-body mb-4" style={{fontSize:13, fontWeight:600, color:'rgba(220,225,235,0.35)', letterSpacing:'0.06em', textTransform:'uppercase'}}>{t.badges} ({earned.length}/{BADGES.length})</div>
           <div className="grid grid-cols-4 gap-2">
             {BADGES.map(b => {
               const has = b.condition(stats);
@@ -3150,9 +3265,32 @@ function App() {
           </div>
         </div>
 
+        {/* Techniques mastery */}
+        <div className="mb-8" style={{borderTop:'1px solid rgba(255,255,255,0.03)', paddingTop:20}}>
+          <div className="font-body mb-4" style={{fontSize:13, fontWeight:600, color:'rgba(220,225,235,0.35)', letterSpacing:'0.06em', textTransform:'uppercase'}}>{t.techniques || 'Techniques'}</div>
+          <div className="space-y-3">
+            {[['tidal','tidal'],['diaphragmatic','diaphragmatic'],['box','boxBreathing'],['segmented','segmented'],['ujjayi','ujjayi'],['recovery','recoveryBreath'],['physiological_sigh','physiologicalSigh']].map(([techKey, langKey]) => {
+              const count = (stats.techniqueStats || {})[techKey] || 0;
+              const masteryLabel = count === 0 ? (t.masteryNone || '\u2014') : count <= 5 ? (t.masteryLearning || 'Learning') : count <= 15 ? (t.masteryComfortable || 'Comfortable') : (t.masteryMastered || 'Mastered');
+              const progress = Math.min(count / 16, 1);
+              return (
+                <div key={techKey} className="flex items-center gap-3">
+                  <div className="font-body" style={{fontSize:13, fontWeight:400, color:'rgba(226,232,240,0.7)', minWidth:100, flex:'0 0 auto'}}>{t[langKey] || techKey}</div>
+                  <div style={{flex:1, height:4, borderRadius:2, background:'rgba(255,255,255,0.04)', overflow:'hidden'}}>
+                    <div style={{width:(progress*100)+'%', height:'100%', borderRadius:2, background:palette.accent, transition:'width 600ms ease'}} />
+                  </div>
+                  <div className="font-body" style={{fontSize:11, fontWeight:300, color:'var(--text-3)', minWidth:80, textAlign:'right', flex:'0 0 auto'}}>
+                    <span className="font-mono" style={{fontSize:12, color:palette.accent, marginRight:4}}>{count}</span>{masteryLabel}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Settings */}
-        <div className="mb-8">
-          <div className="font-body mb-4" style={{fontSize:13, fontWeight:600, color:'rgba(226,232,240,0.6)', letterSpacing:'0.06em', textTransform:'uppercase'}}>{t.settings}</div>
+        <div className="mb-8" style={{borderTop:'1px solid rgba(255,255,255,0.03)', paddingTop:20}}>
+          <div className="font-body mb-4" style={{fontSize:13, fontWeight:600, color:'rgba(220,225,235,0.35)', letterSpacing:'0.06em', textTransform:'uppercase'}}>{t.settings}</div>
           <div className="glass p-5 space-y-4">
             {[
               [t.ambientSound, 'soundEnabled'],
@@ -3194,8 +3332,8 @@ function App() {
 
         {/* History */}
         {stats.history.length > 0 && (
-          <div className="mb-8">
-            <div className="font-body mb-4" style={{fontSize:13, fontWeight:600, color:'rgba(226,232,240,0.6)', letterSpacing:'0.06em', textTransform:'uppercase'}}>{t.history}</div>
+          <div className="mb-8" style={{borderTop:'1px solid rgba(255,255,255,0.03)', paddingTop:20}}>
+            <div className="font-body mb-4" style={{fontSize:13, fontWeight:600, color:'rgba(220,225,235,0.35)', letterSpacing:'0.06em', textTransform:'uppercase'}}>{t.history}</div>
             <div className="space-y-2">
               {stats.history.slice(-5).reverse().map((h, i) => (
                 <div key={i} className="glass p-4 flex items-center gap-3">
