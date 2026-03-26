@@ -172,6 +172,17 @@ const LANG = {
     speechIntro:'Stand or sit. Shoulders back. Chin up.',
     relaxIntro:'No goal. No task. Just — breathe.',
     deepIntro:'Advanced practice. All techniques. Full immersion.',
+    takeOneBreath:'Take one breath with us',
+    howDoYouFeel:'How do you feel?',
+    feelBetter:'Better', feelCalmer:'Calmer', feelCurious:'Curious',
+    feelLighter:'Lighter', feelSame:'Same', feelNotSure:'Not sure',
+    setReminder:'Set a daily reminder?',
+    reminderMorning:'Morning', reminderEvening:'Evening', reminderNotNow:'Not now',
+    firstDiveLabel:'Your first dive', trySomethingNew:'Try something new', goingDeeper:'Going deeper',
+    todaysDiveLabel:"Today's dive",
+    completePrevDay:'Complete previous day first', availableTomorrow:'Available tomorrow',
+    thisWeek:'THIS WEEK', weeklyDives:'dives', weeklyMinutes:'minutes', weeklyDepth:'depth', mostUsed:'Most used',
+    reminderSet:'Reminder set',
   },
   ru: {
     appName:'DIVE',tagline:'Дыши. Погружайся. Действуй.',chooseLanguage:'Выберите язык',chooseWorld:'Выберите мир',
@@ -239,6 +250,17 @@ const LANG = {
     speechIntro:'Встаньте или сядьте. Плечи расправьте. Подбородок вверх.',
     relaxIntro:'Нет цели. Нет задачи. Просто дышать.',
     deepIntro:'Продвинутая практика. Все техники. Полное погружение.',
+    takeOneBreath:'Сделайте один вдох с нами',
+    howDoYouFeel:'Как вы себя чувствуете?',
+    feelBetter:'Лучше', feelCalmer:'Спокойнее', feelCurious:'Интересно',
+    feelLighter:'Легче', feelSame:'Так же', feelNotSure:'Не уверен',
+    setReminder:'Напоминать каждый день?',
+    reminderMorning:'Утром', reminderEvening:'Вечером', reminderNotNow:'Не сейчас',
+    firstDiveLabel:'Первое погружение', trySomethingNew:'Попробуйте новое', goingDeeper:'Глубже',
+    todaysDiveLabel:'Погружение дня',
+    completePrevDay:'Сначала пройдите предыдущий день', availableTomorrow:'Доступно завтра',
+    thisWeek:'ЭТА НЕДЕЛЯ', weeklyDives:'погружений', weeklyMinutes:'минут', weeklyDepth:'глубина', mostUsed:'Чаще всего',
+    reminderSet:'Напоминание установлено',
   },
   zh: {
     appName:'DIVE',tagline:'呼吸。沉浸。行动。',chooseLanguage:'选择语言',chooseWorld:'选择你的世界',
@@ -302,6 +324,17 @@ const LANG = {
     speechIntro:'站好或坐好。肩膀打开。抬起下巴。',
     relaxIntro:'没有目标。没有任务。只是呼吸。',
     deepIntro:'进阶练习。所有技巧。完全沉浸。',
+    takeOneBreath:'和我们一起呼吸',
+    howDoYouFeel:'你感觉如何？',
+    feelBetter:'更好', feelCalmer:'更平静', feelCurious:'好奇',
+    feelLighter:'更轻松', feelSame:'一样', feelNotSure:'不确定',
+    setReminder:'设置每日提醒？',
+    reminderMorning:'早上', reminderEvening:'晚上', reminderNotNow:'暂时不',
+    firstDiveLabel:'你的第一次练习', trySomethingNew:'尝试新东西', goingDeeper:'更深入',
+    todaysDiveLabel:'今日练习',
+    completePrevDay:'先完成前一天', availableTomorrow:'明天可用',
+    thisWeek:'本周', weeklyDives:'次练习', weeklyMinutes:'分钟', weeklyDepth:'深度', mostUsed:'最常使用',
+    reminderSet:'提醒已设置',
   },
   ar: {
     appName:'DIVE',tagline:'تنفّس. انغمس. انطلق.',chooseLanguage:'اختر اللغة',chooseWorld:'اختر عالمك',
@@ -365,6 +398,17 @@ const LANG = {
     speechIntro:'قف أو اجلس. افرد كتفيك. ارفع ذقنك.',
     relaxIntro:'لا هدف. لا مهمة. فقط تنفّس.',
     deepIntro:'ممارسة متقدمة. كل التقنيات. انغماس كامل.',
+    takeOneBreath:'خذ نفساً معنا',
+    howDoYouFeel:'كيف تشعر؟',
+    feelBetter:'أفضل', feelCalmer:'أهدأ', feelCurious:'فضولي',
+    feelLighter:'أخف', feelSame:'كما كان', feelNotSure:'غير متأكد',
+    setReminder:'تعيين تذكير يومي؟',
+    reminderMorning:'صباحاً', reminderEvening:'مساءً', reminderNotNow:'ليس الآن',
+    firstDiveLabel:'غوصتك الأولى', trySomethingNew:'جرّب شيئاً جديداً', goingDeeper:'أعمق',
+    todaysDiveLabel:'تمرين اليوم',
+    completePrevDay:'أكمل اليوم السابق أولاً', availableTomorrow:'متاح غداً',
+    thisWeek:'هذا الأسبوع', weeklyDives:'غوصات', weeklyMinutes:'دقائق', weeklyDepth:'عمق', mostUsed:'الأكثر استخداماً',
+    reminderSet:'تم تعيين التذكير',
   }
 };
 
@@ -927,7 +971,21 @@ const defaultStats = () => ({
   techniquesUsed:[], categoriesUsed:[], nightSessions:0, morningSessions:0, programsCompleted:0,
   history:[], world:'ocean', onboarded:false, isPremium:false, programProgress:{},
   soundEnabled:true, vibrateEnabled:true, voiceEnabled:true,
+  firstFeeling:null, lastFeeling:null, reminderTime:null, lastWeeklySummary:null,
 });
+
+// ===== SMART DAILY RECOMMENDATION =====
+function getDailyRecommendation(stats, t) {
+  const hour = new Date().getHours();
+  const sessions = stats.totalSessions || 0;
+  if (sessions === 0) return { scenario:'cant_focus', duration:5, title: t.firstDiveLabel || 'Your first dive', sub:'5 ' + t.min + ' \u00b7 ' + t.diaphragmatic };
+  if (sessions === 1) return { scenario:'meeting', duration:5, title: t.trySomethingNew || 'Try something new', sub:'5 ' + t.min + ' \u00b7 ' + t.boxBreathing };
+  if (sessions === 2) return { scenario:'hard_day', duration:5, title: t.goingDeeper || 'Going deeper', sub:'5 ' + t.min + ' \u00b7 ' + t.diaphragmatic };
+  if (hour >= 6 && hour < 11) return { scenario:'morning', duration:5, title: t.morningStart, sub:'5 ' + t.min + ' \u00b7 ' + t.segmented };
+  if (hour >= 11 && hour < 17) return { scenario:'meeting', duration:5, title: t.beforeMeeting, sub:'5 ' + t.min + ' \u00b7 ' + t.boxBreathing };
+  if (hour >= 17 && hour < 22) return { scenario:'hard_day', duration:5, title: t.afterToughDay, sub:'5 ' + t.min + ' \u00b7 ' + t.diaphragmatic };
+  return { scenario:'insomnia', duration:10, title: t.cantSleep, sub:'10 ' + t.min + ' \u00b7 ' + t.diaphragmatic };
+}
 
 // ===== AMBIENT ENGINE =====
 class AmbientEngine {
@@ -1824,6 +1882,108 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
   );
 }
 
+// ===== FIRST BREATH SCREEN =====
+function FirstBreathScreen({ world, palette, accentRgb, t, onComplete }) {
+  const [phase, setPhase] = useState('breathing'); // 'breathing' | 'feeling'
+  const [currentPhase, setCurrentPhase] = useState('inhale');
+  const [phaseTime, setPhaseTime] = useState(4);
+  const [cycleCount, setCycleCount] = useState(0);
+  const [totalElapsed, setTotalElapsed] = useState(0);
+  const [breathScale, setBreathScale] = useState(1.0);
+  const totalDuration = 48; // 3 cycles x 16 seconds
+  const phases = ['inhale','holdIn','exhale','holdOut'];
+  const phaseDurations = {inhale:4,holdIn:4,exhale:4,holdOut:4};
+  const phaseLabels = {inhale:t.inhale,holdIn:t.hold,exhale:t.exhale,holdOut:t.holdPause};
+
+  useEffect(() => {
+    if (phase !== 'breathing') return;
+    let elapsed = 0;
+    let phaseIdx = 0;
+    let phaseElapsed = 0;
+    let cycles = 0;
+    let lastTime = performance.now();
+    let running = true;
+    const tick = () => {
+      if (!running) return;
+      const now = performance.now();
+      const dt = (now - lastTime) / 1000;
+      lastTime = now;
+      elapsed += dt;
+      phaseElapsed += dt;
+      setTotalElapsed(elapsed);
+      const curPhase = phases[phaseIdx];
+      const dur = phaseDurations[curPhase];
+      if (phaseElapsed >= dur) {
+        phaseElapsed -= dur;
+        phaseIdx++;
+        if (phaseIdx >= phases.length) { phaseIdx = 0; cycles++; setCycleCount(cycles); }
+        setCurrentPhase(phases[phaseIdx]);
+        setPhaseTime(Math.ceil(phaseDurations[phases[phaseIdx]] - phaseElapsed));
+      } else {
+        setPhaseTime(Math.ceil(dur - phaseElapsed));
+      }
+      // Scale
+      const p = phases[phaseIdx];
+      const prog = dur > 0 ? Math.min(phaseElapsed / dur, 1) : 0;
+      const eased = prog < 0.5 ? 4*prog*prog*prog : 1 - Math.pow(-2*prog+2,3)/2;
+      if (p === 'inhale') setBreathScale(1.0 + 0.5 * eased);
+      else if (p === 'holdIn') setBreathScale(1.5);
+      else if (p === 'exhale') setBreathScale(1.5 - 0.5 * eased);
+      else setBreathScale(1.0);
+      if (elapsed >= totalDuration) { setPhase('feeling'); return; }
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+    return () => { running = false; };
+  }, [phase]);
+
+  const w = WORLDS[world];
+  const bg = w.bgGradient;
+
+  if (phase === 'feeling') {
+    return (
+      <div className="fixed inset-0 flex flex-col items-center justify-center px-8" style={{background:bg}}>
+        <Particles world={world} />
+        <div className="screen-transition text-center z-10">
+          <div className="font-body mb-10" style={{fontSize:24, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.06em'}}>{t.howDoYouFeel}</div>
+          <div className="flex gap-3 justify-center">
+            {[[t.feelBetter,'better'],[t.feelCalmer,'calmer'],[t.feelCurious,'curious']].map(([label,val]) => (
+              <button key={val} className="glass px-6 py-3 font-body"
+                style={{fontWeight:500, fontSize:14, color:palette.accent, border:`1px solid rgba(${accentRgb},0.25)`}}
+                onClick={() => onComplete(val)}>
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 flex flex-col items-center justify-center" style={{background:bg}}>
+      <Particles world={world} />
+      <div className="screen-transition text-center z-10" style={{width:'100%'}}>
+        <div className="font-body mb-12" style={{fontSize:18, fontWeight:300, color:'rgba(226,232,240,0.85)', letterSpacing:'0.04em'}}>{t.takeOneBreath}</div>
+        <div style={{position:'relative', width:'min(70vw, 260px)', aspectRatio:'1', margin:'0 auto', display:'flex', alignItems:'center', justifyContent:'center',
+          transform:`scale(${breathScale})`, transition:'transform 200ms ease-out'}}>
+          {world === 'ocean' && <OceanBubble />}
+          {world === 'space' && <PulsarObject />}
+          {world === 'memory' && <MemoryOrb />}
+        </div>
+        <div style={{marginTop:40, textAlign:'center'}}>
+          <div className="font-body" style={{fontWeight:500, fontSize:14, letterSpacing:'0.1em', textTransform:'uppercase', color:'rgba(220,225,235,0.7)', marginBottom:4}}>
+            {phaseLabels[currentPhase]}
+          </div>
+          <div className="font-mono" style={{fontWeight:300, fontSize:32, color:'rgba(220,225,235,0.5)', fontVariantNumeric:'tabular-nums'}}>
+            {phaseTime}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ===== MAIN APP =====
 function App() {
   const [currentLang, setCurrentLang] = useState(() => {
@@ -1837,14 +1997,17 @@ function App() {
   });
   const [onboardStep, setOnboardStep] = useState(0);
   const [selectedCat, setSelectedCat] = useState(null);
-  const [selectedScenario, setSelectedScenario] = useState(null);
-  const [selectedDuration, setSelectedDuration] = useState(null);
+
+
   const [activeSession, setActiveSession] = useState(null);
   const [selectedProgram, setSelectedProgram] = useState(null);
   const [tab, setTab] = useState('home');
   const [showPaywall, setShowPaywall] = useState(false);
   const [showCompletion, setShowCompletion] = useState(false);
   const [completionData, setCompletionData] = useState(null);
+  const [firstBreathDone, setFirstBreathDone] = useState(false);
+  const [completionFeeling, setCompletionFeeling] = useState(null);
+  const [completionStep, setCompletionStep] = useState('stats'); // 'stats' | 'feeling' | 'reminder' | 'done'
   const ambientRef = useRef(new AmbientEngine());
   const world = stats.world || 'ocean';
   const w = WORLDS[world];
@@ -1852,6 +2015,17 @@ function App() {
   const accentRgb = palette.accentRgb;
 
   const t = LANG[currentLang] || LANG.en;
+
+  // Weekly summary check
+  const shouldShowWeekly = useMemo(() => {
+    if (!stats.onboarded || stats.totalSessions < 2) return false;
+    const last = stats.lastWeeklySummary ? new Date(stats.lastWeeklySummary) : null;
+    if (!last) return stats.totalSessions >= 3;
+    const daysSince = (Date.now() - last.getTime()) / 86400000;
+    return daysSince >= 7;
+  }, [stats.onboarded, stats.totalSessions, stats.lastWeeklySummary]);
+  const [showWeekly, setShowWeekly] = useState(false);
+  useEffect(() => { if (shouldShowWeekly && screen === 'home') setShowWeekly(true); }, [shouldShowWeekly]);
 
   // Apply language
   useEffect(() => {
@@ -1935,7 +2109,7 @@ function App() {
           return {...prev, programProgress: pp, programsCompleted};
         });
       }
-      setCompletionData({ duration: totalDur, techniques: techs, depth: Math.round(totalDur / 60 * maxMult * 10) / 10 });
+      setCompletionData({ duration: totalDur, techniques: techs, depth: Math.round(totalDur / 60 * maxMult * 10) / 10, _lastScenario: activeSession.meta?.scenario });
       setShowCompletion(true);
     }
     setActiveSession(null);
@@ -1985,6 +2159,12 @@ function App() {
     );
   }
 
+  // ===== FIRST BREATH SCREEN =====
+  if (screen === 'first_breath') {
+    return <FirstBreathScreen world={world} palette={palette} accentRgb={accentRgb} t={t}
+      onComplete={(feeling) => { setStats(s => ({...s, firstFeeling: feeling})); setFirstBreathDone(true); setOnboardStep(5); setScreen('onboarding'); }} />;
+  }
+
   // ===== ONBOARDING =====
   if (screen === 'onboarding') {
     const stepKeys = [
@@ -2010,7 +2190,13 @@ function App() {
             </div>
             <button className="px-10 py-3 rounded-full font-body"
               style={{fontWeight:500, background:`rgba(${accentRgb},0.12)`, border:`1px solid rgba(${accentRgb},0.25)`, color:palette.accent}}
-              onClick={() => setOnboardStep(onboardStep + 1)}>
+              onClick={() => {
+                if (onboardStep === stepKeys.length - 1 && !firstBreathDone) {
+                  setScreen('first_breath');
+                } else {
+                  setOnboardStep(onboardStep + 1);
+                }
+              }}>
               {t.next}
             </button>
           </div>
@@ -2056,6 +2242,7 @@ function App() {
   // Completion
   if (showCompletion && completionData) {
     const earnedBadges = BADGES.filter(b => b.condition(stats));
+    const closeCompletion = () => { setShowCompletion(false); setCompletionData(null); setCompletionStep('stats'); setCompletionFeeling(null); };
     return (
       <div className="fixed inset-0 flex flex-col items-center justify-center px-8" style={{background:bg}}>
         <div style={{position:'absolute',top:'-50%',left:'50%',width:'200%',height:'100%',transform:'translateX(-50%)',
@@ -2065,7 +2252,7 @@ function App() {
         <div className="screen-transition text-center z-10">
           <div style={{marginBottom:20, color:palette.accent, opacity:0.4}}><Icon name="check" size={32}/></div>
           <div className="font-body mb-3" style={{fontSize:28, fontWeight:300, color:'rgba(226,232,240,0.95)'}}>{t.diveComplete}</div>
-          <div className="flex gap-8 justify-center mb-10 mt-8">
+          <div className="flex gap-8 justify-center mb-8 mt-8">
             {[[Math.round(completionData.duration / 60), t.min],[completionData.depth, WORLDS[world].depthUnit],[stats.streak, t.dayStreak]].map(([val,label],i) => (
               <div key={i} className="text-center" style={{animation:`count-up 600ms ${i*150}ms ease-out both`}}>
                 <div className="font-mono" style={{fontSize:28, fontWeight:300, color:palette.accent}}>{val}</div>
@@ -2074,7 +2261,7 @@ function App() {
             ))}
           </div>
           {earnedBadges.length > 0 && (
-            <div className="flex gap-2 justify-center flex-wrap mb-8">
+            <div className="flex gap-2 justify-center flex-wrap mb-6">
               {earnedBadges.slice(-3).map((b, i) => (
                 <div key={b.id} className="glass px-4 py-2 flex items-center gap-2">
                   <span style={{color:palette.accent,opacity:0.6}}><Icon name="check" size={14}/></span>
@@ -2083,11 +2270,68 @@ function App() {
               ))}
             </div>
           )}
-          <button className="px-10 py-3 rounded-full font-body"
-            style={{fontWeight:500, background:`rgba(${accentRgb},0.12)`, border:`1px solid rgba(${accentRgb},0.25)`, color:palette.accent}}
-            onClick={() => { setShowCompletion(false); setCompletionData(null); }}>
-            {t.done}
-          </button>
+
+          {/* Post-session feeling */}
+          {completionStep === 'stats' && (
+            <div className="mb-6 screen-transition">
+              <div className="font-body mb-4" style={{fontSize:16, fontWeight:300, color:'rgba(226,232,240,0.8)'}}>{t.howDoYouFeel}</div>
+              <div className="flex gap-2 justify-center flex-wrap">
+                {[[t.feelBetter,'better'],[t.feelCalmer,'calmer'],[t.feelLighter,'lighter'],[t.feelSame,'same'],[t.feelNotSure,'notsure']].map(([label,val]) => (
+                  <button key={val} className="glass px-4 py-2 font-body"
+                    style={{fontSize:13, fontWeight:500, color: completionFeeling === val ? palette.accent : 'rgba(226,232,240,0.6)', border: completionFeeling === val ? `1px solid rgba(${accentRgb},0.3)` : '1px solid rgba(255,255,255,0.06)'}}
+                    onClick={() => {
+                      setCompletionFeeling(val);
+                      setStats(s => ({...s, lastFeeling: val}));
+                      setTimeout(() => {
+                        if (stats.totalSessions === 1 && !stats.reminderTime) setCompletionStep('reminder');
+                        else setCompletionStep('done');
+                      }, 600);
+                    }}>
+                    {completionFeeling === val ? '\u2713 ' : ''}{label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Reminder prompt — first session only */}
+          {completionStep === 'reminder' && (
+            <div className="mb-6 screen-transition">
+              <div className="font-body mb-4" style={{fontSize:16, fontWeight:300, color:'rgba(226,232,240,0.8)'}}>{t.setReminder}</div>
+              <div className="flex gap-3 justify-center">
+                {[[t.reminderMorning,'morning'],[t.reminderEvening,'evening'],[t.reminderNotNow,null]].map(([label,val]) => (
+                  <button key={label} className="glass px-5 py-2.5 font-body"
+                    style={{fontSize:13, fontWeight:500, color: val ? palette.accent : 'rgba(226,232,240,0.5)', border: val ? `1px solid rgba(${accentRgb},0.25)` : '1px solid rgba(255,255,255,0.06)'}}
+                    onClick={() => {
+                      setStats(s => ({...s, reminderTime: val}));
+                      setCompletionStep('done');
+                    }}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {stats.reminderTime && <div className="font-body mt-3" style={{fontSize:12, color:palette.accent, opacity:0.7}}>{t.reminderSet} \u2713</div>}
+            </div>
+          )}
+
+          {/* Final buttons */}
+          {completionStep === 'done' && (
+            <div className="flex gap-3 justify-center screen-transition">
+              <button className="px-8 py-3 rounded-full font-body"
+                style={{fontWeight:500, background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.08)', color:'rgba(226,232,240,0.7)'}}
+                onClick={() => {
+                  closeCompletion();
+                  if (completionData._lastScenario) launchScenario(completionData._lastScenario);
+                }}>
+                {t.repeat}
+              </button>
+              <button className="px-8 py-3 rounded-full font-body"
+                style={{fontWeight:500, background:`rgba(${accentRgb},0.12)`, border:`1px solid rgba(${accentRgb},0.25)`, color:palette.accent}}
+                onClick={closeCompletion}>
+                {t.newDive}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -2133,9 +2377,20 @@ function App() {
   );
 
   // ===== HOME =====
-  const renderHome = () => (
+  const launchScenario = useCallback((id, dur) => {
+    const sc = SCENARIOS[id];
+    if (!sc) return;
+    if (!checkAccess(sc)) { setShowPaywall(true); return; }
+    const d = dur || sc.durations[0];
+    const segs = getSessionContent(t, world)[id]?.[d];
+    if (segs) startSession(segs, {scenario:id, category:sc.cat});
+  }, [t, world, stats.isPremium]);
+
+  const renderHome = () => {
+    const rec = getDailyRecommendation(stats, t);
+    return (
     <div className="screen-transition overflow-y-auto h-full no-scrollbar" style={{padding:'env(safe-area-inset-top, 48px) 24px 100px 24px'}}>
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6">
         <div>
           <div className="font-body" style={{fontSize:24, fontWeight:200, color:'rgba(226,232,240,0.95)', letterSpacing:'0.25em', textTransform:'uppercase'}}>{t.appName}</div>
           <div className="font-body mt-1" style={{fontSize:12, fontWeight:400, color:'var(--text-3)'}}>
@@ -2144,70 +2399,72 @@ function App() {
         </div>
       </div>
 
-      {/* Quick start */}
-      <div className="mb-8">
-        <div className="font-body mb-4" style={{fontSize:13, fontWeight:600, color:'rgba(226,232,240,0.6)', letterSpacing:'0.06em', textTransform:'uppercase'}}>{t.quickStart}</div>
-        <div className="grid grid-cols-2 gap-3">
-          {[['meeting',5],['hard_day',5],['cant_focus',5],['morning',5]].map(([id,dur]) => {
-            const sc = SCENARIOS[id];
-            return (
-              <button key={id} className="glass p-5 text-left" style={{position:'relative',overflow:'hidden',minHeight:110}} onClick={() => {
-                if (!checkAccess(sc)) { setShowPaywall(true); return; }
-                const segs = getSessionContent(t, world)[id]?.[dur];
-                if (segs) startSession(segs, {scenario:id, category:sc.cat});
-              }}>
-                <div style={{marginBottom:8, color:palette.accent, opacity:0.7}}><Icon name={sc.svgIcon || id} size={24}/></div>
-                <div className="font-body" style={{fontWeight:600, fontSize:15, color:'rgba(255,255,255,0.92)', marginBottom:4}}>{t[SCENARIO_LANG_KEY[id]]}</div>
-                <div style={{display:'inline-block',padding:'3px 10px',borderRadius:12,fontSize:11,fontWeight:500,background:'rgba(255,255,255,0.08)',color:'rgba(255,255,255,0.6)',marginTop:6}} className="font-body">{dur} {t.min}</div>
-              </button>
-            );
-          })}
+      {/* Daily recommendation card — 60% viewport */}
+      <button className="w-full text-left mb-6" style={{
+        minHeight:160, borderRadius:18, padding:'28px 24px', position:'relative', overflow:'hidden',
+        background:`linear-gradient(135deg, rgba(${accentRgb},0.08) 0%, rgba(${accentRgb},0.02) 100%)`,
+        border:`1px solid rgba(${accentRgb},0.18)`,
+        boxShadow:`0 0 40px rgba(${accentRgb},0.06), inset 0 0 40px rgba(${accentRgb},0.03)`,
+      }} onClick={() => launchScenario(rec.scenario, rec.duration)}>
+        <div className="font-body mb-1" style={{fontSize:12, fontWeight:500, color:palette.accent, opacity:0.7, letterSpacing:'0.08em', textTransform:'uppercase'}}>{t.todaysDiveLabel}</div>
+        <div className="font-body mb-2" style={{fontSize:20, fontWeight:400, color:'rgba(226,232,240,0.95)', letterSpacing:'0.04em'}}>{rec.title}</div>
+        <div className="font-body mb-6" style={{fontSize:13, fontWeight:400, color:'var(--text-2)'}}>{rec.sub}</div>
+        <div className="inline-flex items-center justify-center font-body"
+          style={{height:40, padding:'0 24px', borderRadius:10, fontWeight:500, fontSize:14, background:`rgba(${accentRgb},0.15)`, border:`1px solid rgba(${accentRgb},0.3)`, color:palette.accent, letterSpacing:'0.04em'}}>
+          {t.begin}
         </div>
-      </div>
+      </button>
 
-      {/* Categories */}
-      <div className="mb-8">
-        <div className="font-body mb-4" style={{fontSize:13, fontWeight:600, color:'rgba(226,232,240,0.6)', letterSpacing:'0.06em', textTransform:'uppercase'}}>{t.categories}</div>
+      {/* Programs — horizontal scroll */}
+      <div className="mb-6">
+        <div className="font-body mb-3" style={{fontSize:13, fontWeight:600, color:'rgba(226,232,240,0.6)', letterSpacing:'0.06em', textTransform:'uppercase'}}>{t.programs}</div>
         <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
-          {Object.entries(CATEGORIES).map(([key, cat]) => (
-            <button key={key} className="glass px-5 py-3 flex-shrink-0 flex items-center gap-2"
-              onClick={() => { setSelectedCat(key); setScreen('category'); }}>
-              <span style={{color:palette.accent,opacity:0.6}}><Icon name={cat.svgIcon || key} size={18}/></span>
-              <span className="font-body" style={{fontSize:13, fontWeight:500, color:'rgba(255,255,255,0.75)'}}>{t[CATEGORY_LANG_KEY[key]]}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Programs */}
-      <div className="mb-8">
-        <div className="font-body mb-4" style={{fontSize:13, fontWeight:600, color:'rgba(226,232,240,0.6)', letterSpacing:'0.06em', textTransform:'uppercase'}}>{t.programs}</div>
-        <div className="space-y-3">
           {Object.entries(PROGRAMS).map(([key, prog]) => {
             const progress = (stats.programProgress?.[key] || []).length;
             const nameKey = key === 'first_dive' ? 'firstDive' : key === 'stress_shield' ? 'stressShield' : 'deepFocus';
-            const subKey = nameKey + 'Sub';
             return (
-              <button key={key} className="glass p-5 w-full text-left flex items-center gap-4"
+              <button key={key} className="glass flex-shrink-0 p-4 text-left" style={{width:150, minHeight:100}}
                 onClick={() => { setSelectedProgram(key); setScreen('program_view'); }}>
-                <span style={{color:palette.accent,opacity:0.5}}><Icon name={key === 'first_dive' ? 'prog_bubble' : key === 'stress_shield' ? 'prog_shield' : 'prog_target'} size={24}/></span>
-                <div className="flex-1">
-                  <div className="font-body" style={{fontWeight:600, fontSize:15, color:'rgba(255,255,255,0.92)'}}>{t[nameKey]}</div>
-                  <div className="font-body" style={{fontSize:12, fontWeight:400, color:'rgba(255,255,255,0.4)', marginTop:2}}>{t[subKey]}</div>
-                  {progress > 0 && (
-                    <div className="mt-3" style={{height:2, borderRadius:1, background:'rgba(255,255,255,0.04)'}}>
-                      <div style={{height:'100%', borderRadius:1, width:`${progress/prog.days*100}%`, background:`rgba(${accentRgb},0.6)`, transition:'width 1s ease'}} />
-                    </div>
-                  )}
+                <span style={{color:palette.accent,opacity:0.5}}><Icon name={key === 'first_dive' ? 'prog_bubble' : key === 'stress_shield' ? 'prog_shield' : 'prog_target'} size={20}/></span>
+                <div className="font-body mt-2" style={{fontWeight:600, fontSize:13, color:'rgba(255,255,255,0.92)'}}>{t[nameKey]}</div>
+                <div className="mt-2" style={{height:2, borderRadius:1, background:'rgba(255,255,255,0.04)'}}>
+                  <div style={{height:'100%', borderRadius:1, width:`${progress/prog.days*100}%`, background:`rgba(${accentRgb},0.6)`}} />
                 </div>
-                {!stats.isPremium && !prog.free && <span className="font-body" style={{fontSize:11, fontWeight:500, color:palette.accent, opacity:0.7, letterSpacing:'0.05em'}}>PRO</span>}
+                <div className="font-body mt-1" style={{fontSize:10, fontWeight:400, color:palette.accent, opacity:0.7}}>{progress}/{prog.days}</div>
               </button>
             );
           })}
         </div>
       </div>
+
+      {/* Quick Dives — by category */}
+      <div className="mb-8">
+        <div className="font-body mb-3" style={{fontSize:13, fontWeight:600, color:'rgba(226,232,240,0.6)', letterSpacing:'0.06em', textTransform:'uppercase'}}>{t.quickDives}</div>
+        {Object.entries(CATEGORIES).map(([catKey, cat]) => {
+          const catScenarios = Object.entries(SCENARIOS).filter(([_, s]) => s.cat === catKey);
+          return (
+            <div key={catKey} className="mb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <span style={{color:palette.accent,opacity:0.5}}><Icon name={cat.svgIcon || catKey} size={16}/></span>
+                <span className="font-body" style={{fontSize:12, fontWeight:500, color:'rgba(226,232,240,0.55)', letterSpacing:'0.04em'}}>{t[CATEGORY_LANG_KEY[catKey]]}</span>
+              </div>
+              <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                {catScenarios.map(([id, sc]) => (
+                  <button key={id} className="glass flex-shrink-0 px-4 py-3 text-left" style={{minWidth:130}}
+                    onClick={() => launchScenario(id)}>
+                    <div className="font-body" style={{fontWeight:500, fontSize:13, color:'rgba(255,255,255,0.85)'}}>{t[SCENARIO_LANG_KEY[id]]}</div>
+                    <div className="font-body mt-1" style={{fontSize:11, fontWeight:400, color:'rgba(255,255,255,0.35)'}}>{sc.durations[0]} {t.min}</div>
+                    {!checkAccess(sc) && <span style={{position:'absolute', top:8, right:8, color:'var(--text-3)', opacity:0.4}}><Icon name="lock" size={12}/></span>}
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
+  };
 
   const renderCategory = () => {
     const scenarios = Object.entries(SCENARIOS).filter(([_, s]) => s.cat === selectedCat);
@@ -2223,7 +2480,7 @@ function App() {
         <div className="space-y-3">
           {scenarios.map(([id, sc]) => (
             <button key={id} className="glass p-5 w-full text-left flex items-center gap-4"
-              onClick={() => { if (!checkAccess(sc)) { setShowPaywall(true); return; } setSelectedScenario(id); setScreen('session_pre'); }}>
+              onClick={() => launchScenario(id)}>
               <span style={{color:palette.accent,opacity:0.6}}><Icon name={sc.svgIcon || id} size={24}/></span>
               <div className="flex-1">
                 <div className="font-body" style={{fontWeight:600, fontSize:15, color:'rgba(255,255,255,0.92)'}}>{t[SCENARIO_LANG_KEY[id]]}</div>
@@ -2239,51 +2496,13 @@ function App() {
     );
   };
 
-  const renderSessionPre = () => {
-    const sc = SCENARIOS[selectedScenario];
-    if (!sc) { setScreen('home'); return null; }
-    return (
-      <div className="screen-transition overflow-y-auto h-full no-scrollbar flex flex-col items-center justify-center" style={{padding:'24px'}}>
-        <button className="absolute left-6 flex items-center gap-2" style={{top:'env(safe-area-inset-top, 48px)', color:'var(--text-3)'}} onClick={() => setScreen('category')}>
-          <Icon name="back" size={16}/>
-        </button>
-        <div className="text-center">
-          <div style={{marginBottom:20, color:palette.accent, opacity:0.5}}><Icon name={sc.svgIcon || selectedScenario} size={40}/></div>
-          <div className="font-body mb-2" style={{fontSize:26, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.08em'}}>{t[SCENARIO_LANG_KEY[selectedScenario]]}</div>
-          <div className="font-body mb-10" style={{fontSize:13, fontWeight:400, color:'var(--text-3)'}}>{t[CATEGORY_LANG_KEY[sc.cat]]}</div>
-          <div className="flex gap-3 justify-center mb-10">
-            {sc.durations.map(d => (
-              <button key={d} className="glass px-7 py-3 font-body"
-                style={{fontWeight:500, fontSize:14, color: selectedDuration === d ? palette.accent : 'rgba(226,232,240,0.5)', border: selectedDuration === d ? `1px solid rgba(${accentRgb},0.3)` : '1px solid rgba(255,255,255,0.06)', boxShadow: selectedDuration === d ? `0 0 15px rgba(${accentRgb},0.1)` : 'none'}}
-                onClick={() => setSelectedDuration(d)}>
-                {d} {t.min}
-              </button>
-            ))}
-          </div>
-          <button className="flex items-center justify-center mx-auto font-body"
-            style={{height:52, padding:'0 32px', borderRadius:12, fontWeight:500, fontSize:15, background:`rgba(${accentRgb},0.12)`, border:`1px solid rgba(${accentRgb},0.25)`, color:palette.accent, letterSpacing:'0.04em'}}
-            onClick={() => {
-              const dur = selectedDuration || sc.durations[0];
-              const segs = getSessionContent(t, world)[selectedScenario]?.[dur];
-              if (segs) startSession(segs, {scenario:selectedScenario, category:sc.cat});
-            }}>
-            {t.begin}
-          </button>
-        </div>
-      </div>
-    );
-  };
-
   const renderQuickDive = () => (
     <div className="screen-transition overflow-y-auto h-full no-scrollbar" style={{padding:'env(safe-area-inset-top, 48px) 24px 100px 24px'}}>
       <div className="font-body mb-8" style={{fontSize:24, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.1em'}}>{t.quickDives}</div>
       <div className="space-y-3">
         {Object.entries(SCENARIOS).map(([id, sc]) => (
           <button key={id} className="glass p-5 w-full text-left flex items-center gap-4"
-            onClick={() => {
-              if (!checkAccess(sc)) { setShowPaywall(true); return; }
-              setSelectedScenario(id); setSelectedDuration(sc.durations[0]); setSelectedCat(sc.cat); setScreen('session_pre');
-            }}>
+            onClick={() => launchScenario(id)}>
             <span style={{color:palette.accent,opacity:0.6}}><Icon name={sc.svgIcon || id} size={24}/></span>
             <div className="flex-1">
               <div className="font-body" style={{fontWeight:600, fontSize:15, color:'rgba(255,255,255,0.92)'}}>{t[SCENARIO_LANG_KEY[id]]}</div>
@@ -2304,6 +2523,14 @@ function App() {
     const progress = stats.programProgress?.[selectedProgram] || [];
     const nameKey = selectedProgram === 'first_dive' ? 'firstDive' : selectedProgram === 'stress_shield' ? 'stressShield' : 'deepFocus';
     const subKey = nameKey + 'Sub';
+
+    // Find last completion time for cooldown check
+    const lastCompletionEntry = stats.history?.filter(h => h.scenario === selectedProgram || h.category === 'program').slice(-1)[0];
+    const lastCompletionTime = lastCompletionEntry ? new Date(lastCompletionEntry.date).getTime() : 0;
+    const hoursSinceLast = (Date.now() - lastCompletionTime) / 3600000;
+    const today = new Date().toISOString().split('T')[0];
+    const lastCompletionDate = lastCompletionEntry ? new Date(lastCompletionEntry.date).toISOString().split('T')[0] : null;
+
     return (
       <div className="screen-transition overflow-y-auto h-full no-scrollbar" style={{padding:'env(safe-area-inset-top, 48px) 24px 100px 24px'}}>
         <button className="flex items-center gap-2 mb-5" onClick={() => { setScreen('home'); setTab('programs'); }} style={{color:'var(--text-3)'}}>
@@ -2321,10 +2548,24 @@ function App() {
         <div className="space-y-3">
           {prog.sessions.map((daySegs, i) => {
             const completed = progress.includes(i);
-            const locked = !stats.isPremium && i >= prog.trialDay;
+            const premiumLocked = !stats.isPremium && i >= prog.trialDay;
+            // Sequential unlock: day 0 always available, day N requires day N-1 completed
+            const prevCompleted = i === 0 || progress.includes(i - 1);
+            // Cooldown: if previous day completed today, show "available tomorrow"
+            const prevCompletedToday = i > 0 && progress.includes(i - 1) && lastCompletionDate === today && hoursSinceLast < 12;
+            const sequentialLocked = !completed && (!prevCompleted || prevCompletedToday);
+            const locked = premiumLocked || sequentialLocked;
+            let subText = '';
+            if (completed) subText = t.completed;
+            else if (premiumLocked) subText = t.locked;
+            else if (!prevCompleted) subText = t.completePrevDay;
+            else if (prevCompletedToday) subText = t.availableTomorrow;
+            else subText = t.startDay;
+
             return (
               <button key={i} className="glass p-5 w-full text-left flex items-center gap-4"
-                onClick={() => { if (locked) { setShowPaywall(true); return; } startSession(daySegs, {programId:selectedProgram, day:i, category:'program'}); }}>
+                style={{opacity: locked && !completed ? 0.5 : 1}}
+                onClick={() => { if (locked) { if (premiumLocked) setShowPaywall(true); return; } startSession(daySegs, {programId:selectedProgram, day:i, category:'program'}); }}>
                 <div className="flex items-center justify-center rounded-full font-mono"
                   style={{width:40, height:40, fontWeight:300, fontSize:14, background: completed ? `rgba(${accentRgb},0.15)` : 'rgba(255,255,255,0.06)', border: completed ? `1px solid rgba(${accentRgb},0.3)` : '1px solid rgba(255,255,255,0.06)', color: completed ? palette.accent : 'rgba(226,232,240,0.5)'}}>
                   {completed ? <Icon name="check" size={16}/> : i + 1}
@@ -2332,10 +2573,10 @@ function App() {
                 <div className="flex-1">
                   <div className="font-body" style={{fontWeight:600, fontSize:15, color:'rgba(255,255,255,0.92)'}}>{t.dayN} {i + 1}</div>
                   <div className="font-body" style={{fontSize:12, fontWeight:400, color:'rgba(255,255,255,0.4)', marginTop:3}}>
-                    {completed ? t.completed : locked ? t.locked : t.startDay}
+                    {subText}
                   </div>
                 </div>
-                {locked && <span style={{color:'var(--text-3)',opacity:0.5}}><Icon name="lock" size={16}/></span>}
+                {locked && !completed && <span style={{color:'var(--text-3)',opacity:0.5}}><Icon name="lock" size={16}/></span>}
               </button>
             );
           })}
@@ -2377,16 +2618,21 @@ function App() {
     const earned = BADGES.filter(b => b.condition(stats));
     return (
       <div className="screen-transition overflow-y-auto h-full no-scrollbar" style={{padding:'env(safe-area-inset-top, 48px) 24px 100px 24px'}}>
-        <div className="font-body mb-8" style={{fontSize:24, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.1em'}}>{t.profile}</div>
+        <div className="font-body mb-4" style={{fontSize:24, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.1em'}}>{t.profile}</div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-3 mb-8">
+        {/* Total depth — hero number */}
+        <div className="text-center mb-6">
+          <div className="font-mono" style={{fontSize:48, fontWeight:200, color:palette.accent}}>{stats.totalDepth}</div>
+          <div className="font-body" style={{fontSize:12, fontWeight:400, color:'var(--text-3)', letterSpacing:'0.05em', marginTop:2}}>{t.totalDepth} ({WORLDS[world].depthUnit})</div>
+        </div>
+
+        {/* Other stats */}
+        <div className="grid grid-cols-2 gap-3 mb-8">
           {[
-            [stats.totalDepth, WORLDS[world].depthUnit],
             [stats.streak, t.dayStreak],
             [stats.totalSessions, t.sessions],
           ].map(([val, label], i) => (
-            <div key={i} className="glass p-5 text-center">
+            <div key={i} className="glass p-4 text-center">
               <div className="font-mono" style={{fontSize:22, fontWeight:300, color:palette.accent}}>{val}</div>
               <div className="font-body mt-2" style={{fontSize:11, fontWeight:400, color:'var(--text-3)', letterSpacing:'0.05em'}}>{label}</div>
             </div>
@@ -2496,7 +2742,7 @@ function App() {
 
   const renderScreen = () => {
     if (screen === 'category') return renderCategory();
-    if (screen === 'session_pre') return renderSessionPre();
+
     if (screen === 'program_view') return renderProgramView();
     switch (tab) {
       case 'home': return renderHome();
@@ -2507,7 +2753,7 @@ function App() {
     }
   };
 
-  const showTabs = !['category','session_pre','program_view'].includes(screen);
+  const showTabs = !['category','program_view'].includes(screen);
 
   return (
     <div className="fixed inset-0" style={{background:bg}}>
@@ -2527,7 +2773,7 @@ function App() {
               {id:'profile', svgIcon:'profile', labelKey:'profile'},
             ].map(tb => (
               <button key={tb.id} className="flex flex-col items-center py-1 px-3" style={{gap:3}}
-                onClick={() => { setTab(tb.id); if (['category','session_pre','program_view'].includes(screen)) setScreen('home'); }}>
+                onClick={() => { setTab(tb.id); if (['category','program_view'].includes(screen)) setScreen('home'); }}>
                 <span style={{color: tab === tb.id ? palette.accent : 'var(--text-3)', transition:'color 200ms ease'}}><Icon name={tb.svgIcon} size={20}/></span>
                 <span className="font-body" style={{fontSize:10, fontWeight:500, letterSpacing:'0.03em', color: tab === tb.id ? palette.accent : 'var(--text-3)', transition:'color 200ms ease'}}>{t[tb.labelKey]}</span>
               </button>
@@ -2537,6 +2783,59 @@ function App() {
       )}
 
       {showPaywall && <PaywallModal />}
+
+      {/* Weekly summary overlay */}
+      {showWeekly && (() => {
+        const weekSessions = stats.history?.filter(h => {
+          const d = new Date(h.date);
+          return (Date.now() - d.getTime()) < 7 * 86400000;
+        }) || [];
+        const weekMinutes = weekSessions.reduce((s, h) => s + Math.round((h.duration || 0) / 60), 0);
+        const weekDepth = Math.round(stats.totalDepth * 10) / 10;
+        // Most used technique from recent history
+        const techCounts = {};
+        (stats.history || []).slice(-20).forEach(h => {
+          if (h.scenario) {
+            const sc = SCENARIOS[h.scenario];
+            if (sc) {
+              const content = getSessionContent(t, world)[h.scenario];
+              if (content) {
+                const firstDur = Object.keys(content)[0];
+                const segs = content[firstDur] || [];
+                segs.filter(s => s.type === 'breathing').forEach(s => {
+                  techCounts[s.technique] = (techCounts[s.technique] || 0) + 1;
+                });
+              }
+            }
+          }
+        });
+        const topTech = Object.entries(techCounts).sort((a,b) => b[1] - a[1])[0];
+        const topTechLabel = topTech ? (t[TECHNIQUE_LANG_KEY[topTech[0]]] || topTech[0]) : '-';
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center" style={{background:'rgba(0,0,0,0.8)', backdropFilter:'blur(16px)'}}>
+            <div className="screen-transition text-center z-10 px-8">
+              <div className="font-body mb-8" style={{fontSize:14, fontWeight:600, color:palette.accent, letterSpacing:'0.15em'}}>{t.thisWeek}</div>
+              <div className="flex gap-6 justify-center mb-8">
+                {[[weekSessions.length, t.weeklyDives],[weekMinutes, t.weeklyMinutes],[weekDepth, t.weeklyDepth],[stats.streak, t.dayStreak]].map(([val,label],i) => (
+                  <div key={i} className="text-center">
+                    <div className="font-mono" style={{fontSize:28, fontWeight:300, color:palette.accent}}>{val}</div>
+                    <div className="font-body" style={{fontSize:11, fontWeight:400, color:'var(--text-3)', marginTop:4}}>{label}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="glass p-4 mx-auto mb-8" style={{maxWidth:200}}>
+                <div className="font-body" style={{fontSize:11, fontWeight:500, color:'var(--text-3)', letterSpacing:'0.06em', textTransform:'uppercase', marginBottom:4}}>{t.mostUsed}</div>
+                <div className="font-body" style={{fontSize:16, fontWeight:400, color:'rgba(226,232,240,0.9)'}}>{topTechLabel}</div>
+              </div>
+              <button className="px-10 py-3 rounded-full font-body"
+                style={{fontWeight:500, background:`rgba(${accentRgb},0.12)`, border:`1px solid rgba(${accentRgb},0.25)`, color:palette.accent}}
+                onClick={() => { setShowWeekly(false); setStats(s => ({...s, lastWeeklySummary: new Date().toISOString()})); }}>
+                {t.continueText}
+              </button>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
