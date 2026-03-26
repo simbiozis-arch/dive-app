@@ -13,12 +13,10 @@
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@200;300;400;500;600&family=JetBrains+Mono:wght@300;400&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600&family=Noto+Sans+SC:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@200;300;400;500;600&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet">
 <style>
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 html,body,#root { width:100%; height:100%; overflow:hidden; font-family:'DM Sans',sans-serif; }
-html[lang="ar"] body, html[lang="ar"] #root { font-family:'IBM Plex Sans Arabic','DM Sans',sans-serif; }
-html[lang="zh"] body, html[lang="zh"] #root { font-family:'Noto Sans SC','DM Sans',sans-serif; }
 :root {
   --bg-1:#070c15; --bg-2:#0c1322; --bg-3:#111b2e; --bg-4:#182640;
   --bg-start:#0c1322; --bg-mid:#0a1628; --bg-end:#070c15;
@@ -109,6 +107,11 @@ html[lang="zh"] body, html[lang="zh"] #root { font-family:'Noto Sans SC','DM San
 .bodyscan-crossfade {
   transition: opacity 400ms ease;
 }
+.font-mono, .phase-timer, .hold-timer, .completion-stat-number,
+.depth-number, .streak-number, .duration-badge, .mood-circle {
+  font-family: 'JetBrains Mono', monospace !important;
+  font-variant-numeric: tabular-nums;
+}
 </style>
 </head>
 <body>
@@ -119,7 +122,7 @@ const { useState, useEffect, useRef, useCallback, useMemo } = React;
 // ===== LANG =====
 const LANG = {
   en: {
-    appName:'DIVE',tagline:'Breathe. Dive. Perform.',chooseLanguage:'Choose language',chooseWorld:'Choose your world',
+    appName:'DIVE',tagline:'Prepare. Breathe. Dive.',chooseLanguage:'Choose language',chooseWorld:'Choose your world',
     ocean:'Ocean',space:'Space',memory:'Memory',
     home:'Home',explore:'Explore',programs:'Programs',profile:'Profile',settings:'Settings',
     todaysDive:"Today's dive",quickDives:'Quick Dives',myPrograms:'My Programs',seeAll:'See all',
@@ -213,280 +216,6 @@ const LANG = {
     retestTitle:'Time to check your progress',retestSub:'days since your last depth test',retestNow:'Test now \u2014 30 sec',retestLater:'Later',
     trialNotice:"You won't be charged for 7 days. Cancel anytime.",
     streakAtRisk:'day streak at risk',surfaceBreath1Min:'Surface Breath \u2014 1 min',freshStartFull:'Fresh start. Every freediver surfaces eventually.',
-  },
-  ru: {
-    appName:'DIVE',tagline:'Дыши. Погружайся. Действуй.',chooseLanguage:'Выберите язык',chooseWorld:'Выберите мир',
-    ocean:'Океан',space:'Космос',memory:'Воспоминания',
-    home:'Главная',explore:'Обзор',programs:'Программы',profile:'Профиль',settings:'Настройки',
-    todaysDive:'Погружение дня',quickDives:'Быстрые практики',myPrograms:'Мои программы',seeAll:'Все',
-    focus:'Фокус',stress:'Стресс',energy:'Энергия',recovery:'Восстановление',deep:'Глубина',
-    beforeMeeting:'Перед важной встречей',beforeSpeech:'Перед выступлением',beforeCall:'Перед сложным звонком',
-    cantFocus:'Не могу сосредоточиться',beforeDecision:'Перед решением',afterToughDay:'После тяжёлого дня',
-    afterArgument:'После конфликта',stuckInTraffic:'В пробке',deadlinePressure:'Дедлайн давит',
-    infoOverload:'Перегруз информацией',morningStart:'Утренний старт',afternoonSlump:'Послеобеденный спад',
-    beforeWorkout:'Перед тренировкой',quickReset:'Быстрый сброс',afterWorkout:'После тренировки',
-    cantSleep:'Не могу уснуть',anxiousMorning:'Тревожное утро',betweenMeetings:'Между встречами',
-    justRelax:'Просто расслабиться',deepDive:'Глубокое погружение',
-    min:'мин',begin:'Начать',pause:'Пауза',resume:'Продолжить',skip:'Пропустить',
-    exitSession:'Выйти?',exitConfirm:'Прогресс сохранится.',exitYes:'Выйти',exitNo:'Остаться',
-    inhale:'Вдох',exhale:'Выдох',hold:'Задержка',holdPause:'Пауза',belly:'Живот',ribs:'Рёбра',chest:'Грудь',inhale2:'+ Вдох',
-    subInhaleNose:'Через нос, живот вперёд',subExhaleMouth:'Через рот, плавно',
-    subHoldStill:'Воздух внутри',subEmptyPause:'Пустая пауза',
-    subBelly:'Живот — треть',subRibs:'Рёбра — две трети',subChest:'Грудь — полностью',
-    subReleaseAll:'Сверху вниз, отпустите',subDoubleInhale:'Двойной вдох, длинный выдох',
-    subSharpExhale:'Резкий выдох',subOceanSound:'Горло сужено — звук океана',
-    diaphragmatic:'Диафрагмальное',boxBreathing:'Квадратное',segmented:'Трёхфазное',
-    tidal:'Приливное',ujjayi:'Океанское',recoveryBreath:'Восстановительное',physiologicalSigh:'Физиологический вздох',
-    diveComplete:'Погружение завершено',duration:'Длительность',breathCycles:'Циклов',depth:'Глубина',
-    repeat:'Повторить',newDive:'Новое погружение',totalDepth:'Общая глубина',dayStreak:'дней подряд',
-    sessionHistory:'История',badges:'Достижения',resetData:'Сбросить данные',
-    firstDive:'Первое погружение',firstDiveSub:'5 дней · Основы',
-    stressShield:'Стресс-щит',stressShieldSub:'7 дней · Устойчивость',
-    deepFocus:'Глубокий фокус',deepFocusSub:'5 дней · Острота ума',
-    dayN:'День',startDay:'Начать',completed:'Пройден',locked:'Заблокирован',
-    videoComingSoon:'Видеоуроки от тренера — скоро',continueText:'Продолжить',
-    unlockAll:'Разблокировать всё',monthly:'499 ₽/мес',yearly:'3490 ₽/год',yearlySave:'Экономия 40%',
-    startTrial:'7 дней бесплатно',demoUnlock:'Демо-доступ',voiceGuided:'С голосовым сопровождением',
-    bodyScanFull:'Лоб — отпустите. Глаза — тяжёлые. Челюсть — приоткрыта. Шея — расслаблена. Плечи — опустите. Руки — тяжёлые, тёплые. Грудь — открыта. Живот — мягкий. Ноги — тяжёлые. Ступни — тёплые.',
-    visOceanCalm:'Вы в тёплой воде. Невесомость. Свет сквозь поверхность. Каждый выдох — глубже в тишину.',
-    visSpaceCalm:'Космос. Невесомость. Тишина. Земля внизу — маленькая. Всё, что давит — там. Вы здесь. В покое.',
-    visMemoryCalm:'Вспомните место покоя. Увидьте. Почувствуйте воздух. Вы там. Ничего не должны. Просто есть.',
-    sitDown:'Сядьте удобно. Спина прямая. Закройте глаза.',
-    openEyes:'Откройте глаза. Вы готовы.',sleepEnd:'Продолжайте дышать. Сон придёт.',
-    oceanDesc:'Глубина океана, пузыри, звуки волн',spaceDesc:'Бесконечный космос, звёзды, тишина',memoryDesc:'Тёплые воспоминания, боке, гармония',
-    canChangeLater:'Можно сменить в настройках',quickStart:'Быстрый старт',categories:'Категории',
-    back:'Назад',close:'Закрыть',done:'Готово',sessions:'сессий',days:'дней',
-    ambientSound:'Окружающий звук',vibration:'Вибрация',premium:'Premium',active:'Активен',free:'Бесплатно',
-    history:'История',resetProgress:'Сбросить прогресс',resetConfirm:'Сбросить весь прогресс?',
-    language:'Язык',world:'Мир',voiceNarration:'Голосовое сопровождение',
-    streakStart:'Начните серию сессий',streakDays:'дней подряд',next:'Далее',
-    onb1title:'DIVE',onb1sub:'Дыши как фридайвер',onb1desc:'Антистресс-техники от людей, которые ныряют на 130 метров на одном вдохе.',
-    onb2title:'7 техник',onb2sub:'Проверены наукой и глубиной',onb2desc:'Диафрагмальное, квадратное, ujjayi, физиологический вздох — и ещё три.',
-    onb3title:'20 сценариев',onb3sub:'На каждый случай',onb3desc:'Перед встречей, после конфликта, бессонница, утренняя тревога — найдётся нужный.',
-    onb4title:'3 программы',onb4sub:'Пошаговое обучение',onb4desc:'Первое погружение. Стресс-щит. Глубокий фокус. С видео-уроками тренера.',
-    paywallFeatures:['20 сценариев на все случаи жизни','3 программы с видео-уроками','Все 7 техник дыхания','2 визуальных мира','Без рекламы'],
-    morningIntro:'Доброе утро. Перед кофе — 5 минут дыхания. Тело проснётся быстрее.',
-    overloadIntro:'Пять минут. Ноль входящей информации. Только вы и дыхание.',
-    conflictIntro:'Стоп. Прежде чем прокручивать — продышите. Адреналин уходит за 3-5 минут.',
-    deadlineIntro:'Три минуты. Потом к задаче. Но спокойно.',
-    trafficIntro:'Глаза открыты, руки на руле. Только дыхание.',
-    sleepIntro:'Лягте на спину. Накройтесь. Закройте глаза. Просто следуйте за дыханием.',
-    focusIntro:'Закройте глаза, когда будете готовы. Следующие пять минут — только дыхание.',
-    decisionIntro:'Важные решения — из спокойствия, не из тревоги. Дайте себе 5 минут.',
-    workoutIntro:'Активируем тело. Мобилизуем ресурсы.',
-    postWorkoutIntro:'Тренировка окончена. Переключаем тело в восстановление.',
-    anxiousIntro:'Утренняя тревога — это кортизол. Пик в первые 30 минут. Снижаем.',
-    betweenIntro:'Микро-перезагрузка. Три минуты — и вы новый.',
-    speechIntro:'Встаньте или сядьте. Плечи расправьте. Подбородок вверх.',
-    relaxIntro:'Нет цели. Нет задачи. Просто дышать.',
-    deepIntro:'Продвинутая практика. Все техники. Полное погружение.',
-    takeOneBreath:'Сделайте один вдох с нами',
-    howDoYouFeel:'Как вы себя чувствуете?',
-    feelBetter:'Лучше', feelCalmer:'Спокойнее', feelCurious:'Интересно',
-    feelLighter:'Легче', feelSame:'Так же', feelNotSure:'Не уверен',
-    setReminder:'Напоминать каждый день?',
-    reminderMorning:'Утром', reminderEvening:'Вечером', reminderNotNow:'Не сейчас',
-    firstDiveLabel:'Первое погружение', trySomethingNew:'Попробуйте новое', goingDeeper:'Глубже',
-    todaysDiveLabel:'Погружение дня',
-    completePrevDay:'Сначала пройдите предыдущий день', availableTomorrow:'Доступно завтра',
-    thisWeek:'ЭТА НЕДЕЛЯ', weeklyDives:'погружений', weeklyMinutes:'минут', weeklyDepth:'глубина', mostUsed:'Чаще всего',
-    reminderSet:'Напоминание установлено',
-    whatBroughtYou:'Что привело вас сюда?',stressRelief:'Снять стресс',betterFocus:'Лучше фокус',betterSleep:'Лучше сон',moreEnergy:'Больше энергии',
-    missedYesterday:'Вы пропустили вчера',surfaceBreathOffer:'1-минутный вдох сохранит серию из {N} дней',surfaceBreathButton:'Вдох — 1 мин',letItGo:'Отпустить',streakSaved:'Серия сохранена ✓',freshStart:'Новый старт',
-    buildHabit:'Создать привычку?',habitMorning:'Утром 8:00',habitEvening:'Вечером 21:00',habitNotNow:'Не сейчас',
-    paywallMonthly:'499₽/мес',paywallYearly:'2490₽/год',paywallYearlySave:'Экономия 58%',paywallTrialNote:'7 дней бесплатно. Отмена в любой момент.',paywallStartTrial:'Начать бесплатно',
-    spaceLockedMsg:'Разблокируйте Космос: Premium или 30-дневная серия',
-    holdTestTitle:'Найдём вашу начальную глубину',holdTestDesc:'Выдохните полностью. Задержите дыхание. Нажмите, когда нужно вдохнуть.',holdTestStart:'Начать',holdTestYourDepth:'Ваша начальная глубина',holdTestSwimmingPool:'Бассейн',holdTestCoralReef:'Коралловый риф',holdTestShipwreck:'Затонувший корабль',holdTestSunlightFades:'Где гаснет свет',holdTestTwilightZone:'Сумеречная зона',
-    howStressed:'Насколько вы напряжены сейчас?',andNow:'А сейчас?',moodLow:'мало',moodHigh:'много',
-    moodImprove:'{pre} \u2192 {post} \u00b7 \u2212{delta} баллов',moodSame:'Стабильность укрепляет.',moodWorse:'Некоторые сессии работают позже.',
-    techniques:'Техники',masteryNone:'\u2014',masteryLearning:'Изучение',masteryComfortable:'Уверенно',masteryMastered:'Мастерство',
-    unlockSpaceStreak:'Premium или 30-дневная серия',unlockSpaceDaysLeft:'Ещё {N} дней',
-    goodMorning:'Доброе утро',goodAfternoon:'Добрый день',goodEvening:'Добрый вечер',goodNight:'Доброй ночи',
-    day1Free:'День 1 бесплатно',premiumLabel:'Премиум',
-    safetyQuestion:'Было ли вам дурно или кружилась голова?',safetyYes:'Да',safetyNo:'Нет',safetyMessage:'Это нормально для начинающих. Мы предложим более мягкие техники.',
-    retestTitle:'Время проверить прогресс',retestSub:'дней с последнего теста',retestNow:'Тест \u2014 30 сек',retestLater:'Позже',
-    trialNotice:'7 дней бесплатно. Отмена в любой момент.',
-    streakAtRisk:'дней подряд под угрозой',surfaceBreath1Min:'Поверхностный вдох \u2014 1 мин',freshStartFull:'Новое начало.',
-  },
-  zh: {
-    appName:'DIVE',tagline:'呼吸。沉浸。行动。',chooseLanguage:'选择语言',chooseWorld:'选择你的世界',
-    ocean:'海洋',space:'太空',memory:'回忆',
-    home:'首页',explore:'探索',programs:'课程',profile:'个人',settings:'设置',
-    todaysDive:'今日练习',quickDives:'快速练习',myPrograms:'我的课程',seeAll:'全部',
-    focus:'专注',stress:'减压',energy:'能量',recovery:'恢复',deep:'深度',
-    beforeMeeting:'重要会议前',beforeSpeech:'演讲前',beforeCall:'困难电话前',
-    cantFocus:'无法集中',beforeDecision:'做决定前',afterToughDay:'疲惫一天后',
-    afterArgument:'争吵之后',stuckInTraffic:'堵车时',deadlinePressure:'截止日期压力',
-    infoOverload:'信息过载',morningStart:'清晨启动',afternoonSlump:'午后困倦',
-    beforeWorkout:'运动前',quickReset:'快速重启',afterWorkout:'运动后',
-    cantSleep:'无法入睡',anxiousMorning:'焦虑的早晨',betweenMeetings:'会议间隙',
-    justRelax:'单纯放松',deepDive:'深度沉浸',
-    min:'分钟',begin:'开始',pause:'暂停',resume:'继续',skip:'跳过',
-    exitSession:'退出？',exitConfirm:'进度将保存。',exitYes:'退出',exitNo:'留下',
-    inhale:'吸气',exhale:'呼气',hold:'屏住',holdPause:'停顿',belly:'腹部',ribs:'肋骨',chest:'胸部',inhale2:'+ 吸气',
-    subInhaleNose:'鼻吸，腹部扩张',subExhaleMouth:'口呼，缓慢',subHoldStill:'保持不动',subEmptyPause:'空停顿',
-    subBelly:'腹部三分之一',subRibs:'肋骨三分之二',subChest:'胸部完全',subReleaseAll:'从上到下释放',
-    subDoubleInhale:'双重吸气，长呼气',subSharpExhale:'猛烈呼气',subOceanSound:'喉咙微收',
-    diaphragmatic:'腹式呼吸',boxBreathing:'方块呼吸',segmented:'分段呼吸',
-    tidal:'潮汐呼吸',ujjayi:'海洋呼吸',recoveryBreath:'恢复呼吸',physiologicalSigh:'生理叹息',
-    diveComplete:'完成',duration:'时长',breathCycles:'循环',depth:'深度',
-    repeat:'重复',newDive:'新练习',totalDepth:'总深度',dayStreak:'天连续',
-    sessionHistory:'记录',badges:'成就',resetData:'重置',
-    firstDive:'初次沉浸',firstDiveSub:'5天·基础',stressShield:'压力护盾',stressShieldSub:'7天·韧性',
-    deepFocus:'深度专注',deepFocusSub:'5天·心智',
-    dayN:'第',startDay:'开始',completed:'完成',locked:'锁定',
-    videoComingSoon:'教练视频即将推出',continueText:'继续',
-    unlockAll:'解锁全部',monthly:'¥45/月',yearly:'¥328/年',yearlySave:'省40%',
-    startTrial:'7天免费',demoUnlock:'演示',voiceGuided:'语音引导',
-    bodyScanFull:'额头放松。眼皮沉重。下巴微张。脖子放松。肩膀下沉。双臂温暖。胸部打开。腹部柔软。双腿沉重。双脚温暖。',
-    visOceanCalm:'漂浮在温暖水中。失重。阳光透过水面。每次呼气沉入宁静。',
-    visSpaceCalm:'太空。失重。寂静。地球在下方。所有压力在那小点上。你在寂静中。',
-    visMemoryCalm:'回忆平静的地方。看清它。感受空气。你又回到那里。只是存在。',
-    sitDown:'舒适坐下。背部挺直。闭眼。',openEyes:'睁眼。准备好了。',sleepEnd:'继续呼吸。睡眠会来。',
-    oceanDesc:'深海，气泡，波浪声',spaceDesc:'无限宇宙，星辰，寂静',memoryDesc:'温暖回忆，散景，和谐',
-    canChangeLater:'之后可以更改',quickStart:'快速开始',categories:'分类',
-    back:'返回',close:'关闭',done:'完成',sessions:'次',days:'天',
-    ambientSound:'环境音',vibration:'振动',premium:'Premium',active:'已激活',free:'免费',
-    history:'记录',resetProgress:'重置进度',resetConfirm:'重置所有进度？',
-    language:'语言',world:'世界',voiceNarration:'语音引导',
-    streakStart:'开始连续练习',streakDays:'天连续',next:'下一步',
-    onb1title:'DIVE',onb1sub:'像自由潜水员一样呼吸',onb1desc:'来自130米单次呼吸潜水者的减压技巧。',
-    onb2title:'7种技巧',onb2sub:'经科学和深度验证',onb2desc:'腹式、方块、海洋呼吸、生理叹息——还有三种。',
-    onb3title:'20种场景',onb3sub:'应对各种情况',onb3desc:'会议前、争吵后、失眠、早晨焦虑——总有适合的。',
-    onb4title:'3个课程',onb4sub:'循序渐进学习',onb4desc:'初次沉浸。压力护盾。深度专注。含教练视频。',
-    paywallFeatures:['20种场景','3个视频课程','全部7种呼吸技巧','2个视觉世界','无广告'],
-    morningIntro:'早安。咖啡之前五分钟呼吸。身体会更快醒来。',
-    overloadIntro:'五分钟。零输入。只有你和呼吸。',
-    conflictIntro:'停。在脑中重播之前——先呼吸。肾上腺素3到5分钟就会消退。',
-    deadlineIntro:'三分钟。然后回到任务。但要平静。',
-    trafficIntro:'睁开眼，手握方向盘。只有呼吸。',
-    sleepIntro:'仰卧。盖好被子。闭眼。什么都不用做。跟随呼吸。',
-    focusIntro:'准备好就闭上眼睛。接下来五分钟只有呼吸。',
-    decisionIntro:'重要决定来自平静，不是焦虑。给自己五分钟。',
-    workoutIntro:'激活身体。调动资源。',
-    postWorkoutIntro:'训练结束。切换到恢复模式。',
-    anxiousIntro:'晨间焦虑是皮质醇。醒后30分钟达到峰值。现在降低它。',
-    betweenIntro:'微型重启。三分钟焕然一新。',
-    speechIntro:'站好或坐好。肩膀打开。抬起下巴。',
-    relaxIntro:'没有目标。没有任务。只是呼吸。',
-    deepIntro:'进阶练习。所有技巧。完全沉浸。',
-    takeOneBreath:'和我们一起呼吸',
-    howDoYouFeel:'你感觉如何？',
-    feelBetter:'更好', feelCalmer:'更平静', feelCurious:'好奇',
-    feelLighter:'更轻松', feelSame:'一样', feelNotSure:'不确定',
-    setReminder:'设置每日提醒？',
-    reminderMorning:'早上', reminderEvening:'晚上', reminderNotNow:'暂时不',
-    firstDiveLabel:'你的第一次练习', trySomethingNew:'尝试新东西', goingDeeper:'更深入',
-    todaysDiveLabel:'今日练习',
-    completePrevDay:'先完成前一天', availableTomorrow:'明天可用',
-    thisWeek:'本周', weeklyDives:'次练习', weeklyMinutes:'分钟', weeklyDepth:'深度', mostUsed:'最常使用',
-    reminderSet:'提醒已设置',
-    whatBroughtYou:'是什么让你来到这里？',stressRelief:'缓解压力',betterFocus:'更好专注',betterSleep:'更好睡眠',moreEnergy:'更多能量',
-    missedYesterday:'你错过了昨天',surfaceBreathOffer:'1分钟呼吸保住{N}天连续记录',surfaceBreathButton:'呼吸 — 1分钟',letItGo:'放手',streakSaved:'记录已保存 ✓',freshStart:'重新开始',
-    buildHabit:'养成每日习惯？',habitMorning:'早上 8:00',habitEvening:'晚上 21:00',habitNotNow:'暂时不',
-    paywallMonthly:'¥18/月',paywallYearly:'¥168/年',paywallYearlySave:'省58%',paywallTrialNote:'7天免费。随时取消。',paywallStartTrial:'免费开始',
-    spaceLockedMsg:'解锁太空：Premium或30天连续',
-    holdTestTitle:'找到你的起始深度',holdTestDesc:'完全呼气。然后屏住。需要呼吸时点击。',holdTestStart:'开始',holdTestYourDepth:'你的起始深度',holdTestSwimmingPool:'游泳池',holdTestCoralReef:'珊瑚礁',holdTestShipwreck:'浅水沉船',holdTestSunlightFades:'阳光消失处',holdTestTwilightZone:'暮光区',
-    howStressed:'你现在的压力有多大？',andNow:'现在呢？',moodLow:'低',moodHigh:'高',
-    moodImprove:'{pre} \u2192 {post} \u00b7 \u2212{delta} 分',moodSame:'稳定性培养韧性。',moodWorse:'有些练习会在之后生效。',
-    techniques:'技巧',masteryNone:'\u2014',masteryLearning:'学习中',masteryComfortable:'熟练',masteryMastered:'精通',
-    unlockSpaceStreak:'Premium或30天连续解锁',unlockSpaceDaysLeft:'还需{N}天',
-    goodMorning:'早上好',goodAfternoon:'下午好',goodEvening:'晚上好',goodNight:'晚安',
-    day1Free:'第1天免费',premiumLabel:'高级版',
-    safetyQuestion:'你是否感到头晕？',safetyYes:'是',safetyNo:'否',safetyMessage:'这对初学者来说很正常。我们会推荐更温和的练习。',
-    retestTitle:'是时候检查进度了',retestSub:'天没有测试了',retestNow:'立即测试 \u2014 30秒',retestLater:'以后',
-    trialNotice:'14天内不会收费。随时取消。',
-    streakAtRisk:'天连续记录面临风险',surfaceBreath1Min:'浮出水面 \u2014 1分钟',freshStartFull:'重新开始。',
-  },
-  ar: {
-    appName:'DIVE',tagline:'تنفّس. انغمس. انطلق.',chooseLanguage:'اختر اللغة',chooseWorld:'اختر عالمك',
-    ocean:'المحيط',space:'الفضاء',memory:'الذكريات',
-    home:'الرئيسية',explore:'استكشف',programs:'البرامج',profile:'الملف',settings:'الإعدادات',
-    todaysDive:'تمرين اليوم',quickDives:'تمارين سريعة',myPrograms:'برامجي',seeAll:'الكل',
-    focus:'تركيز',stress:'توتر',energy:'طاقة',recovery:'استعادة',deep:'عمق',
-    beforeMeeting:'قبل اجتماع مهم',beforeSpeech:'قبل خطاب',beforeCall:'قبل مكالمة صعبة',
-    cantFocus:'لا أستطيع التركيز',beforeDecision:'قبل قرار',afterToughDay:'بعد يوم صعب',
-    afterArgument:'بعد خلاف',stuckInTraffic:'في الزحام',deadlinePressure:'ضغط الموعد',
-    infoOverload:'حمل زائد',morningStart:'بداية الصباح',afternoonSlump:'خمول الظهر',
-    beforeWorkout:'قبل التمرين',quickReset:'إعادة ضبط',afterWorkout:'بعد التمرين',
-    cantSleep:'لا أستطيع النوم',anxiousMorning:'صباح قلق',betweenMeetings:'بين الاجتماعات',
-    justRelax:'استرخِ',deepDive:'غوص عميق',
-    min:'د',begin:'ابدأ',pause:'توقف',resume:'استمر',skip:'تخطّ',
-    exitSession:'خروج؟',exitConfirm:'سيُحفظ تقدمك.',exitYes:'خروج',exitNo:'ابقَ',
-    inhale:'شهيق',exhale:'زفير',hold:'احبس',holdPause:'توقف',belly:'البطن',ribs:'الأضلاع',chest:'الصدر',inhale2:'+ شهيق',
-    subInhaleNose:'الأنف، البطن يتمدد',subExhaleMouth:'الفم، ببطء',subHoldStill:'ثابت',subEmptyPause:'توقف فارغ',
-    subBelly:'البطن — الثلث',subRibs:'الأضلاع — الثلثين',subChest:'الصدر — بالكامل',subReleaseAll:'أطلق الكل',
-    subDoubleInhale:'شهيق مزدوج',subSharpExhale:'زفير حاد',subOceanSound:'صوت المحيط',
-    diaphragmatic:'بطني',boxBreathing:'مربع',segmented:'مقسّم',
-    tidal:'مدّي',ujjayi:'المحيط',recoveryBreath:'استعادة',physiologicalSigh:'تنهيدة',
-    diveComplete:'اكتملت',duration:'المدة',breathCycles:'الدورات',depth:'العمق',
-    repeat:'إعادة',newDive:'جديدة',totalDepth:'العمق الكلي',dayStreak:'يوم متتالي',
-    sessionHistory:'السجل',badges:'الإنجازات',resetData:'إعادة تعيين',
-    firstDive:'الغوصة الأولى',firstDiveSub:'٥ أيام',stressShield:'درع التوتر',stressShieldSub:'٧ أيام',
-    deepFocus:'تركيز عميق',deepFocusSub:'٥ أيام',
-    dayN:'اليوم',startDay:'ابدأ',completed:'مكتمل',locked:'مقفل',
-    videoComingSoon:'فيديو المدرب قريباً',continueText:'استمر',
-    unlockAll:'افتح الكل',monthly:'$6.99/شهر',yearly:'$49.99/سنة',yearlySave:'وفّر ٤٠٪',
-    startTrial:'٧ أيام مجاناً',demoUnlock:'تجريبي',voiceGuided:'بإرشاد صوتي',
-    bodyScanFull:'الجبين أرخِه. العينان ثقيلتان. الفك مفتوح. الرقبة مسترخية. الكتفان منخفضان. الذراعان دافئتان. الصدر مفتوح. البطن ناعم. الساقان ثقيلتان. القدمان دافئتان.',
-    visOceanCalm:'ماء دافئ. انعدام الوزن. ضوء عبر السطح. كل زفير أعمق في السكينة.',
-    visSpaceCalm:'الفضاء. صمت. الأرض صغيرة. كل ما يثقل على تلك النقطة. أنت في الصمت.',
-    visMemoryCalm:'تذكّر مكان السلام. شاهده. اشعر بالهواء. أنت هناك. فقط الوجود.',
-    sitDown:'اجلس مريحاً. ظهر مستقيم. أغلق عينيك.',openEyes:'افتح عينيك. جاهز.',sleepEnd:'واصل التنفس. النوم سيأتي.',
-    oceanDesc:'محيط عميق، فقاعات، أمواج',spaceDesc:'فضاء لا نهائي، نجوم، صمت',memoryDesc:'ذكريات دافئة، بوكيه، انسجام',
-    canChangeLater:'يمكنك التغيير لاحقاً',quickStart:'بداية سريعة',categories:'الفئات',
-    back:'رجوع',close:'إغلاق',done:'تم',sessions:'جلسات',days:'أيام',
-    ambientSound:'صوت محيطي',vibration:'اهتزاز',premium:'Premium',active:'فعّال',free:'مجاني',
-    history:'السجل',resetProgress:'إعادة تعيين',resetConfirm:'إعادة تعيين كل التقدم؟',
-    language:'اللغة',world:'العالم',voiceNarration:'الإرشاد الصوتي',
-    streakStart:'ابدأ سلسلة',streakDays:'يوم متتالي',next:'التالي',
-    onb1title:'DIVE',onb1sub:'تنفّس كالغواص الحر',onb1desc:'تقنيات من أشخاص يغوصون 130 متراً بنفس واحد.',
-    onb2title:'7 تقنيات',onb2sub:'مثبتة علمياً',onb2desc:'بطني، مربع، أوجاي، تنهيدة فسيولوجية — وثلاث أخرى.',
-    onb3title:'20 سيناريو',onb3sub:'لكل مناسبة',onb3desc:'قبل اجتماع، بعد خلاف، أرق، قلق صباحي — ستجد المناسب.',
-    onb4title:'3 برامج',onb4sub:'تعلّم خطوة بخطوة',onb4desc:'الغوصة الأولى. درع التوتر. تركيز عميق. مع فيديو المدرب.',
-    paywallFeatures:['20 سيناريو','3 برامج فيديو','كل التقنيات السبع','عالمان بصريان','بلا إعلانات'],
-    morningIntro:'صباح الخير. خمس دقائق تنفس قبل القهوة. جسمك سيستيقظ أسرع.',
-    overloadIntro:'خمس دقائق. صفر مدخلات. فقط أنت وتنفسك.',
-    conflictIntro:'توقف. قبل إعادة التفكير — تنفّس. الأدرينالين يختفي في ٣-٥ دقائق.',
-    deadlineIntro:'ثلاث دقائق. ثم عد للمهمة. لكن بهدوء.',
-    trafficIntro:'عيون مفتوحة، يدان على المقود. فقط التنفس.',
-    sleepIntro:'استلقِ. تغطّ. أغلق عينيك. فقط تابع التنفس.',
-    focusIntro:'أغلق عينيك عندما تكون مستعداً. الدقائق الخمس القادمة — فقط التنفس.',
-    decisionIntro:'القرارات المهمة تأتي من الهدوء. امنح نفسك خمس دقائق.',
-    workoutIntro:'تنشيط الجسم. تعبئة الموارد.',
-    postWorkoutIntro:'انتهى التمرين. التحول لوضع الاستعادة.',
-    anxiousIntro:'قلق الصباح هو الكورتيزول. ذروته في أول ٣٠ دقيقة. سنخفضه الآن.',
-    betweenIntro:'إعادة ضبط مصغرة. ثلاث دقائق وتصبح جديداً.',
-    speechIntro:'قف أو اجلس. افرد كتفيك. ارفع ذقنك.',
-    relaxIntro:'لا هدف. لا مهمة. فقط تنفّس.',
-    deepIntro:'ممارسة متقدمة. كل التقنيات. انغماس كامل.',
-    takeOneBreath:'خذ نفساً معنا',
-    howDoYouFeel:'كيف تشعر؟',
-    feelBetter:'أفضل', feelCalmer:'أهدأ', feelCurious:'فضولي',
-    feelLighter:'أخف', feelSame:'كما كان', feelNotSure:'غير متأكد',
-    setReminder:'تعيين تذكير يومي؟',
-    reminderMorning:'صباحاً', reminderEvening:'مساءً', reminderNotNow:'ليس الآن',
-    firstDiveLabel:'غوصتك الأولى', trySomethingNew:'جرّب شيئاً جديداً', goingDeeper:'أعمق',
-    todaysDiveLabel:'تمرين اليوم',
-    completePrevDay:'أكمل اليوم السابق أولاً', availableTomorrow:'متاح غداً',
-    thisWeek:'هذا الأسبوع', weeklyDives:'غوصات', weeklyMinutes:'دقائق', weeklyDepth:'عمق', mostUsed:'الأكثر استخداماً',
-    reminderSet:'تم تعيين التذكير',
-    whatBroughtYou:'ما الذي أتى بك إلى هنا؟',stressRelief:'تخفيف التوتر',betterFocus:'تركيز أفضل',betterSleep:'نوم أفضل',moreEnergy:'طاقة أكثر',
-    missedYesterday:'فاتك يوم أمس',surfaceBreathOffer:'نفس واحد لحفظ سلسلة {N} يوم',surfaceBreathButton:'نفس — دقيقة',letItGo:'دعها تذهب',streakSaved:'تم الحفظ ✓',freshStart:'بداية جديدة',
-    buildHabit:'بناء عادة يومية؟',habitMorning:'صباحاً 8:00',habitEvening:'مساءً 21:00',habitNotNow:'ليس الآن',
-    paywallMonthly:'$7.99/شهر',paywallYearly:'$49.99/سنة',paywallYearlySave:'وفّر 58%',paywallTrialNote:'لن يتم الخصم لمدة 7 أيام. إلغاء في أي وقت.',paywallStartTrial:'ابدأ مجاناً',
-    spaceLockedMsg:'افتح الفضاء: Premium أو سلسلة ٣٠ يوم',
-    holdTestTitle:'لنجد عمقك الأولي',holdTestDesc:'ازفر بالكامل. ثم احبس. انقر عندما تحتاج للتنفس.',holdTestStart:'ابدأ',holdTestYourDepth:'عمقك الأولي',holdTestSwimmingPool:'حوض سباحة',holdTestCoralReef:'شعاب مرجانية',holdTestShipwreck:'حطام سفينة',holdTestSunlightFades:'حيث يتلاشى الضوء',holdTestTwilightZone:'منطقة الشفق',
-    howStressed:'ما مستوى توترك الآن؟',andNow:'والآن؟',moodLow:'قليل',moodHigh:'كثير',
-    moodImprove:'{pre} \u2192 {post} \u00b7 \u2212{delta} نقاط',moodSame:'الثبات يبني المرونة.',moodWorse:'بعض الجلسات تزرع بذوراً للمستقبل.',
-    techniques:'التقنيات',masteryNone:'\u2014',masteryLearning:'تعلّم',masteryComfortable:'مريح',masteryMastered:'متقن',
-    unlockSpaceStreak:'Premium أو سلسلة 30 يوم',unlockSpaceDaysLeft:'{N} يوم للفتح',
-    goodMorning:'صباح الخير',goodAfternoon:'مساء الخير',goodEvening:'مساء الخير',goodNight:'تصبح على خير',
-    day1Free:'اليوم 1 مجاني',premiumLabel:'مميز',
-    safetyQuestion:'هل شعرت بالدوار؟',safetyYes:'نعم',safetyNo:'لا',safetyMessage:'هذا طبيعي في البداية. سنقترح تقنيات أخف.',
-    retestTitle:'حان وقت التحقق',retestSub:'أيام منذ آخر اختبار',retestNow:'اختبر الآن \u2014 30 ثانية',retestLater:'لاحقاً',
-    trialNotice:'لن يتم الخصم لمدة 7 أيام. إلغاء في أي وقت.',
-    streakAtRisk:'يوم متتالي في خطر',surfaceBreath1Min:'نفس السطح \u2014 دقيقة',freshStartFull:'بداية جديدة.',
   }
 };
 
@@ -855,51 +584,51 @@ const PROGRAMS = {
     sessions: [
       [
         { type:'video', duration:0, src:'', textKey:'videoComingSoon' },
-        { type:'text', duration:15, text:'Сядьте удобно. Спина прямая, но без напряжения. Положите одну руку на живот, другую на грудь.' },
-        { type:'breathing', technique:'diaphragmatic', duration:90, params:{inhale:4,exhale:8}, hint:'Вдох — живот идёт вперёд. Выдох — живот мягко внутрь.' },
-        { type:'text', duration:15, text:'Обратите внимание: грудь почти не двигается. Всю работу делает диафрагма — мышца под лёгкими.' },
-        { type:'breathing', technique:'diaphragmatic', duration:120, params:{inhale:5,exhale:10}, hint:'Выдох в два раза длиннее вдоха. Не торопите. Просто отпускайте воздух.' },
-        { type:'text', duration:10, text:'Отлично. Первое погружение завершено. Завтра — квадратное дыхание.' },
+        { type:'text', duration:15, text:'Sit comfortably. Back straight but relaxed. Place one hand on your belly, the other on your chest.' },
+        { type:'breathing', technique:'diaphragmatic', duration:90, params:{inhale:4,exhale:8}, hint:'Inhale — belly moves forward. Exhale — belly gently pulls in.' },
+        { type:'text', duration:15, text:'Notice: your chest barely moves. The diaphragm — the muscle below your lungs — does all the work.' },
+        { type:'breathing', technique:'diaphragmatic', duration:120, params:{inhale:5,exhale:10}, hint:'Exhale twice as long as inhale. No rush. Just let the air go.' },
+        { type:'text', duration:10, text:'Great. First dive complete. Tomorrow — box breathing.' },
       ],
       [
         { type:'video', duration:0, src:'', textKey:'videoComingSoon' },
-        { type:'text', duration:10, text:'Найдите удобное положение. Закройте глаза.' },
-        { type:'breathing', technique:'tidal', duration:60, params:{inhale:4,exhale:5,pause:2}, hint:'Начнём с обычного спокойного дыхания. Настраиваемся.' },
-        { type:'breathing', technique:'box', duration:160, params:{inhale:4,holdIn:4,exhale:4,holdOut:4}, hint:'Вдох на 4 — задержите на 4 — выдох на 4 — пауза на 4. Рисуете квадрат дыханием.' },
-        { type:'text', duration:20, text:'Если задержка вызывает дискомфорт — это нормально. Не боритесь. Просто наблюдайте.' },
+        { type:'text', duration:10, text:'Find a comfortable position. Close your eyes.' },
+        { type:'breathing', technique:'tidal', duration:60, params:{inhale:4,exhale:5,pause:2}, hint:'Starting with calm, natural breathing. Settling in.' },
+        { type:'breathing', technique:'box', duration:160, params:{inhale:4,holdIn:4,exhale:4,holdOut:4}, hint:'Inhale for 4 — hold for 4 — exhale for 4 — pause for 4. Drawing a square with your breath.' },
+        { type:'text', duration:20, text:'If the hold feels uncomfortable — that is normal. Do not fight it. Just observe.' },
         { type:'breathing', technique:'box', duration:80, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
-        { type:'text', duration:10, text:'Квадрат освоен. Завтра — трёхфазное дыхание.' },
+        { type:'text', duration:10, text:'Box mastered. Tomorrow — segmented breathing.' },
       ],
       [
         { type:'video', duration:0, src:'', textKey:'videoComingSoon' },
-        { type:'text', duration:10, text:'Сядьте прямо. Руки свободно на коленях.' },
-        { type:'breathing', technique:'segmented', duration:120, params:{belly:3,ribs:3,chest:3,exhale:8}, hint:'Живот... рёбра... грудь... и мягкий длинный выдох. Три этажа вверх, лифт вниз.' },
-        { type:'text', duration:20, text:'Не форсируйте. Если грудной отдел «не хочет» — ничего страшного. Гибкость придёт с практикой.' },
+        { type:'text', duration:10, text:'Sit up straight. Hands resting freely on your knees.' },
+        { type:'breathing', technique:'segmented', duration:120, params:{belly:3,ribs:3,chest:3,exhale:8}, hint:'Belly... ribs... chest... and a soft long exhale. Three floors up, elevator down.' },
+        { type:'text', duration:20, text:'Do not force it. If your chest does not want to expand — that is fine. Flexibility comes with practice.' },
         { type:'breathing', technique:'segmented', duration:120, params:{belly:4,ribs:3,chest:3,exhale:10} },
-        { type:'text', duration:10, text:'Три этажа освоены. Завтра — океанское дыхание.' },
+        { type:'text', duration:10, text:'Three floors mastered. Tomorrow — ocean breathing.' },
       ],
       [
         { type:'video', duration:0, src:'', textKey:'videoComingSoon' },
-        { type:'text', duration:15, text:'Попробуйте: откройте рот и выдохните — «хааа». Теперь закройте рот и сделайте то же через нос. Слышите мягкий звук?' },
-        { type:'breathing', technique:'ujjayi', duration:120, params:{inhale:5,exhale:8}, hint:'Вдох через нос — звук океана. Выдох через нос — звук прибоя.' },
+        { type:'text', duration:15, text:'Try this: open your mouth and exhale — "haaa." Now close your mouth and do the same through your nose. Hear the soft sound?' },
+        { type:'breathing', technique:'ujjayi', duration:120, params:{inhale:5,exhale:8}, hint:'Inhale through the nose — ocean sound. Exhale through the nose — sound of surf.' },
         { type:'bodyscan', duration:60, parts:[
-          {text:'Лоб — расслабьте',hold:8},{text:'Глаза — мягко закрыты',hold:8},{text:'Челюсть — приоткрыта, язык свободен',hold:8},{text:'Плечи — опустите от ушей',hold:8},{text:'Руки — тяжёлые, тёплые',hold:8},{text:'Живот — мягкий, свободный',hold:8}
+          {text:'Forehead — release',hold:8},{text:'Eyes — gently closed',hold:8},{text:'Jaw — slightly open, tongue free',hold:8},{text:'Shoulders — drop away from ears',hold:8},{text:'Arms — heavy, warm',hold:8},{text:'Belly — soft, free',hold:8}
         ]},
         { type:'breathing', technique:'ujjayi', duration:150, params:{inhale:6,exhale:10} },
-        { type:'text', duration:10, text:'Вы слышите свой внутренний океан. Завтра — финальное погружение.' },
+        { type:'text', duration:10, text:'You can hear your inner ocean. Tomorrow — the final dive.' },
       ],
       [
         { type:'video', duration:0, src:'', textKey:'videoComingSoon' },
-        { type:'text', duration:10, text:'Закройте глаза. Расслабьте лицо. Отпустите плечи.' },
+        { type:'text', duration:10, text:'Close your eyes. Relax your face. Let your shoulders drop.' },
         { type:'breathing', technique:'diaphragmatic', duration:60, params:{inhale:4,exhale:8} },
         { type:'breathing', technique:'box', duration:96, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
         { type:'breathing', technique:'ujjayi', duration:120, params:{inhale:5,exhale:10} },
         { type:'visualization', duration:40, texts:{
-          ocean:'Вы в воде. Тёплой, прозрачной. Невесомость. Никакого давления. Тело поддержано со всех сторон.',
-          space:'Вы в открытом космосе. Невесомость. Тишина. Под вами — Земля. Все проблемы — далеко внизу.'
+          ocean:'You are in the water. Warm, clear. Weightless. No pressure. Your body supported on all sides.',
+          space:'You are in open space. Weightless. Silent. Below you — Earth. All problems — far below.'
         }},
-        { type:'breathing', technique:'physiological_sigh', duration:60, params:{inhale1:2,inhale2:1,exhale:7}, hint:'Двойной короткий вдох — ин-ИН — и длинный мягкий выдох. Как вздох облегчения.' },
-        { type:'text', duration:15, text:'Программа завершена. Вы освоили пять техник фридайверов. Используйте их каждый день. Они работают.' },
+        { type:'breathing', technique:'physiological_sigh', duration:60, params:{inhale1:2,inhale2:1,exhale:7}, hint:'Double short inhale — in-IN — and a long soft exhale. Like a sigh of relief.' },
+        { type:'text', duration:15, text:'Program complete. You have mastered five freediver techniques. Use them every day. They work.' },
       ],
     ]
   },
@@ -911,7 +640,7 @@ const PROGRAMS = {
         { type:'breathing', technique:'physiological_sigh', duration:90, params:{inhale1:2,inhale2:1,exhale:7} },
         { type:'breathing', technique:'diaphragmatic', duration:120, params:{inhale:5,exhale:10} },
         { type:'bodyscan', duration:60, parts:[
-          {text:'Лоб — расслабьте',hold:8},{text:'Глаза — тяжёлые',hold:7},{text:'Челюсть — свободна',hold:7},{text:'Плечи — опустите',hold:8},{text:'Руки — тяжёлые',hold:7},{text:'Живот — мягкий',hold:7},{text:'Ноги — тёплые',hold:7}
+          {text:'Forehead — release',hold:8},{text:'Eyes — heavy',hold:7},{text:'Jaw — free',hold:7},{text:'Shoulders — drop',hold:8},{text:'Arms — heavy',hold:7},{text:'Belly — soft',hold:7},{text:'Legs — warm',hold:7}
         ]},
       ],
       [
@@ -919,7 +648,7 @@ const PROGRAMS = {
         { type:'breathing', technique:'tidal', duration:90, params:{inhale:4,exhale:6,pause:2} },
         { type:'breathing', technique:'diaphragmatic', duration:120, params:{inhale:4,exhale:12} },
         { type:'bodyscan', duration:90, parts:[
-          {text:'Макушка — тепло',hold:9},{text:'Лоб — гладкий',hold:9},{text:'Глаза — тяжёлые',hold:9},{text:'Челюсть — свободна',hold:9},{text:'Шея — длинная',hold:9},{text:'Плечи — вниз',hold:9},{text:'Руки — тёплые',hold:9},{text:'Живот — мягкий',hold:9},{text:'Ноги — тяжёлые',hold:9},{text:'Ступни — расслаблены',hold:9}
+          {text:'Crown — warm',hold:9},{text:'Forehead — smooth',hold:9},{text:'Eyes — heavy',hold:9},{text:'Jaw — free',hold:9},{text:'Neck — long',hold:9},{text:'Shoulders — down',hold:9},{text:'Arms — warm',hold:9},{text:'Belly — soft',hold:9},{text:'Legs — heavy',hold:9},{text:'Feet — relaxed',hold:9}
         ]},
       ],
       [
@@ -933,18 +662,18 @@ const PROGRAMS = {
         { type:'breathing', technique:'diaphragmatic', duration:60, params:{inhale:5,exhale:10} },
         { type:'breathing', technique:'ujjayi', duration:180, params:{inhale:5,exhale:8} },
         { type:'bodyscan', duration:60, parts:[
-          {text:'Лоб — расслабьте',hold:8},{text:'Глаза — мягко',hold:7},{text:'Челюсть — приоткрыта',hold:7},{text:'Плечи — тяжёлые',hold:8},{text:'Руки — тёплые',hold:7},{text:'Живот — свободный',hold:7},{text:'Ноги — расслаблены',hold:7}
+          {text:'Forehead — release',hold:8},{text:'Eyes — soft',hold:7},{text:'Jaw — slightly open',hold:7},{text:'Shoulders — heavy',hold:8},{text:'Arms — warm',hold:7},{text:'Belly — free',hold:7},{text:'Legs — relaxed',hold:7}
         ]},
       ],
       [
         { type:'video', duration:0, src:'', textKey:'videoComingSoon' },
         { type:'breathing', technique:'box', duration:90, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
         { type:'visualization', duration:40, texts:{
-          ocean:'Представьте ситуацию стресса. Увидьте её чётко. Вы наблюдаете со стороны. Как фридайвер смотрит на глубину перед нырком — спокойно.',
-          space:'Представьте ситуацию стресса. Она далеко внизу, на Земле. Вы смотрите из космоса. Масштаб другой. Перспектива другая.'
+          ocean:'Picture a stressful situation. See it clearly. You are observing from the side. Like a freediver looking at the depth before a dive — calmly.',
+          space:'Picture a stressful situation. It is far below, on Earth. You are looking from space. Different scale. Different perspective.'
         }},
         { type:'breathing', technique:'ujjayi', duration:120, params:{inhale:5,exhale:8} },
-        { type:'text', duration:10, text:'Стресс не исчез. Но вы выбрали, как на него реагировать.' },
+        { type:'text', duration:10, text:'The stress did not disappear. But you chose how to respond to it.' },
       ],
       [
         { type:'video', duration:0, src:'', textKey:'videoComingSoon' },
@@ -953,7 +682,7 @@ const PROGRAMS = {
         { type:'breathing', technique:'box', duration:90, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
         { type:'breathing', technique:'ujjayi', duration:120, params:{inhale:5,exhale:8} },
         { type:'bodyscan', duration:60, parts:[
-          {text:'Лоб',hold:7},{text:'Глаза',hold:7},{text:'Челюсть',hold:7},{text:'Плечи',hold:7},{text:'Руки',hold:7},{text:'Живот',hold:7},{text:'Ноги',hold:7},{text:'Ступни',hold:7}
+          {text:'Forehead',hold:7},{text:'Eyes',hold:7},{text:'Jaw',hold:7},{text:'Shoulders',hold:7},{text:'Arms',hold:7},{text:'Belly',hold:7},{text:'Legs',hold:7},{text:'Feet',hold:7}
         ]},
       ],
       [
@@ -964,7 +693,7 @@ const PROGRAMS = {
         { type:'breathing', technique:'box', duration:90, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
         { type:'breathing', technique:'ujjayi', duration:90, params:{inhale:5,exhale:8} },
         { type:'bodyscan', duration:60, parts:[
-          {text:'Лоб — мягко',hold:7},{text:'Глаза — тяжёлые',hold:7},{text:'Челюсть — свободна',hold:7},{text:'Плечи — вниз',hold:7},{text:'Руки — тёплые',hold:7},{text:'Живот — мягкий',hold:7},{text:'Ноги — тяжёлые',hold:7},{text:'Ступни — расслаблены',hold:7}
+          {text:'Forehead — soft',hold:7},{text:'Eyes — heavy',hold:7},{text:'Jaw — free',hold:7},{text:'Shoulders — down',hold:7},{text:'Arms — warm',hold:7},{text:'Belly — soft',hold:7},{text:'Legs — heavy',hold:7},{text:'Feet — relaxed',hold:7}
         ]},
       ],
     ]
@@ -974,20 +703,20 @@ const PROGRAMS = {
     sessions: [
       [
         { type:'video', duration:0, src:'', textKey:'videoComingSoon' },
-        { type:'breathing', technique:'tidal', duration:180, params:{inhale:4,exhale:6,pause:2}, hint:'Считайте вдохи от 1 до 10, потом сначала.' },
+        { type:'breathing', technique:'tidal', duration:180, params:{inhale:4,exhale:6,pause:2}, hint:'Count your breaths from 1 to 10, then start over.' },
         { type:'breathing', technique:'box', duration:90, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
       ],
       [
         { type:'video', duration:0, src:'', textKey:'videoComingSoon' },
         { type:'breathing', technique:'box', duration:120, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
         { type:'breathing', technique:'box', duration:120, params:{inhale:5,holdIn:5,exhale:5,holdOut:5} },
-        { type:'text', duration:20, text:'Когда ум отвлекается — вы теряете счёт. Когда вы в фокусе — счёт идёт автоматически.' },
+        { type:'text', duration:20, text:'When the mind wanders — you lose count. When you are focused — counting flows automatically.' },
       ],
       [
         { type:'video', duration:0, src:'', textKey:'videoComingSoon' },
         { type:'breathing', technique:'segmented', duration:180, params:{belly:3,ribs:3,chest:3,exhale:8} },
         { type:'breathing', technique:'diaphragmatic', duration:90, params:{inhale:5,exhale:10} },
-        { type:'text', duration:20, text:'Способность изолировать внимание на одной зоне тела переносится на способность изолировать внимание на одной задаче.' },
+        { type:'text', duration:20, text:'The ability to isolate attention on one body zone transfers to the ability to isolate attention on one task.' },
       ],
       [
         { type:'video', duration:0, src:'', textKey:'videoComingSoon' },
@@ -1001,8 +730,8 @@ const PROGRAMS = {
         { type:'breathing', technique:'segmented', duration:90, params:{belly:3,ribs:3,chest:3,exhale:8} },
         { type:'breathing', technique:'ujjayi', duration:180, params:{inhale:6,exhale:12} },
         { type:'visualization', duration:30, texts:{
-          ocean:'Вы в воде. Нет звуков, нет мыслей. Только ритм: вдох — движение — выдох. Вы и есть этот ритм.',
-          space:'Вы в кабине. Один экран перед глазами. Одна задача. Одно действие. Полная ясность.'
+          ocean:'You are in the water. No sounds, no thoughts. Only rhythm: inhale — movement — exhale. You are the rhythm.',
+          space:'You are in the cockpit. One screen before your eyes. One task. One action. Total clarity.'
         }},
         { type:'breathing', technique:'physiological_sigh', duration:60, params:{inhale1:2,inhale2:1,exhale:7} },
       ],
@@ -1078,18 +807,6 @@ const SESSION_INSIGHTS = [
   {id:'bh10',text:'Breathwork strengthens your prefrontal cortex — the brain region for impulse control and long-term planning.',condition:(s)=>s.totalSessions>=3},
 ];
 
-const SESSION_INSIGHTS_RU = {
-  sci1:'Вариабельность сердечного ритма только что улучшилась. Ваша нервная система стала гибче.',
-  sci2:'Вы достигли кардиальной когерентности — состояния синхронизации сердца, лёгких и мозга.',
-  sci3:'Учёные Стэнфорда доказали: циклический физиологический вздох — самый быстрый способ снизить тревогу.',
-  sci4:'Морские котики используют квадратное дыхание перед операциями. Вы тренируетесь по тому же протоколу.',
-  sci5:'Каждый длинный выдох стимулирует блуждающий нерв — главную магистраль между мозгом и системой покоя.',
-  sci6:'Кортизол начинает снижаться через 90 секунд медленного дыхания.',
-  sci7:'При 6 вдохах в минуту тело входит в резонанс — волны давления и пульса синхронизируются.',
-  sci8:'Диафрагма — единственная скелетная мышца, работающая 24/7. Вы только что дали ей тренировку.',
-  sci9:'Вы активировали парасимпатическую нервную систему. Невозможно быть в режиме \"бей-беги\" и дышать медленно.',
-  sci10:'С каждой сессией растёт ваша толерантность к CO2. Меньше паники, больше спокойствия.',
-};
 
 function getSessionInsight(stats, completionData, lang) {
   const now = new Date();
@@ -1122,11 +839,7 @@ function getSessionInsight(stats, completionData, lang) {
   if (eligible.length === 0) return null;
   const pick = eligible[Math.floor(Math.random() * eligible.length)];
 
-  // Try to get translated text
   let text = pick.text;
-  if (lang === 'ru' && SESSION_INSIGHTS_RU[pick.id]) {
-    text = SESSION_INSIGHTS_RU[pick.id];
-  }
 
   // Replace placeholders
   text = text.replace(/\{cycles\}/g, cycles)
@@ -1192,6 +905,24 @@ const FIRST_SESSION = (t) => [
   { type:'text', duration:10, text:t.openEyes, textKey:'openEyes' }
 ]; // Total: 10+15+120+10+120+15+10 = 300s
 
+// ===== DEPTH CALCULATION =====
+function holdTimeToDepth(holdSeconds) {
+  return Math.max(1, Math.round((holdSeconds / 2) * 0.75));
+}
+function sessionDepth(durationSec, technique) {
+  const mult = { tidal:0.8, diaphragmatic:1.0, box:1.2, segmented:1.2, ujjayi:1.5, recovery:0.8, physiological_sigh:1.3 };
+  return Math.round(((durationSec / 60) * (mult[technique] || 1.0)) * 10) / 10;
+}
+function depthContext(m) {
+  if (m < 5) return 'A swimming pool';
+  if (m < 10) return 'The reef edge';
+  if (m < 15) return 'A coral reef';
+  if (m < 25) return 'Beginner freediver depth';
+  if (m < 40) return 'Where sunlight fades';
+  if (m < 60) return 'Advanced freediver depth';
+  return 'The twilight zone';
+}
+
 // ===== SAFETY CHECK HELPER =====
 const isIntensiveSession = (segments) => {
   const intensiveTime = (segments || [])
@@ -1200,17 +931,48 @@ const isIntensiveSession = (segments) => {
   return intensiveTime > 120; // > 2 minutes
 };
 
+// ===== SCENARIO DISPLAY NAME =====
+function getScenarioDisplayName(key) {
+  const t = LANG.en;
+  const map = {
+    'meeting': t.beforeMeeting, 'hard_day': t.afterToughDay, 'cant_focus': t.cantFocus,
+    'morning': t.morningStart, 'insomnia': t.cantSleep, 'first_session': 'Your first dive',
+    'presentation': t.beforeSpeech, 'call': t.beforeCall, 'decision': t.beforeDecision,
+    'conflict': t.afterArgument, 'traffic': t.stuckInTraffic, 'deadline': t.deadlinePressure,
+    'overload': t.infoOverload, 'afternoon': t.afternoonSlump, 'pre_workout': t.beforeWorkout,
+    'quick_reset': t.quickReset, 'post_workout': t.afterWorkout, 'anxious_wake': t.anxiousMorning,
+    'between': t.betweenMeetings, 'just_relax': t.justRelax, 'deep_dive': t.deepDive,
+    'surface_breath': 'Surface Breath',
+  };
+  return map[key] || (SCENARIO_LANG_KEY[key] ? t[SCENARIO_LANG_KEY[key]] : key);
+}
+
 // ===== SMART DAILY RECOMMENDATION =====
 function getDailyRecommendation(stats, t) {
   const hour = new Date().getHours();
   const sessions = stats.totalSessions || 0;
-  // If safety flag is recent (< 7 days), only recommend gentle scenarios
   const safetyRecent = stats.safetyFlag && ((Date.now() - new Date(stats.safetyFlag.date).getTime()) < 7 * 86400000);
+
+  // First session — always cyclic sigh intro
   if (sessions === 0) return { scenario:'_first_session', duration:5, title: t.firstDiveLabel || 'Your first dive', sub:'5 ' + t.min + ' \u00b7 ' + t.physiologicalSigh, isFirstSession:true };
-  if (sessions === 1) return { scenario:'meeting', duration:5, title: t.trySomethingNew || 'Try something new', sub:'5 ' + t.min + ' \u00b7 ' + t.boxBreathing };
-  if (sessions === 2) return { scenario:'hard_day', duration:5, title: t.goingDeeper || 'Going deeper', sub:'5 ' + t.min + ' \u00b7 ' + t.diaphragmatic };
+
+  // Days 1-7: fixed progression
+  const dayProgression = [
+    { scenario:'_first_session', duration:5, title: t.firstDiveLabel, sub:'5 ' + t.min + ' \u00b7 ' + t.physiologicalSigh, isFirstSession:true },
+    { scenario:'meeting', duration:5, title: 'Box breathing basics', sub:'5 ' + t.min + ' \u00b7 ' + t.boxBreathing },
+    { scenario:'hard_day', duration:5, title: 'Ocean breath', sub:'5 ' + t.min + ' \u00b7 ' + t.ujjayi },
+    { scenario:'cant_focus', duration:5, title: 'Segmented breathing', sub:'5 ' + t.min + ' \u00b7 ' + t.segmented },
+    { scenario:'morning', duration:5, title: 'Diaphragmatic mastery', sub:'5 ' + t.min + ' \u00b7 ' + t.diaphragmatic },
+    { scenario:'just_relax', duration:5, title: 'Extended box', sub:'5 ' + t.min + ' \u00b7 ' + t.boxBreathing },
+    { scenario:'deep_dive', duration:10, title: 'Combined techniques', sub:'10 ' + t.min + ' \u00b7 ' + t.deepDive },
+  ];
+
+  if (sessions >= 1 && sessions <= 7) {
+    return dayProgression[Math.min(sessions, dayProgression.length - 1)];
+  }
+
+  // Day 8+: time-based recommendations
   if (safetyRecent) {
-    // Gentle scenarios only: morning, hard_day, just_relax (use diaphragmatic/tidal/ujjayi)
     if (hour >= 6 && hour < 11) return { scenario:'morning', duration:5, title: t.morningStart, sub:'5 ' + t.min + ' \u00b7 ' + t.segmented };
     if (hour >= 17 && hour < 22) return { scenario:'hard_day', duration:5, title: t.afterToughDay, sub:'5 ' + t.min + ' \u00b7 ' + t.diaphragmatic };
     return { scenario:'just_relax', duration:5, title: t.justRelax, sub:'5 ' + t.min + ' \u00b7 ' + t.tidal };
@@ -1591,7 +1353,7 @@ class SessionEngine {
     this.segments = segments;
     this.world = world;
     this.lang = lang;
-    this.voiceEnabled = voiceEnabled && lang === 'en';
+    this.voiceEnabled = voiceEnabled;
     this.currentSegmentIndex = 0;
     this.segmentElapsed = 0;
     this.totalElapsed = 0;
@@ -1781,7 +1543,7 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [hapticOn, setHapticOn] = useState(true);
   const hapticEnabledRef = useRef(true);
-  const [voiceOn, setVoiceOn] = useState(voiceEnabled && currentLang === 'en');
+  const [voiceOn, setVoiceOn] = useState(voiceEnabled);
   const [bodyScanIdx, setBodyScanIdx] = useState(0);
   const lastPhaseRef = useRef('');
   const lastDiveProgressRef = useRef(0);
@@ -1823,7 +1585,7 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
     setBodyScanIdx(0);
     lastPhaseRef.current = '';
 
-    if (!voiceOn || currentLang !== 'en') return;
+    if (!voiceOn) return;
     if (!newSeg || newSeg.type === 'breathing') {
       ambientRef.current?.unduck();
       return;
@@ -2108,11 +1870,9 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
             0:00 / {Math.floor(totalDuration / 60)}:{String(Math.floor(totalDuration % 60)).padStart(2,'0')}
           </div>
           <div className="flex items-center gap-2">
-            {currentLang === 'en' && (
               <button onClick={() => setVoiceOn(v => !v)} className="flex items-center justify-center rounded-full" style={{width:44,height:44,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.06)', color: voiceOn ? palette.accent : 'var(--text-3)'}}>
                 <Icon name={voiceOn ? 'mic' : 'mic_off'} size={16}/>
               </button>
-            )}
             <button onClick={() => { setHapticOn(h => !h); }} className="flex items-center justify-center rounded-full" style={{width:44,height:44,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.06)', color: hapticOn ? palette.accent : 'var(--text-3)'}}>
               <Icon name={hapticOn ? 'haptic' : 'haptic_off'} size={16}/>
             </button>
@@ -2341,15 +2101,7 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
     ? `linear-gradient(180deg, rgb(${Math.round(bgProgress*14)},${Math.round(bgProgress*61)},${Math.round(bgProgress*92)}) 0%, rgb(${Math.round(bgProgress*8)},${Math.round(bgProgress*42)},${Math.round(bgProgress*66)}) 33%, rgb(${Math.round(bgProgress*4)},${Math.round(bgProgress*21)},${Math.round(bgProgress*32)}) 66%, rgb(${Math.round(bgProgress*2)},${Math.round(bgProgress*10)},${Math.round(bgProgress*16)}) 100%)`
     : oceanBg;
 
-  // Breath hold test depth calculation
-  const getDepthContext = (time) => {
-    const safeTime = Math.max(0, time || 0);
-    if (safeTime < 10) return t.holdTestSwimmingPool || 'A swimming pool';
-    if (safeTime < 20) return t.holdTestCoralReef || 'A coral reef';
-    if (safeTime < 35) return t.holdTestShipwreck || 'A shallow shipwreck';
-    if (safeTime < 60) return t.holdTestSunlightFades || 'Where sunlight fades';
-    return t.holdTestTwilightZone || 'The twilight zone';
-  };
+  // Breath hold test depth calculation — uses global holdTimeToDepth + depthContext
 
   const startHoldTest = () => {
     setHoldTestPhase('holding');
@@ -2421,7 +2173,7 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
 
   // Breath hold test screen
   if (breathPhase === 'holdTest') {
-    const holdDepth = Math.max(1, Math.round(holdTime));
+    const holdDepth = holdTimeToDepth(holdTime);
     if (holdTestPhase === 'intro') {
       return (
         <div className="fixed inset-0 flex flex-col items-center justify-center px-8" style={{background:oceanBg}}>
@@ -2460,7 +2212,7 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
           <div className="screen-transition text-center z-10">
             <div className="font-body mb-6" style={{fontSize:16, fontWeight:300, color:'rgba(220,225,235,0.55)', letterSpacing:'0.04em'}}>{t.holdTestYourDepth || 'Your starting depth'}</div>
             <div className="font-mono mb-2" style={{fontSize:48, fontWeight:300, color:palette.accent}}>{holdDepth}<span style={{fontSize:24}}>m</span></div>
-            <div className="font-body mb-10" style={{fontSize:15, fontWeight:300, color:'rgba(220,225,235,0.5)'}}>{getDepthContext(holdTime)}</div>
+            <div className="font-body mb-10" style={{fontSize:15, fontWeight:300, color:'rgba(220,225,235,0.5)'}}>{depthContext(holdDepth)}</div>
             <button className="px-10 py-3 rounded-full font-body"
               style={{fontWeight:500, background:`rgba(${accentRgb},0.12)`, border:`1px solid rgba(${accentRgb},0.25)`, color:palette.accent}}
               onClick={() => setBreathPhase('goal')}>
@@ -2555,7 +2307,7 @@ function MoodScale({ label, onSelect, lowLabel, highLabel }) {
           React.createElement('button', {key:n, onClick:() => onSelect(n), style:{
             width:44, height:44, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center',
             background:'transparent', cursor:'pointer',
-            border: '1px solid ' + (n<=2 ? 'rgba(94,170,168,0.15)' : n>=4 ? 'rgba(196,149,106,0.15)' : 'rgba(255,255,255,0.08)'),
+            border: '1px solid rgba(255,255,255,0.08)',
           }},
             React.createElement('span', {className:'font-mono', style:{fontSize:16, fontWeight:300, color:'var(--text)'}}, n)
           )
@@ -2590,15 +2342,9 @@ function AnimatedNumber({ value, duration = 1200 }) {
 }
 
 function App() {
-  const [currentLang, setCurrentLang] = useState(() => {
-    return window.localStorage?.getItem('user-lang') || null;
-  });
+  const currentLang = 'en';
   const [stats, setStats] = useState(() => loadData() || defaultStats());
-  const [screen, setScreen] = useState(() => {
-    if (!currentLang) return 'lang_select';
-    if (stats.onboarded) return 'home';
-    return 'first_breath';
-  });
+  const [screen, setScreen] = useState(() => stats.onboarded ? 'home' : 'first_breath');
   const [selectedCat, setSelectedCat] = useState(null);
   const [quickDiveCat, setQuickDiveCat] = useState('focus');
 
@@ -2610,9 +2356,6 @@ function App() {
   const [showCompletion, setShowCompletion] = useState(false);
   const [completionData, setCompletionData] = useState(null);
   const [completionFeeling, setCompletionFeeling] = useState(null);
-  const [preMoodScreen, setPreMoodScreen] = useState(false);
-  const preMoodTimeoutRef = useRef(null);
-  const [pendingSession, setPendingSession] = useState(null);
   const [currentMood, setCurrentMood] = useState({pre:null, post:null});
   const [moodDelta, setMoodDelta] = useState(null);
   const [completionStep, setCompletionStep] = useState('stats'); // 'stats' | 'safety' | 'feeling' | 'reminder' | 'done'
@@ -2626,7 +2369,7 @@ function App() {
   const palette = w.palette;
   const accentRgb = palette.accentRgb;
 
-  const t = LANG[currentLang] || LANG.en;
+  const t = LANG.en;
 
   // Weekly summary check
   const shouldShowWeekly = useMemo(() => {
@@ -2645,16 +2388,6 @@ function App() {
   const [showWeekly, setShowWeekly] = useState(false);
   useEffect(() => { if (shouldShowWeekly && screen === 'home') setShowWeekly(true); }, [shouldShowWeekly, screen]);
 
-  // Apply language
-  useEffect(() => {
-    if (!currentLang) return;
-    window.localStorage?.setItem('user-lang', currentLang);
-    document.documentElement.lang = currentLang;
-    document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
-    if (currentLang === 'ar') document.body.style.fontFamily = "'IBM Plex Sans Arabic','DM Sans',sans-serif";
-    else if (currentLang === 'zh') document.body.style.fontFamily = "'Noto Sans SC','DM Sans',sans-serif";
-    else document.body.style.fontFamily = "'DM Sans',sans-serif";
-  }, [currentLang]);
 
   useEffect(() => { saveData(stats); }, [stats]);
 
@@ -2707,7 +2440,7 @@ function App() {
         streak = diff === 1 ? prev.streak + 1 : 1;
       }
       const longestStreak = Math.max(prev.longestStreak || 0, streak);
-      const depth = (sessionInfo.duration || 0) / 60 * (sessionInfo.multiplier || 1);
+      const depth = sessionDepth(sessionInfo.duration || 0, sessionInfo.mainTechnique || 'diaphragmatic');
       const newTechStats = {...(prev.techniqueStats || {})};
       (sessionInfo.techniques || []).forEach(tc => { newTechStats[tc] = (newTechStats[tc] || 0) + 1; });
       return {
@@ -2728,22 +2461,16 @@ function App() {
     if (stats.soundEnabled) { ambientRef.current.init(WORLDS[world].ambient); ambientRef.current.fadeIn(); }
   };
 
+  const [showPreMood, setShowPreMood] = useState(false);
+  const [pendingSessionData, setPendingSessionData] = useState(null);
+
   const startSession = (segments, meta = {}) => {
     setCurrentMood({pre:null, post:null});
     setMoodDelta(null);
-    // Go directly to session (pre-mood collected on completion screen)
-    actuallyStartSession(segments, meta);
+    setPendingSessionData({ segments, meta });
+    setShowPreMood(true);
   };
 
-  const handlePreMoodSelect = (n) => {
-    if (preMoodTimeoutRef.current) { clearTimeout(preMoodTimeoutRef.current); preMoodTimeoutRef.current = null; }
-    setCurrentMood(m => ({...m, pre:n}));
-    setPreMoodScreen(false);
-    if (pendingSession) {
-      actuallyStartSession(pendingSession.segments, pendingSession.meta);
-      setPendingSession(null);
-    }
-  };
 
   const endSession = (completed = true) => {
     ambientRef.current.fadeOut();
@@ -2752,8 +2479,9 @@ function App() {
       const segs = activeSession.segments;
       const totalDur = segs.reduce((s, seg) => s + seg.duration, 0);
       const techs = [...new Set(segs.filter(s => s.type === 'breathing').map(s => s.technique))];
-      const maxMult = Math.max(...segs.filter(s => s.type === 'breathing').map(s => TECHNIQUES[s.technique]?.multiplier || 1), 1);
-      updateStats({ duration: totalDur, techniques: techs, category: activeSession.meta?.category, scenario: activeSession.meta?.scenario, multiplier: maxMult });
+      const breathSegs = segs.filter(s => s.type === 'breathing');
+      const mainTech = breathSegs.length > 0 ? breathSegs.reduce((a, b) => b.duration > a.duration ? b : a).technique : 'diaphragmatic';
+      updateStats({ duration: totalDur, techniques: techs, category: activeSession.meta?.category, scenario: activeSession.meta?.scenario, mainTechnique: mainTech });
       if (activeSession.meta?.programId && activeSession.meta?.day !== undefined) {
         setStats(prev => {
           const pp = {...(prev.programProgress || {})};
@@ -2768,7 +2496,7 @@ function App() {
         const cycleDur = Object.values(s.params).reduce((a, b) => a + b, 0);
         return total + (cycleDur > 0 ? Math.floor(s.duration / cycleDur) : 0);
       }, 0) || Math.round(totalDur / 16);
-      setCompletionData({ duration: totalDur, techniques: techs, depth: Math.round(totalDur / 60 * maxMult * 10) / 10, breathCycles, segments: segs, _lastScenario: activeSession.meta?.scenario });
+      setCompletionData({ duration: totalDur, techniques: techs, depth: sessionDepth(totalDur, mainTech), breathCycles, segments: segs, _lastScenario: activeSession.meta?.scenario });
       setShowCompletion(true);
     }
     setActiveSession(null);
@@ -2785,52 +2513,58 @@ function App() {
 
   const bg = w.bgGradient;
 
-  // ===== LANGUAGE SELECTION SCREEN =====
-  if (screen === 'lang_select') {
-    return (
-      <div className="fixed inset-0 flex flex-col items-center justify-center" style={{background:'#070c15'}}>
-        <div className="screen-transition text-center z-10 w-full max-w-sm px-6">
-          <div className="font-body mb-2" style={{fontSize:48, fontWeight:200, color:'rgba(220,225,235,0.92)', letterSpacing:'0.25em', textTransform:'uppercase'}}>DIVE</div>
-          <div className="font-body mb-12" style={{fontSize:13, fontWeight:400, color:'rgba(220,225,235,0.30)'}}>Choose language</div>
-          <div className="space-y-3">
-            {[['en','English'],['ru','Русский'],['zh','中文'],['ar','العربية']].map(([code,label]) => (
-              <button key={code} className="w-full glass p-4 text-center" style={{fontSize:17, fontWeight:400, color:'rgba(220,225,235,0.92)'}}
-                onClick={() => {
-                  // Initialize ambient on language selection (first user gesture)
-                  if (ambientRef.current && !ambientRef.current.ctx) {
-                    ambientRef.current.init(WORLDS.ocean.ambient);
-                    if (ambientRef.current.masterGain) {
-                      ambientRef.current.masterGain.gain.value = 0;
-                    }
-                  }
-                  setCurrentLang(code);
-                  setScreen(stats.onboarded ? 'home' : 'first_breath');
-                }}>
-                {label}
-                {code === 'en' && <div className="font-body mt-1" style={{fontSize:11, fontWeight:400, color:'rgba(220,225,235,0.30)'}}>{LANG.en.voiceGuided}</div>}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
 
 
   // ===== FIRST BREATH SCREEN =====
   if (screen === 'first_breath') {
     return <FirstBreathScreen palette={palette} accentRgb={accentRgb} t={t} ambientRef={ambientRef}
       onComplete={(goal, holdTimeResult) => { setStats(s => {
-        const newState = {...s, firstFeeling: goal, userGoal: goal, onboarded:true, world:'ocean', initialHoldTime: holdTimeResult ? Math.round(holdTimeResult*10)/10 : null, initialDepth: holdTimeResult ? Math.round(holdTimeResult) : null};
+        const hDepth = holdTimeResult ? holdTimeToDepth(holdTimeResult) : null;
+        const newState = {...s, firstFeeling: goal, userGoal: goal, onboarded:true, world:'ocean', initialHoldTime: holdTimeResult ? Math.round(holdTimeResult*10)/10 : null, initialDepth: hDepth};
         if (holdTimeResult && holdTimeResult > 0) {
-          newState.breathTests = [...(s.breathTests || []), { date: new Date().toISOString(), holdTime: Math.round(holdTimeResult*10)/10, depth: Math.max(1, Math.round(holdTimeResult)) }];
+          newState.breathTests = [...(s.breathTests || []), { date: new Date().toISOString(), holdTime: Math.round(holdTimeResult*10)/10, depth: hDepth }];
         }
         return newState;
       }); setScreen('home'); setTab('home'); }} />;
   }
 
 
-  // Pre-mood: skipped for now (collected post-session instead)
+  // Pre-mood overlay
+  if (showPreMood && pendingSessionData) {
+    return (
+      <div className="fixed inset-0 flex flex-col items-center justify-center" style={{background:bg, zIndex:50}}>
+        <Particles world={world} />
+        <div className="z-10 text-center">
+          <p className="font-body" style={{fontWeight:300, fontSize:20, color:'var(--text)', marginBottom:32}}>How are you feeling?</p>
+          <div style={{display:'flex', gap:16, justifyContent:'center'}}>
+            {[1,2,3,4,5].map(n => (
+              <button key={n} onClick={() => {
+                setCurrentMood(m => ({...m, pre:n}));
+                setShowPreMood(false);
+                actuallyStartSession(pendingSessionData.segments, pendingSessionData.meta);
+                setPendingSessionData(null);
+              }} style={{
+                width:48, height:48, borderRadius:'50%',
+                border:'1px solid rgba(255,255,255,0.08)', background:'transparent',
+                fontFamily:"'JetBrains Mono',monospace", fontWeight:300, fontSize:18,
+                color:'var(--text-2)', display:'flex', alignItems:'center', justifyContent:'center',
+                cursor:'pointer',
+              }}>{n}</button>
+            ))}
+          </div>
+          <div style={{display:'flex', justifyContent:'space-between', width:280, margin:'12px auto 0'}}>
+            <span style={{fontSize:11, color:'var(--text-3)'}}>calm</span>
+            <span style={{fontSize:11, color:'var(--text-3)'}}>stressed</span>
+          </div>
+          <button onClick={() => {
+            setShowPreMood(false);
+            actuallyStartSession(pendingSessionData.segments, pendingSessionData.meta);
+            setPendingSessionData(null);
+          }} style={{marginTop:32, fontSize:13, color:'var(--text-3)', background:'none', border:'none', cursor:'pointer'}}>Skip</button>
+        </div>
+      </div>
+    );
+  }
 
   // Active session
   if (activeSession) {
@@ -2999,12 +2733,11 @@ function App() {
 
   // ===== PAYWALL =====
   const PaywallModal = () => {
-    const trialDays = currentLang === 'zh' ? 14 : 7;
     const monthlyPrice = t.paywallMonthly || t.monthly;
     const yearlyPrice = t.paywallYearly || t.yearly;
     const yearlySave = t.paywallYearlySave || t.yearlySave;
     const trialNote = t.trialNotice || t.paywallTrialNote || '';
-    const startTrialLabel = currentLang === 'zh' ? '14\u5929\u514D\u8D39\u8BD5\u7528' : (t.paywallStartTrial || t.startTrial);
+    const startTrialLabel = t.paywallStartTrial || t.startTrial;
     return (
     <div className="fixed inset-0 z-50 flex items-end justify-center" style={{background:'rgba(0,0,0,0.7)', backdropFilter:'blur(12px)'}}>
       <div className="glass w-full max-w-sm mx-6 mb-8 p-6 screen-transition" style={{borderRadius:24}}>
@@ -3466,17 +3199,6 @@ function App() {
                 <div className="absolute rounded-full transition-all" style={{top:3, width:16, height:16, background: stats.voiceEnabled ? palette.accent : 'rgba(255,255,255,0.3)', left: stats.voiceEnabled ? 'calc(100% - 20px)' : '4px'}} />
               </button>
             </div>
-            {/* Language switch */}
-            <div className="flex items-center justify-between">
-              <span className="font-body" style={{fontSize:14, fontWeight:400, color:'rgba(226,232,240,0.75)'}}>{t.language}</span>
-              <select className="font-body rounded-lg px-3 py-1" style={{fontSize:13, fontWeight:400, background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.08)', color:'rgba(226,232,240,0.75)', outline:'none'}}
-                value={currentLang} onChange={e => setCurrentLang(e.target.value)}>
-                <option value="en">English</option>
-                <option value="ru">Русский</option>
-                <option value="zh">中文</option>
-                <option value="ar">العربية</option>
-              </select>
-            </div>
             <div className="flex items-center justify-between">
               <span className="font-body" style={{fontSize:14, fontWeight:400, color:'rgba(226,232,240,0.75)'}}>{t.premium}</span>
               <span className="font-body" style={{fontSize:13, fontWeight:500, color: stats.isPremium ? palette.accent : 'var(--text-3)'}}>{stats.isPremium ? t.active : t.free}</span>
@@ -3493,8 +3215,8 @@ function App() {
                 <div key={i} className="glass p-4 flex items-center gap-3">
                   <span style={{color:palette.accent,opacity:0.4}}><Icon name={SCENARIOS[h.scenario]?.svgIcon || 'check'} size={16}/></span>
                   <div className="flex-1">
-                    <div className="font-body" style={{fontSize:14, fontWeight:500, color:'rgba(226,232,240,0.85)'}}>{t[SCENARIO_LANG_KEY[h.scenario]] || h.scenario}</div>
-                    <div className="font-body" style={{fontSize:11, fontWeight:400, color:'var(--text-3)', marginTop:2}}>{new Date(h.date).toLocaleDateString(currentLang === 'zh' ? 'zh-CN' : currentLang === 'ar' ? 'ar' : currentLang)}</div>
+                    <div className="font-body" style={{fontSize:14, fontWeight:500, color:'rgba(226,232,240,0.85)'}}>{getScenarioDisplayName(h.scenario)}</div>
+                    <div className="font-body" style={{fontSize:11, fontWeight:400, color:'var(--text-3)', marginTop:2}}>{new Date(h.date).toLocaleDateString('en')}</div>
                   </div>
                   <div className="font-mono" style={{fontSize:12, fontWeight:300, color:palette.accent}}>{Math.round(h.duration/60)}{t.min}</div>
                 </div>
@@ -3505,7 +3227,7 @@ function App() {
 
         {/* Reset */}
         <button className="w-full py-3 font-body rounded-full" style={{fontSize:13, fontWeight:400, color:'rgba(252,129,129,0.6)', border:'1px solid rgba(252,129,129,0.15)'}}
-          onClick={() => { if (confirm(t.resetConfirm)) { setStats(defaultStats()); setScreen('lang_select'); }}}>
+          onClick={() => { if (confirm(t.resetConfirm)) { setStats(defaultStats()); setScreen('first_breath'); }}}>
           {t.resetProgress}
         </button>
       </div>
