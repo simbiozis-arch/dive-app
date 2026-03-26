@@ -52,7 +52,7 @@ html,body,#root { width:100%; height:100%; overflow:hidden; font-family:'DM Sans
 @keyframes slowRotate { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
 
 .font-display { font-family:'DM Sans',sans-serif; }
-.font-mono { font-family:'JetBrains Mono',monospace; font-variant-numeric:tabular-nums; }
+.font-mono { font-family:'JetBrains Mono',monospace !important; font-variant-numeric:tabular-nums !important; }
 .font-body { font-family:inherit; }
 
 .screen-transition { animation: fade-in 400ms ease-out; }
@@ -1803,11 +1803,13 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
           <div className="flex-1 flex flex-col items-center justify-center" style={{position:'relative'}}>
             {/* Breathing object wrapper — NO transition, scaled directly by ref */}
             <div ref={wrapperRef} style={{
-              position: 'absolute', top: '45%', left: '50%',
+              position: 'fixed', top: '42%', left: '50%',
               width: 'min(80vw, 320px)', aspectRatio: '1',
+              margin: 0,
               willChange: 'transform',
               transform: 'translate(-50%, -50%) scale(1)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
+              zIndex: 5,
             }}>
               {/* Slow-rotating dashed ring */}
               <div style={{
@@ -1819,29 +1821,29 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
               {world === 'ocean' && <OceanBubble ref={glowTargetRef} />}
               {world === 'space' && <PulsarObject ref={glowTargetRef} />}
             </div>
-            {/* Phase info below the object */}
-            <div style={{ textAlign:'center', marginTop: 'min(80vw, 320px)', paddingTop: 24, zIndex:5, position:'relative' }}>
+            {/* Phase info — SEPARATE from bubble, fixed to bottom area */}
+            <div style={{position:'fixed', bottom:'18%', left:'50%', transform:'translateX(-50%)', textAlign:'center', zIndex:10, width:'80%', maxWidth:340}}>
               <div ref={phaseLabelRef} className="font-body" style={{
                 fontWeight:500, fontSize:14, letterSpacing:'0.1em', textTransform:'uppercase',
-                color:'rgba(220,225,235,0.7)', marginBottom:4,
+                color:'rgba(220,225,235,0.7)', marginBottom:4, minHeight:18,
               }}>
               </div>
               <div ref={phaseTimerRef} className="font-mono" style={{
                 fontWeight:300, fontSize:32, color:'rgba(220,225,235,0.5)',
-                fontVariantNumeric:'tabular-nums',
+                fontVariantNumeric:'tabular-nums', minHeight:38,
               }}>
               </div>
               <div className="font-body" style={{fontSize:13, fontWeight:400, color:'var(--text-2)', marginTop:8}}>
                 {techLabel}
               </div>
-            </div>
-            <div ref={phaseSubRef} className="font-body text-center mt-5 px-8" style={{fontSize:13,fontWeight:300,color:'var(--text-2)',maxWidth:280,lineHeight:1.6,position:'relative',zIndex:5}}>
-            </div>
-            {seg.hint && (
-              <div className="font-body text-center mt-5 px-8 text-deblur" style={{fontSize:13, fontWeight:300, lineHeight:1.6, color:'var(--text-2)', maxWidth:280, position:'relative', zIndex:5}}>
-                {seg.hint}
+              <div ref={phaseSubRef} className="font-body" style={{fontSize:13,fontWeight:300,color:'var(--text-2)',maxWidth:280,lineHeight:1.6,marginTop:12,marginLeft:'auto',marginRight:'auto',minHeight:20}}>
               </div>
-            )}
+              {seg.hint && (
+                <div className="font-body text-deblur" style={{fontSize:13, fontWeight:300, lineHeight:1.6, color:'var(--text-2)', maxWidth:280, marginTop:8, marginLeft:'auto', marginRight:'auto'}}>
+                  {seg.hint}
+                </div>
+              )}
+            </div>
           </div>
         );
       case 'text':
@@ -2920,8 +2922,8 @@ function App() {
 
       {/* Stress SOS button */}
       <button className="w-full mb-6" style={{
-        height:44, borderRadius:12, background:'rgba(196,100,80,0.06)', border:'1px solid rgba(196,100,80,0.12)',
-        color:'rgba(220,180,170,0.7)', display:'flex', alignItems:'center', justifyContent:'center', gap:8,
+        height:44, borderRadius:12, background:`rgba(${accentRgb},0.06)`, border:`1px solid rgba(${accentRgb},0.12)`,
+        color:'rgba(220,225,235,0.7)', display:'flex', alignItems:'center', justifyContent:'center', gap:8,
         fontSize:14, fontWeight:400,
       }} onClick={() => setShowStressChoice(true)}>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
