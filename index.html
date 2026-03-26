@@ -107,6 +107,13 @@ html,body,#root { width:100%; height:100%; overflow:hidden; font-family:'DM Sans
 .bodyscan-crossfade {
   transition: opacity 400ms ease;
 }
+.dima-video {
+  position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+  width:calc(100% - 48px); max-width:340px; aspect-ratio:9/16;
+  border-radius:20px; overflow:hidden; z-index:30;
+  box-shadow:0 0 60px rgba(0,0,0,0.5);
+}
+.dima-video video { width:100%; height:100%; object-fit:cover; }
 .font-mono, .phase-timer, .hold-timer, .completion-stat-number,
 .depth-number, .streak-number, .duration-badge, .mood-circle {
   font-family: 'JetBrains Mono', monospace !important;
@@ -173,7 +180,7 @@ const LANG = {
     onb2title:'7 techniques',onb2sub:'Proven by science and depth',onb2desc:'Diaphragmatic, box, ujjayi, physiological sigh — and three more.',
     onb3title:'20 scenarios',onb3sub:'For every occasion',onb3desc:'Before a meeting, after a conflict, insomnia, morning anxiety — find the right one.',
     onb4title:'3 programs',onb4sub:'Step-by-step learning',onb4desc:'First Dive. Stress Shield. Deep Focus. With video coaching.',
-    paywallFeatures:['20 scenarios for every situation','3 programs with video lessons','All 7 breathing techniques','2 visual worlds','No ads'],
+    paywallFeatures:['All 20 breathing scenarios','All programs with video coaching','10-minute deep sessions','Space world','Mood tracking & statistics'],
     morningIntro:'Good morning. Five minutes of breathing before coffee. Your body will wake up faster.',
     overloadIntro:'Five minutes. Zero input. Just you and your breath.',
     conflictIntro:'Stop. Before replaying it in your head — breathe. Adrenaline leaves your blood in 3 to 5 minutes. Let it pass.',
@@ -209,7 +216,7 @@ const LANG = {
     howStressed:'How stressed are you right now?',andNow:'And now?',moodLow:'low',moodHigh:'high',
     moodImprove:'{pre} \u2192 {post} \u00b7 \u2212{delta} points',moodSame:'Consistency builds resilience.',moodWorse:'Some sessions plant seeds for later.',
     techniques:'Techniques',masteryNone:'\u2014',masteryLearning:'Learning',masteryComfortable:'Comfortable',masteryMastered:'Mastered',
-    unlockSpaceStreak:'Unlock with premium or 30-day streak',unlockSpaceDaysLeft:'{N} more days to unlock',
+    unlockSpaceStreak:'Unlock with premium \u2014 or 30 day streak',unlockSpaceDaysLeft:'{N} more days to unlock',
     goodMorning:'Good morning',goodAfternoon:'Good afternoon',goodEvening:'Good evening',goodNight:'Good night',
     day1Free:'Day 1 free',premiumLabel:'Premium',
     safetyQuestion:'Did you feel dizzy or lightheaded?',safetyYes:'Yes',safetyNo:'No',safetyMessage:"That's normal when starting out. We'll suggest gentler techniques.",
@@ -529,7 +536,9 @@ const getSessionContent = (t, world) => ({
       { type:'breathing', technique:'tidal', duration:120, params:{inhale:4,exhale:6,pause:3} },
       { type:'breathing', technique:'diaphragmatic', duration:150, params:{inhale:4,exhale:12} },
       { type:'bodyscan', duration:120, text:t.bodyScanFull, scanType:'sleep' },
-      { type:'breathing', technique:'diaphragmatic', duration:185, params:{inhale:4,exhale:14} },
+      { type:'breathing', technique:'diaphragmatic', duration:90, params:{inhale:4,exhale:14} },
+      { type:'text', duration:10, text:'Good. Keep going.' },
+      { type:'breathing', technique:'diaphragmatic', duration:85, params:{inhale:4,exhale:14} },
       { type:'text', duration:10, text:t.sleepEnd, textKey:'sleepEnd' },
     ]
   },
@@ -557,7 +566,9 @@ const getSessionContent = (t, world) => ({
       { type:'text', duration:15, text:t.relaxIntro, textKey:'relaxIntro' },
       { type:'breathing', technique:'tidal', duration:120, params:{inhale:4,exhale:6,pause:2} },
       { type:'breathing', technique:'diaphragmatic', duration:120, params:{inhale:5,exhale:10} },
-      { type:'breathing', technique:'ujjayi', duration:245, params:{inhale:6,exhale:12} },
+      { type:'breathing', technique:'ujjayi', duration:120, params:{inhale:6,exhale:12} },
+      { type:'text', duration:10, text:'Good. Keep going.' },
+      { type:'breathing', technique:'ujjayi', duration:115, params:{inhale:6,exhale:12} },
       { type:'bodyscan', duration:90, text:t.bodyScanFull, scanType:'full' },
       { type:'text', duration:10, text:t.relaxIntro, textKey:'relaxIntro' },
     ]
@@ -904,6 +915,24 @@ const FIRST_SESSION = (t) => [
   { type:'text', duration:15, text:t.openEyes, textKey:'openEyes' },
   { type:'text', duration:10, text:t.openEyes, textKey:'openEyes' }
 ]; // Total: 10+15+120+10+120+15+10 = 300s
+
+// ===== STRESS SOS SESSIONS =====
+const STRESS_SOS_SESSIONS = {
+  calmNow: [
+    { type:'text', duration:8, text:'Stop. Close your eyes. Follow the rhythm.' },
+    { type:'breathing', technique:'physiological_sigh', duration:152, params:{inhale1:2,inhale2:1,exhale:7} },
+    { type:'text', duration:10, text:'The storm is passing. You chose to breathe through it.' },
+    { type:'text', duration:10, text:'Open your eyes. You are calmer than you were 3 minutes ago.' },
+  ], // 180s total
+  prepareStress: [
+    { type:'text', duration:10, text:'Find a comfortable position. Back straight. Close your eyes.' },
+    { type:'breathing', technique:'box', duration:128, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
+    { type:'text', duration:12, text:'Box breathing activates both branches of your nervous system. You are building a shield.' },
+    { type:'breathing', technique:'box', duration:128, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
+    { type:'text', duration:12, text:'Whatever comes next — you are ready.' },
+    { type:'text', duration:10, text:'Open your eyes. You are prepared.' },
+  ], // 300s total
+};
 
 // ===== DEPTH CALCULATION =====
 function holdTimeToDepth(holdSeconds) {
@@ -1823,12 +1852,32 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
         const vText = seg.texts?.[world] || seg.texts?.ocean || '';
         return <SessionText text={vText} visible={true} />;
       }
-      case 'video':
+      case 'video': {
+        const hasVideoSrc = seg.src && seg.src.length > 0;
+        if (hasVideoSrc) {
+          return (
+            <div className="flex-1 flex flex-col items-center justify-center">
+              <div className="dima-video">
+                <video
+                  autoPlay
+                  playsInline
+                  onEnded={() => { if (engineRef.current) engineRef.current.skip(); }}
+                  onError={() => {
+                    // Fallback to placeholder on error
+                    if (engineRef.current) engineRef.current.skip();
+                  }}
+                >
+                  <source src={seg.src} type="video/mp4" />
+                </video>
+              </div>
+            </div>
+          );
+        }
         return (
           <div className="flex-1 flex flex-col items-center justify-center px-6">
             <div className="screen-transition w-full" style={{maxWidth:340}}>
               <div style={{
-                width:'100%', aspectRatio:'16/9', borderRadius:16,
+                width:'100%', aspectRatio:'9/16', maxHeight:'50vh', borderRadius:20,
                 background:'rgba(255,255,255,0.025)', border:'1px solid rgba(255,255,255,0.06)',
                 display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
                 marginBottom:20, position:'relative', overflow:'hidden',
@@ -1838,19 +1887,20 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
                   <path d="M20 16l12 8-12 8V16z" fill={palette.accent} opacity="0.6"/>
                 </svg>
                 <div className="font-body" style={{fontWeight:400, fontSize:13, color:'var(--text-3)', textAlign:'center', padding:'0 24px', lineHeight:1.5}}>
-                  {seg.textKey ? t[seg.textKey] : (seg.placeholder || t.videoComingSoon)}
+                  Video from coach — coming soon
                 </div>
               </div>
               <div style={{textAlign:'center'}}>
                 <button className="px-8 py-3 rounded-full font-body"
                   style={{fontWeight:500, fontSize:14, background:`rgba(${accentRgb},0.12)`, border:`1px solid rgba(${accentRgb},0.25)`, color:palette.accent}}
-                  onClick={() => { console.log('Video skip triggered'); if (engineRef.current) engineRef.current.skip(); }}>
+                  onClick={() => { if (engineRef.current) engineRef.current.skip(); }}>
                   {t.continueText}
                 </button>
               </div>
             </div>
           </div>
         );
+      }
       default: return null;
     }
   };
@@ -2363,6 +2413,8 @@ function App() {
   const [surfaceBreathStreak, setSurfaceBreathStreak] = useState(0);
   const [showRetestPrompt, setShowRetestPrompt] = useState(false);
   const [retestDays, setRetestDays] = useState(0);
+  const [showStressChoice, setShowStressChoice] = useState(false);
+  const [exploreCat, setExploreCat] = useState('focus');
   const ambientRef = useRef(new AmbientEngine());
   const world = (stats.world && WORLDS[stats.world]) ? stats.world : 'ocean';
   const w = WORLDS[world];
@@ -2836,9 +2888,9 @@ function App() {
       {/* Time-based greeting */}
       <div className="font-body mb-3" style={{fontSize:14, fontWeight:300, color:'var(--text-3)', textAlign:'left'}}>{getGreeting(t)}</div>
 
-      {/* Daily recommendation card — 60% viewport */}
+      {/* Daily recommendation card */}
       <button className="w-full text-left mb-6" style={{
-        minHeight:180, borderRadius:18, padding:'28px 24px', position:'relative', overflow:'hidden',
+        minHeight:200, borderRadius:18, padding:'32px 24px', position:'relative', overflow:'hidden',
         background:`linear-gradient(135deg, rgba(${accentRgb},0.10) 0%, rgba(${accentRgb},0.03) 100%)`,
         border:`1px solid rgba(${accentRgb},0.22)`,
         display:'flex', flexDirection:'column', justifyContent:'space-between',
@@ -2866,23 +2918,31 @@ function App() {
         </div>
       </div>
 
+      {/* Stress SOS button */}
+      <button className="w-full mb-6" style={{
+        height:44, borderRadius:12, background:'rgba(196,100,80,0.06)', border:'1px solid rgba(196,100,80,0.12)',
+        color:'rgba(220,180,170,0.7)', display:'flex', alignItems:'center', justifyContent:'center', gap:8,
+        fontSize:14, fontWeight:400,
+      }} onClick={() => setShowStressChoice(true)}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        Stressed right now?
+      </button>
+
       {/* Programs — horizontal scroll */}
       <div className="mb-6">
-        <div className="font-body mb-3" style={{fontSize:13, fontWeight:600, color:'rgba(226,232,240,0.6)', letterSpacing:'0.06em', textTransform:'uppercase'}}>{t.programs}</div>
+        <div className="font-body mb-3" style={{fontSize:11, fontWeight:600, color:'rgba(220,225,235,0.30)', letterSpacing:'0.12em', textTransform:'uppercase'}}>{t.programs}</div>
         <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
           {Object.entries(PROGRAMS).map(([key, prog]) => {
             const progress = (stats.programProgress?.[key] || []).length;
             const nameKey = key === 'first_dive' ? 'firstDive' : key === 'stress_shield' ? 'stressShield' : 'deepFocus';
-            const hasTrialDay = prog.trialDay !== undefined;
-            const hasPremiumContent = !stats.isPremium && prog.days > (prog.trialDay + 1);
             return (
               <button key={key} className="glass flex-shrink-0 p-4 text-left" style={{width:150, minHeight:100}}
                 onClick={() => { setSelectedProgram(key); setScreen('program_view'); }}>
                 <span style={{color:palette.accent,opacity:0.5}}><Icon name={key === 'first_dive' ? 'prog_bubble' : key === 'stress_shield' ? 'prog_shield' : 'prog_target'} size={20}/></span>
                 <div className="font-body mt-2" style={{fontWeight:600, fontSize:13, color:'rgba(255,255,255,0.92)'}}>{t[nameKey]}</div>
                 <div className="flex gap-1 mt-2 flex-wrap">
-                  {hasTrialDay && <span style={{padding:'3px 10px', borderRadius:6, background:'rgba(94,170,168,0.08)', border:'1px solid rgba(94,170,168,0.15)', fontSize:11, color:'rgba(94,170,168,0.7)'}}>{t.day1Free}</span>}
-                  {hasPremiumContent && <span style={{padding:'3px 10px', borderRadius:6, background:'rgba(139,126,200,0.06)', border:'1px solid rgba(139,126,200,0.12)', fontSize:11, color:'rgba(139,126,200,0.5)'}}>{t.premiumLabel}</span>}
+                  {key === 'first_dive' && <span style={{padding:'3px 10px', borderRadius:6, background:'rgba(94,170,168,0.08)', border:'1px solid rgba(94,170,168,0.15)', fontSize:11, color:'rgba(94,170,168,0.7)'}}>{t.day1Free}</span>}
+                  {key !== 'first_dive' && !stats.isPremium && <span style={{padding:'3px 10px', borderRadius:6, background:'rgba(139,126,200,0.06)', border:'1px solid rgba(139,126,200,0.12)', fontSize:11, color:'rgba(139,126,200,0.5)'}}>{t.premiumLabel}</span>}
                 </div>
                 <div className="mt-2" style={{height:2, borderRadius:1, background:'rgba(255,255,255,0.04)'}}>
                   <div style={{height:'100%', borderRadius:1, width:`${progress/prog.days*100}%`, background:`rgba(${accentRgb},0.6)`}} />
@@ -2896,7 +2956,7 @@ function App() {
 
       {/* Quick Dives — category pills */}
       <div className="mb-8">
-        <div className="font-body mb-3" style={{fontSize:13, fontWeight:600, color:'rgba(226,232,240,0.6)', letterSpacing:'0.06em', textTransform:'uppercase'}}>{t.quickDives}</div>
+        <div className="font-body mb-3" style={{fontSize:11, fontWeight:600, color:'rgba(220,225,235,0.30)', letterSpacing:'0.12em', textTransform:'uppercase'}}>{t.quickDives}</div>
         <div className="flex gap-2 overflow-x-auto no-scrollbar mb-4">
           {Object.keys(CATEGORIES).map(catKey => (
             <button key={catKey} className="flex-shrink-0 font-body" style={{
@@ -2959,16 +3019,28 @@ function App() {
 
   const renderQuickDive = () => (
     <div className="screen-transition overflow-y-auto h-full no-scrollbar" style={{padding:'env(safe-area-inset-top, 48px) 24px 100px 24px'}}>
-      <div className="font-body mb-8" style={{fontSize:24, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.1em'}}>{t.quickDives}</div>
+      <div className="font-body mb-6" style={{fontSize:24, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.1em'}}>{t.quickDives}</div>
+      <div className="flex gap-2 overflow-x-auto no-scrollbar mb-4">
+        {Object.keys(CATEGORIES).map(catKey => (
+          <button key={catKey} className="flex-shrink-0 font-body" style={{
+            padding:'6px 16px', borderRadius:20, fontSize:13,
+            background: exploreCat === catKey ? `rgba(${accentRgb},0.10)` : 'transparent',
+            border: exploreCat === catKey ? `1px solid rgba(${accentRgb},0.20)` : '1px solid rgba(255,255,255,0.06)',
+            color: exploreCat === catKey ? palette.accent : 'var(--text-2)',
+          }} onClick={() => setExploreCat(catKey)}>
+            {t[CATEGORY_LANG_KEY[catKey]]}
+          </button>
+        ))}
+      </div>
       <div className="space-y-3">
-        {Object.entries(SCENARIOS).map(([id, sc]) => (
+        {Object.entries(SCENARIOS).filter(([_, sc]) => sc.cat === exploreCat).map(([id, sc]) => (
           <button key={id} className="glass p-5 w-full text-left flex items-center gap-4"
             onClick={() => launchScenario(id)}>
             <span style={{color:palette.accent,opacity:0.6}}><Icon name={sc.svgIcon || id} size={24}/></span>
             <div className="flex-1">
               <div className="font-body" style={{fontWeight:600, fontSize:15, color:'rgba(255,255,255,0.92)'}}>{t[SCENARIO_LANG_KEY[id]]}</div>
               <div className="font-mono" style={{fontSize:12, fontWeight:300, color:'rgba(255,255,255,0.4)', marginTop:3}}>
-                {t[CATEGORY_LANG_KEY[sc.cat]]} / {sc.durations.map(d => d + t.min).join('/')}
+                {sc.durations.map(d => d + ' ' + t.min).join(' / ')}
               </div>
             </div>
             {!checkAccess(sc) && <span style={{color:'var(--text-3)',opacity:0.5}}><Icon name="lock" size={16}/></span>}
@@ -3106,7 +3178,7 @@ function App() {
           const daysToUnlock = Math.max(0, 30 - (stats.longestStreak || stats.streak || 0));
           return (
             <div className="mb-8" style={{borderTop:'1px solid rgba(255,255,255,0.03)', paddingTop:20}}>
-              <div className="font-body mb-4" style={{fontSize:13, fontWeight:600, color:'rgba(220,225,235,0.35)', letterSpacing:'0.06em', textTransform:'uppercase'}}>{t.world}</div>
+              <div className="font-body mb-4" style={{fontSize:11, fontWeight:600, color:'rgba(220,225,235,0.30)', letterSpacing:'0.12em', textTransform:'uppercase'}}>{t.world}</div>
               <div className="flex gap-3">
                 {/* Ocean — always active */}
                 <button className="glass flex-1 p-4 text-center"
@@ -3138,7 +3210,7 @@ function App() {
 
         {/* Badges */}
         <div className="mb-8" style={{borderTop:'1px solid rgba(255,255,255,0.03)', paddingTop:20}}>
-          <div className="font-body mb-4" style={{fontSize:13, fontWeight:600, color:'rgba(220,225,235,0.35)', letterSpacing:'0.06em', textTransform:'uppercase'}}>{t.badges} ({earned.length}/{BADGES.length})</div>
+          <div className="font-body mb-4" style={{fontSize:11, fontWeight:600, color:'rgba(220,225,235,0.30)', letterSpacing:'0.12em', textTransform:'uppercase'}}>{t.badges} ({earned.length}/{BADGES.length})</div>
           <div className="grid grid-cols-4 gap-2">
             {BADGES.map(b => {
               const has = b.condition(stats);
@@ -3154,7 +3226,7 @@ function App() {
 
         {/* Techniques mastery */}
         <div className="mb-8" style={{borderTop:'1px solid rgba(255,255,255,0.03)', paddingTop:20}}>
-          <div className="font-body mb-4" style={{fontSize:13, fontWeight:600, color:'rgba(220,225,235,0.35)', letterSpacing:'0.06em', textTransform:'uppercase'}}>{t.techniques || 'Techniques'}</div>
+          <div className="font-body mb-4" style={{fontSize:11, fontWeight:600, color:'rgba(220,225,235,0.30)', letterSpacing:'0.12em', textTransform:'uppercase'}}>{t.techniques || 'Techniques'}</div>
           <div className="space-y-3">
             {[['tidal','tidal'],['diaphragmatic','diaphragmatic'],['box','boxBreathing'],['segmented','segmented'],['ujjayi','ujjayi'],['recovery','recoveryBreath'],['physiological_sigh','physiologicalSigh']].map(([techKey, langKey]) => {
               const count = (stats.techniqueStats || {})[techKey] || 0;
@@ -3177,7 +3249,7 @@ function App() {
 
         {/* Settings */}
         <div className="mb-8" style={{borderTop:'1px solid rgba(255,255,255,0.03)', paddingTop:20}}>
-          <div className="font-body mb-4" style={{fontSize:13, fontWeight:600, color:'rgba(220,225,235,0.35)', letterSpacing:'0.06em', textTransform:'uppercase'}}>{t.settings}</div>
+          <div className="font-body mb-4" style={{fontSize:11, fontWeight:600, color:'rgba(220,225,235,0.30)', letterSpacing:'0.12em', textTransform:'uppercase'}}>{t.settings}</div>
           <div className="glass p-5 space-y-4">
             {[
               [t.ambientSound, 'soundEnabled'],
@@ -3209,7 +3281,7 @@ function App() {
         {/* History */}
         {stats.history.length > 0 && (
           <div className="mb-8" style={{borderTop:'1px solid rgba(255,255,255,0.03)', paddingTop:20}}>
-            <div className="font-body mb-4" style={{fontSize:13, fontWeight:600, color:'rgba(220,225,235,0.35)', letterSpacing:'0.06em', textTransform:'uppercase'}}>{t.history}</div>
+            <div className="font-body mb-4" style={{fontSize:11, fontWeight:600, color:'rgba(220,225,235,0.30)', letterSpacing:'0.12em', textTransform:'uppercase'}}>{t.history}</div>
             <div className="space-y-2">
               {stats.history.slice(-5).reverse().map((h, i) => (
                 <div key={i} className="glass p-4 flex items-center gap-3">
@@ -3252,6 +3324,13 @@ function App() {
   return (
     <div className="fixed inset-0" style={{background:bg}}>
       {world === 'ocean' && <div className="ocean-caustics" />}
+      {world === 'space' && (
+        <div style={{
+          position:'fixed', top:'20%', right:'-10%', width:'40vw', height:'40vw',
+          borderRadius:'50%', pointerEvents:'none', zIndex:0,
+          background:'radial-gradient(circle, rgba(255,200,100,0.03) 0%, rgba(255,180,80,0.015) 30%, transparent 70%)'
+        }} />
+      )}
       <Particles world={world} />
       <div className="relative z-10 h-full">
         {renderScreen()}
@@ -3342,6 +3421,36 @@ function App() {
                 {t.retestLater}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Stress SOS choice overlay */}
+      {showStressChoice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{background:'rgba(0,0,0,0.8)', backdropFilter:'blur(16px)'}}>
+          <div className="screen-transition text-center z-10 px-6 w-full" style={{maxWidth:360}}>
+            <div className="flex flex-col gap-3">
+              <button className="glass p-5 w-full text-left" style={{borderRadius:16}}
+                onClick={() => {
+                  setShowStressChoice(false);
+                  startSession(STRESS_SOS_SESSIONS.calmNow, {scenario:'stress_sos_calm', category:'stress'});
+                }}>
+                <div className="font-body" style={{fontSize:16, fontWeight:400, color:'rgba(226,232,240,0.92)'}}>I need to calm down NOW</div>
+                <div className="font-body mt-1" style={{fontSize:13, fontWeight:300, color:'var(--text-2)'}}>3 min &middot; Cyclic Sigh</div>
+              </button>
+              <button className="glass p-5 w-full text-left" style={{borderRadius:16}}
+                onClick={() => {
+                  setShowStressChoice(false);
+                  startSession(STRESS_SOS_SESSIONS.prepareStress, {scenario:'stress_sos_prepare', category:'stress'});
+                }}>
+                <div className="font-body" style={{fontSize:16, fontWeight:400, color:'rgba(226,232,240,0.92)'}}>Prepare for something stressful</div>
+                <div className="font-body mt-1" style={{fontSize:13, fontWeight:300, color:'var(--text-2)'}}>5 min &middot; Box Breathing</div>
+              </button>
+            </div>
+            <button className="font-body mt-6" style={{fontSize:13, color:'var(--text-3)', background:'none', border:'none', cursor:'pointer'}}
+              onClick={() => setShowStressChoice(false)}>
+              {t.close}
+            </button>
           </div>
         </div>
       )}
