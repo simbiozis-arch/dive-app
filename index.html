@@ -2073,6 +2073,8 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
   const holdStartRef = useRef(null);
   const holdIntervalRef = useRef(null);
   const ambientFadeStarted = useRef(false);
+  const introAudioRef = useRef(null);
+  const diveAudioRef = useRef(null);
   // 42s total: 0-2 black, 2-4 light, 4-14 cycle1, 14-24 cycle2, 24-34 cycle3, 34-42 cycle4
   const totalDuration = 42;
   const phases = ['inhale1','inhale2','exhale'];
@@ -2101,14 +2103,22 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
       lastTime = now;
       el += dt;
       setElapsed(el);
-      // At 2s, start ambient fade-in
+      // At 2s, start pre-recorded intro ambient (replaces Web Audio for intro)
       if (el >= 2 && !ambientFadeStarted.current) {
         ambientFadeStarted.current = true;
-        if (ambientRef?.current?.masterGain && ambientRef?.current?.ctx) {
-          const audioNow = ambientRef.current.ctx.currentTime;
-          ambientRef.current.masterGain.gain.linearRampToValueAtTime(0.04, audioNow + 2);
-          ambientRef.current.masterGain.gain.linearRampToValueAtTime(0.10, audioNow + 38);
-        }
+        try {
+          const a = new Audio('audio/dive_intro_ambient.mp3');
+          a.volume = 0;
+          introAudioRef.current = a;
+          a.play().catch(() => {});
+          // Slow fade in: 0 → 0.4 over 5 seconds
+          let vol = 0;
+          const fadeIn = setInterval(() => {
+            vol += 0.004;
+            if (vol >= 0.4) { vol = 0.4; clearInterval(fadeIn); }
+            try { a.volume = Math.min(vol, 1); } catch {}
+          }, 50);
+        } catch {}
       }
       // At 4s, breathing begins
       if (el >= 4) {
@@ -2141,18 +2151,28 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
     return () => { running = false; };
   }, [breathPhase]);
 
-  // Done -> feeling transition
+  // Done -> feeling transition + fade out intro audio
   useEffect(() => {
     if (breathPhase === 'done') {
+      // Fade out intro audio over 2 seconds
+      if (introAudioRef.current) {
+        const a = introAudioRef.current;
+        const fadeOut = setInterval(() => {
+          if (a.volume > 0.02) { try { a.volume = Math.max(0, a.volume - 0.01); } catch {} }
+          else { a.pause(); a.volume = 0; clearInterval(fadeOut); }
+        }, 50);
+      }
       const t0 = setTimeout(() => setBreathPhase('feeling'), 800);
       return () => clearTimeout(t0);
     }
   }, [breathPhase]);
 
-  // Cleanup hold test interval on unmount
+  // Cleanup hold test interval + all audio on unmount
   useEffect(() => {
     return () => {
       if (holdIntervalRef.current) { clearInterval(holdIntervalRef.current); holdIntervalRef.current = null; }
+      if (introAudioRef.current) { try { introAudioRef.current.pause(); introAudioRef.current.src = ''; } catch {} introAudioRef.current = null; }
+      if (diveAudioRef.current) { try { diveAudioRef.current.pause(); diveAudioRef.current.src = ''; } catch {} diveAudioRef.current = null; }
     };
   }, []);
 
@@ -2176,6 +2196,23 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
     setHoldTestPhase('holding');
     setHoldTime(0);
     holdStartRef.current = Date.now();
+    // Play dive/splash audio
+    try {
+      const da = new Audio('audio/dive_underwater.mp3');
+      da.currentTime = 0;
+      da.volume = 0.5;
+      diveAudioRef.current = da;
+      da.play().catch(() => {});
+      // After splash (4s), settle to ambient volume
+      setTimeout(() => {
+        let vol = 0.5;
+        const settle = setInterval(() => {
+          vol -= 0.01;
+          if (vol <= 0.25) { vol = 0.25; clearInterval(settle); }
+          try { da.volume = vol; } catch {}
+        }, 50);
+      }, 4000);
+    } catch {}
     holdIntervalRef.current = setInterval(() => {
       if (!holdStartRef.current) return;
       const h = (Date.now() - holdStartRef.current) / 1000;
@@ -2185,6 +2222,16 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
 
   const stopHoldTest = () => {
     if (holdIntervalRef.current) { clearInterval(holdIntervalRef.current); holdIntervalRef.current = null; }
+    // Fade out dive audio
+    if (diveAudioRef.current) {
+      const da = diveAudioRef.current;
+      let vol = da.volume || 0.25;
+      const fadeOut = setInterval(() => {
+        vol -= 0.008;
+        if (vol <= 0) { da.pause(); clearInterval(fadeOut); }
+        else { try { da.volume = vol; } catch {} }
+      }, 50);
+    }
     if (!holdStartRef.current) { setHoldTestPhase('result'); return; }
     const finalTime = (Date.now() - holdStartRef.current) / 1000;
     holdStartRef.current = null;
@@ -2423,7 +2470,7 @@ function App() {
     }
   }, []);
 
-  const updateStats = useCallback((sessionInfo) => {
+  const updateStats = (sessionInfo) => {
     const now = new Date();
     const today = now.toISOString().split('T')[0];
     const hour = now.getHours();
@@ -2450,7 +2497,7 @@ function App() {
         history: [...prev.history, { date: now.toISOString(), scenario: sessionInfo.scenario, duration: sessionInfo.duration, category: sessionInfo.category }].slice(-100),
       };
     });
-  }, []);
+  };
 
   const startSession = (segments, meta = {}) => {
     setActiveSession({ segments, meta });
@@ -2540,11 +2587,8 @@ function App() {
   // Completion
   if (showCompletion && completionData) {
     const earnedBadges = BADGES.filter(b => b.condition(stats));
-    const sessionInsight = useMemo(() => {
-      const ins = getSessionInsight(stats, completionData, currentLang);
-      if (ins) setStats(s => ({...s, shownInsightIds: [...(s.shownInsightIds||[]), ins.id]}));
-      return ins;
-    }, [completionData]);
+    // Note: no useMemo here — conditional hooks violate React rules
+    const sessionInsight = getSessionInsight(stats, completionData, currentLang);
     const closeCompletion = () => { setShowCompletion(false); setCompletionData(null); setCompletionStep('stats'); setCompletionFeeling(null); };
     return (
       <div className="fixed inset-0 flex flex-col items-center justify-center px-8" style={{background:bg}}>
