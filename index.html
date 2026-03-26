@@ -200,6 +200,10 @@ const LANG = {
     unlockSpaceStreak:'Unlock with premium or 30-day streak',unlockSpaceDaysLeft:'{N} more days to unlock',
     goodMorning:'Good morning',goodAfternoon:'Good afternoon',goodEvening:'Good evening',goodNight:'Good night',
     day1Free:'Day 1 free',premiumLabel:'Premium',
+    safetyQuestion:'Did you feel dizzy or lightheaded?',safetyYes:'Yes',safetyNo:'No',safetyMessage:"That's normal when starting out. We'll suggest gentler techniques.",
+    retestTitle:'Time to check your progress',retestSub:'days since your last depth test',retestNow:'Test now \u2014 30 sec',retestLater:'Later',
+    trialNotice:"You won't be charged for 7 days. Cancel anytime.",
+    streakAtRisk:'day streak at risk',surfaceBreath1Min:'Surface Breath \u2014 1 min',freshStartFull:'Fresh start. Every freediver surfaces eventually.',
   },
   ru: {
     appName:'DIVE',tagline:'Дыши. Погружайся. Действуй.',chooseLanguage:'Выберите язык',chooseWorld:'Выберите мир',
@@ -290,6 +294,10 @@ const LANG = {
     unlockSpaceStreak:'Premium или 30-дневная серия',unlockSpaceDaysLeft:'Ещё {N} дней',
     goodMorning:'Доброе утро',goodAfternoon:'Добрый день',goodEvening:'Добрый вечер',goodNight:'Доброй ночи',
     day1Free:'День 1 бесплатно',premiumLabel:'Премиум',
+    safetyQuestion:'Было ли вам дурно или кружилась голова?',safetyYes:'Да',safetyNo:'Нет',safetyMessage:'Это нормально для начинающих. Мы предложим более мягкие техники.',
+    retestTitle:'Время проверить прогресс',retestSub:'дней с последнего теста',retestNow:'Тест \u2014 30 сек',retestLater:'Позже',
+    trialNotice:'7 дней бесплатно. Отмена в любой момент.',
+    streakAtRisk:'дней подряд под угрозой',surfaceBreath1Min:'Поверхностный вдох \u2014 1 мин',freshStartFull:'Новое начало.',
   },
   zh: {
     appName:'DIVE',tagline:'呼吸。沉浸。行动。',chooseLanguage:'选择语言',chooseWorld:'选择你的世界',
@@ -376,6 +384,10 @@ const LANG = {
     unlockSpaceStreak:'Premium或30天连续解锁',unlockSpaceDaysLeft:'还需{N}天',
     goodMorning:'早上好',goodAfternoon:'下午好',goodEvening:'晚上好',goodNight:'晚安',
     day1Free:'第1天免费',premiumLabel:'高级版',
+    safetyQuestion:'你是否感到头晕？',safetyYes:'是',safetyNo:'否',safetyMessage:'这对初学者来说很正常。我们会推荐更温和的练习。',
+    retestTitle:'是时候检查进度了',retestSub:'天没有测试了',retestNow:'立即测试 \u2014 30秒',retestLater:'以后',
+    trialNotice:'14天内不会收费。随时取消。',
+    streakAtRisk:'天连续记录面临风险',surfaceBreath1Min:'浮出水面 \u2014 1分钟',freshStartFull:'重新开始。',
   },
   ar: {
     appName:'DIVE',tagline:'تنفّس. انغمس. انطلق.',chooseLanguage:'اختر اللغة',chooseWorld:'اختر عالمك',
@@ -462,6 +474,10 @@ const LANG = {
     unlockSpaceStreak:'Premium أو سلسلة 30 يوم',unlockSpaceDaysLeft:'{N} يوم للفتح',
     goodMorning:'صباح الخير',goodAfternoon:'مساء الخير',goodEvening:'مساء الخير',goodNight:'تصبح على خير',
     day1Free:'اليوم 1 مجاني',premiumLabel:'مميز',
+    safetyQuestion:'هل شعرت بالدوار؟',safetyYes:'نعم',safetyNo:'لا',safetyMessage:'هذا طبيعي في البداية. سنقترح تقنيات أخف.',
+    retestTitle:'حان وقت التحقق',retestSub:'أيام منذ آخر اختبار',retestNow:'اختبر الآن \u2014 30 ثانية',retestLater:'لاحقاً',
+    trialNotice:'لن يتم الخصم لمدة 7 أيام. إلغاء في أي وقت.',
+    streakAtRisk:'يوم متتالي في خطر',surfaceBreath1Min:'نفس السطح \u2014 دقيقة',freshStartFull:'بداية جديدة.',
   }
 };
 
@@ -1152,6 +1168,8 @@ const defaultStats = () => ({
   firstFeeling:null, lastFeeling:null, reminderTime:null, lastWeeklySummary:null,
   userGoal:null, initialHoldTime:null, initialDepth:null, shownInsightIds:[],
   techniqueStats:{},
+  breathTests:[],
+  safetyFlag:null,
 });
 
 // ===== FIRST SESSION (cyclic sigh) =====
@@ -1165,13 +1183,29 @@ const FIRST_SESSION = (t) => [
   { type:'text', duration:10, text:t.openEyes, textKey:'openEyes' }
 ]; // Total: 10+15+120+10+120+15+10 = 300s
 
+// ===== SAFETY CHECK HELPER =====
+const isIntensiveSession = (segments) => {
+  const intensiveTime = (segments || [])
+    .filter(s => s.type === 'breathing' && ['recovery','physiological_sigh'].includes(s.technique))
+    .reduce((sum, s) => sum + s.duration, 0);
+  return intensiveTime > 120; // > 2 minutes
+};
+
 // ===== SMART DAILY RECOMMENDATION =====
 function getDailyRecommendation(stats, t) {
   const hour = new Date().getHours();
   const sessions = stats.totalSessions || 0;
+  // If safety flag is recent (< 7 days), only recommend gentle scenarios
+  const safetyRecent = stats.safetyFlag && ((Date.now() - new Date(stats.safetyFlag.date).getTime()) < 7 * 86400000);
   if (sessions === 0) return { scenario:'_first_session', duration:5, title: t.firstDiveLabel || 'Your first dive', sub:'5 ' + t.min + ' \u00b7 ' + t.physiologicalSigh, isFirstSession:true };
   if (sessions === 1) return { scenario:'meeting', duration:5, title: t.trySomethingNew || 'Try something new', sub:'5 ' + t.min + ' \u00b7 ' + t.boxBreathing };
   if (sessions === 2) return { scenario:'hard_day', duration:5, title: t.goingDeeper || 'Going deeper', sub:'5 ' + t.min + ' \u00b7 ' + t.diaphragmatic };
+  if (safetyRecent) {
+    // Gentle scenarios only: morning, hard_day, just_relax (use diaphragmatic/tidal/ujjayi)
+    if (hour >= 6 && hour < 11) return { scenario:'morning', duration:5, title: t.morningStart, sub:'5 ' + t.min + ' \u00b7 ' + t.segmented };
+    if (hour >= 17 && hour < 22) return { scenario:'hard_day', duration:5, title: t.afterToughDay, sub:'5 ' + t.min + ' \u00b7 ' + t.diaphragmatic };
+    return { scenario:'just_relax', duration:5, title: t.justRelax, sub:'5 ' + t.min + ' \u00b7 ' + t.tidal };
+  }
   if (hour >= 6 && hour < 11) return { scenario:'morning', duration:5, title: t.morningStart, sub:'5 ' + t.min + ' \u00b7 ' + t.segmented };
   if (hour >= 11 && hour < 17) return { scenario:'meeting', duration:5, title: t.beforeMeeting, sub:'5 ' + t.min + ' \u00b7 ' + t.boxBreathing };
   if (hour >= 17 && hour < 22) return { scenario:'hard_day', duration:5, title: t.afterToughDay, sub:'5 ' + t.min + ' \u00b7 ' + t.diaphragmatic };
@@ -2572,9 +2606,11 @@ function App() {
   const [pendingSession, setPendingSession] = useState(null);
   const [currentMood, setCurrentMood] = useState({pre:null, post:null});
   const [moodDelta, setMoodDelta] = useState(null);
-  const [completionStep, setCompletionStep] = useState('stats'); // 'stats' | 'feeling' | 'reminder' | 'done'
+  const [completionStep, setCompletionStep] = useState('stats'); // 'stats' | 'safety' | 'feeling' | 'reminder' | 'done'
   const [showSurfaceBreath, setShowSurfaceBreath] = useState(false);
   const [surfaceBreathStreak, setSurfaceBreathStreak] = useState(0);
+  const [showRetestPrompt, setShowRetestPrompt] = useState(false);
+  const [retestDays, setRetestDays] = useState(0);
   const ambientRef = useRef(new AmbientEngine());
   const world = (stats.world && WORLDS[stats.world]) ? stats.world : 'ocean';
   const w = WORLDS[world];
@@ -2598,7 +2634,7 @@ function App() {
     return daysSince >= 7;
   }, [stats.onboarded, stats.totalSessions, stats.lastWeeklySummary, stats.history]);
   const [showWeekly, setShowWeekly] = useState(false);
-  useEffect(() => { if (shouldShowWeekly && screen === 'home') setShowWeekly(true); }, [shouldShowWeekly]);
+  useEffect(() => { if (shouldShowWeekly && screen === 'home') setShowWeekly(true); }, [shouldShowWeekly, screen]);
 
   // Apply language
   useEffect(() => {
@@ -2627,14 +2663,24 @@ function App() {
     const last = new Date(stats.lastSessionDate);
     const today = new Date();
     const diffDays = Math.floor((today - last) / 86400000);
-    if (diffDays === 2 && stats.streak > 0) {
-      // Missed exactly yesterday — offer surface breath
+    if (diffDays >= 2 && stats.streak > 0) {
+      // Missed 2+ days — offer surface breath to save streak
       setSurfaceBreathStreak(stats.streak);
       setShowSurfaceBreath(true);
-    } else if (diffDays > 2) {
-      setStats(s => ({...s, streak: 0}));
     }
   }, []);
+
+  // Breath retest check
+  useEffect(() => {
+    if (screen === 'home' && stats.onboarded) {
+      const lastTest = (stats.breathTests || [])[((stats.breathTests || []).length) - 1];
+      const days = lastTest ? Math.floor((Date.now() - new Date(lastTest.date).getTime()) / 86400000) : 999;
+      if (days >= 7 && (stats.totalSessions || 0) >= 3 && !showRetestPrompt) {
+        setRetestDays(days);
+        setShowRetestPrompt(true);
+      }
+    }
+  }, [screen]);
 
   const updateStats = (sessionInfo) => {
     const now = new Date();
@@ -2765,7 +2811,13 @@ function App() {
   // ===== FIRST BREATH SCREEN =====
   if (screen === 'first_breath') {
     return <FirstBreathScreen palette={palette} accentRgb={accentRgb} t={t} ambientRef={ambientRef}
-      onComplete={(goal, holdTimeResult) => { setStats(s => ({...s, firstFeeling: goal, userGoal: goal, onboarded:true, world:'ocean', initialHoldTime: holdTimeResult ? Math.round(holdTimeResult*10)/10 : null, initialDepth: holdTimeResult ? Math.round(holdTimeResult) : null})); setScreen('home'); setTab('home'); }} />;
+      onComplete={(goal, holdTimeResult) => { setStats(s => {
+        const newState = {...s, firstFeeling: goal, userGoal: goal, onboarded:true, world:'ocean', initialHoldTime: holdTimeResult ? Math.round(holdTimeResult*10)/10 : null, initialDepth: holdTimeResult ? Math.round(holdTimeResult) : null};
+        if (holdTimeResult && holdTimeResult > 0) {
+          newState.breathTests = [...(s.breathTests || []), { date: new Date().toISOString(), holdTime: Math.round(holdTimeResult*10)/10, depth: Math.max(1, Math.round(holdTimeResult)) }];
+        }
+        return newState;
+      }); setScreen('home'); setTab('home'); }} />;
   }
 
 
@@ -2840,7 +2892,9 @@ function App() {
                   return {...s, history: hist, lastFeeling: n};
                 });
                 setTimeout(() => {
-                  if (stats.totalSessions <= 1 && !stats.reminderTime) setCompletionStep('reminder');
+                  // Check if intensive session -> show safety question
+                  if (completionData && isIntensiveSession(completionData.segments)) setCompletionStep('safety');
+                  else if (stats.totalSessions <= 1 && !stats.reminderTime) setCompletionStep('reminder');
                   else setCompletionStep('done');
                 }, pre !== null ? 2000 : 600);
               }} />
@@ -2850,6 +2904,44 @@ function App() {
           {moodDelta && completionStep === 'stats' && (
             <div className="mb-6 screen-transition">
               <div className="font-body" style={{fontSize:15, fontWeight:300, color:'rgba(220,225,235,0.65)', lineHeight:1.7, textAlign:'center'}}>{moodDelta}</div>
+            </div>
+          )}
+
+          {/* Safety check — after intensive sessions */}
+          {completionStep === 'safety' && (
+            <div className="mb-6 screen-transition">
+              <div className="font-body mb-5" style={{fontSize:16, fontWeight:300, color:'rgba(226,232,240,0.8)'}}>{t.safetyQuestion}</div>
+              <div className="flex gap-3 justify-center">
+                <button className="glass px-6 py-2.5 font-body"
+                  style={{fontSize:14, fontWeight:500, color:'rgba(252,129,129,0.8)', border:'1px solid rgba(252,129,129,0.25)'}}
+                  onClick={() => {
+                    setStats(s => ({...s, safetyFlag: { date: new Date().toISOString() }}));
+                    setCompletionStep('safety_msg');
+                  }}>
+                  {t.safetyYes}
+                </button>
+                <button className="glass px-6 py-2.5 font-body"
+                  style={{fontSize:14, fontWeight:500, color:palette.accent, border:`1px solid rgba(${accentRgb},0.25)`}}
+                  onClick={() => {
+                    if (stats.totalSessions <= 1 && !stats.reminderTime) setCompletionStep('reminder');
+                    else setCompletionStep('done');
+                  }}>
+                  {t.safetyNo}
+                </button>
+              </div>
+            </div>
+          )}
+          {completionStep === 'safety_msg' && (
+            <div className="mb-6 screen-transition">
+              <div className="font-body mb-5" style={{fontSize:15, fontWeight:300, color:'rgba(220,225,235,0.65)', lineHeight:1.7, textAlign:'center', maxWidth:300, margin:'0 auto'}}>{t.safetyMessage}</div>
+              <button className="px-8 py-3 rounded-full font-body mx-auto block"
+                style={{fontWeight:500, background:`rgba(${accentRgb},0.12)`, border:`1px solid rgba(${accentRgb},0.25)`, color:palette.accent}}
+                onClick={() => {
+                  if (stats.totalSessions <= 1 && !stats.reminderTime) setCompletionStep('reminder');
+                  else setCompletionStep('done');
+                }}>
+                {t.continueText}
+              </button>
             </div>
           )}
 
@@ -2898,11 +2990,12 @@ function App() {
 
   // ===== PAYWALL =====
   const PaywallModal = () => {
+    const trialDays = currentLang === 'zh' ? 14 : 7;
     const monthlyPrice = t.paywallMonthly || t.monthly;
     const yearlyPrice = t.paywallYearly || t.yearly;
     const yearlySave = t.paywallYearlySave || t.yearlySave;
-    const trialNote = t.paywallTrialNote || '';
-    const startTrialLabel = t.paywallStartTrial || t.startTrial;
+    const trialNote = t.trialNotice || t.paywallTrialNote || '';
+    const startTrialLabel = currentLang === 'zh' ? '14\u5929\u514D\u8D39\u8BD5\u7528' : (t.paywallStartTrial || t.startTrial);
     return (
     <div className="fixed inset-0 z-50 flex items-end justify-center" style={{background:'rgba(0,0,0,0.7)', backdropFilter:'blur(12px)'}}>
       <div className="glass w-full max-w-sm mx-6 mb-8 p-6 screen-transition" style={{borderRadius:24}}>
@@ -3456,7 +3549,10 @@ function App() {
       {showSurfaceBreath && (
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{background:'rgba(0,0,0,0.8)', backdropFilter:'blur(16px)'}}>
           <div className="screen-transition text-center z-10 px-8">
-            <div className="font-body mb-4" style={{fontSize:20, fontWeight:300, color:'rgba(226,232,240,0.95)'}}>{t.missedYesterday}</div>
+            <div className="font-body mb-3" style={{fontSize:20, fontWeight:300, color:'rgba(226,232,240,0.95)'}}>{t.missedYesterday}</div>
+            <div className="font-body mb-6" style={{fontSize:16, fontWeight:400, color:palette.accent}}>
+              {surfaceBreathStreak} {t.streakAtRisk || t.dayStreak}
+            </div>
             <div className="font-body mb-8" style={{fontSize:14, fontWeight:400, color:'var(--text-2)', maxWidth:280, margin:'0 auto', lineHeight:1.6}}>
               {(t.surfaceBreathOffer || '').replace('{N}', surfaceBreathStreak)}
             </div>
@@ -3476,7 +3572,7 @@ function App() {
                     return {...s, streak: newStreak, longestStreak: Math.max(s.longestStreak || 0, newStreak), lastSessionDate: new Date().toISOString().split('T')[0]};
                   });
                 }}>
-                {t.surfaceBreathButton}
+                {t.surfaceBreath1Min || t.surfaceBreathButton}
               </button>
               <button className="px-8 py-3 rounded-full font-body w-full max-w-xs"
                 style={{fontWeight:400, fontSize:13, color:'var(--text-3)', border:'1px solid rgba(255,255,255,0.06)'}}
@@ -3485,6 +3581,33 @@ function App() {
                   setStats(s => ({...s, streak: 0}));
                 }}>
                 {t.letItGo}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Retest prompt overlay */}
+      {showRetestPrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{background:'rgba(0,0,0,0.8)', backdropFilter:'blur(16px)'}}>
+          <div className="screen-transition text-center z-10 px-8">
+            <div className="font-body mb-4" style={{fontSize:20, fontWeight:300, color:'rgba(226,232,240,0.95)'}}>{t.retestTitle}</div>
+            <div className="font-body mb-8" style={{fontSize:14, fontWeight:400, color:'var(--text-2)', maxWidth:280, margin:'0 auto', lineHeight:1.6}}>
+              {retestDays === 999 ? '' : retestDays} {t.retestSub}
+            </div>
+            <div className="flex flex-col gap-3 items-center">
+              <button className="px-8 py-3 rounded-full font-body w-full max-w-xs"
+                style={{fontWeight:500, background:`rgba(${accentRgb},0.12)`, border:`1px solid rgba(${accentRgb},0.25)`, color:palette.accent}}
+                onClick={() => {
+                  setShowRetestPrompt(false);
+                  setScreen('first_breath');
+                }}>
+                {t.retestNow}
+              </button>
+              <button className="px-8 py-3 rounded-full font-body w-full max-w-xs"
+                style={{fontWeight:400, fontSize:13, color:'var(--text-3)', border:'1px solid rgba(255,255,255,0.06)'}}
+                onClick={() => setShowRetestPrompt(false)}>
+                {t.retestLater}
               </button>
             </div>
           </div>
