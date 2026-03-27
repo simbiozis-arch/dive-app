@@ -16,6 +16,7 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@200;300;400;500;600&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet">
 <style>
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html,body,#root { background: linear-gradient(180deg, #0e3d5c 0%, #041520 50%, #020a10 100%) !important; min-height: 100dvh; }
 html,body,#root { width:100%; height:100%; overflow:hidden; font-family:'DM Sans',sans-serif; }
 :root {
   --bg-1:#070c15; --bg-2:#0c1322; --bg-3:#111b2e; --bg-4:#182640;
@@ -2119,7 +2120,7 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
             // Cycle complete — stop breathing until next breath_start event
             breathing = false;
             setCurrentPhase(null);
-            setBreathScale(1.0);
+            // Keep breathScale at current value (don't jump to 1.0)
           } else {
             setCurrentPhase(phases[phaseIdx]);
           }
@@ -2289,7 +2290,7 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
       const btmR = Math.round(2*(1-d)),  btmG = Math.round(10*(1-d)), btmB = Math.round(16*(1-d));
       const holdBg = `linear-gradient(180deg, rgb(${topR},${topG},${topB}) 0%, rgb(${btmR},${btmG},${btmB}) 100%)`;
       return (
-        <div className="fixed inset-0 flex flex-col items-center justify-center px-8" style={{background:holdBg, position:'relative'}} onClick={stopHoldTest}>
+        <div className="fixed inset-0 flex flex-col items-center justify-center px-8" style={{background:holdBg}} onClick={stopHoldTest}>
           {/* FIX4: Left-edge depth meter */}
           <div style={{position:'absolute', left:0, top:0, bottom:0, width:4, background:'rgba(94,170,168,0.08)', zIndex:5}}>
             <div style={{position:'absolute', bottom:0, left:0, right:0, height:`${holdProgress*100}%`, background:`rgba(${accentRgb},0.45)`, transition:'height 100ms linear', borderRadius:'0 2px 0 0'}} />
@@ -2375,8 +2376,8 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
   }
 
   // CINEMATIC BREATHING PHASE
-  const showBubble = elapsed >= 4;
-  const bubbleOpacity = elapsed >= 4 ? Math.min((elapsed - 4) * 0.25, 1) : 0;
+  const showBubble = elapsed >= 2;
+  const bubbleOpacity = elapsed >= 2 ? Math.min((elapsed - 2) * 0.5, 1) : 0;
   const lightSize = elapsed >= 1 ? Math.min((elapsed - 1) * 100, 320) : 0;
   const lightOpacity = elapsed >= 1 ? Math.min((elapsed - 1) * 0.4, 1) : 0;
   const smallTextOpacity = elapsed >= 4 ? Math.min((elapsed - 4) * 0.15, 0.45) : 0;
@@ -2478,6 +2479,36 @@ function AnimatedNumber({ value, duration = 1200 }) {
   return display;
 }
 
+async function audioDebug() {
+  const files = [
+    '/audio/dive_intro_ambient.mp3',
+    '/audio/dive_underwater.mp3',
+    '/audio/intro_01_welcome.mp3',
+    '/audio/intro_sit.mp3',
+    '/audio/box_intro.mp3',
+    '/audio/bodyscan_full.mp3',
+    '/audio/session_end.mp3',
+  ];
+  console.log('=== AUDIO DEBUG ===');
+  for (const f of files) {
+    try {
+      const res = await fetch(f, { method: 'HEAD' });
+      console.log(`${res.status === 200 ? '✅' : '❌'} ${f} (${res.status})`);
+    } catch(e) {
+      console.log(`❌ ${f} (${e.message})`);
+    }
+  }
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    console.log(`AudioContext: ${ctx.state}`);
+    if (ctx.state === 'suspended') console.log('⚠️ AudioContext suspended — needs user gesture to resume');
+    ctx.close();
+  } catch(e) {
+    console.log(`❌ AudioContext: ${e.message}`);
+  }
+  console.log('=== END AUDIO DEBUG ===');
+}
+
 function App() {
   const currentLang = 'en';
   const [stats, setStats] = useState(() => loadData() || defaultStats());
@@ -2514,22 +2545,23 @@ function App() {
 
   // Weekly summary check
   const shouldShowWeekly = useMemo(() => {
-    if (!stats.onboarded || stats.totalSessions < 2) return false;
-    // Must have 2+ sessions in last 7 days
-    const weekSessions = (stats.history || []).filter(h => {
-      const d = new Date(h.date);
-      return (Date.now() - d.getTime()) < 7 * 86400000;
-    });
-    if (weekSessions.length < 2) return false;
-    const last = stats.lastWeeklySummary ? new Date(stats.lastWeeklySummary) : null;
-    if (!last) return true;
-    const daysSince = (Date.now() - last.getTime()) / 86400000;
-    return daysSince >= 7;
-  }, [stats.onboarded, stats.totalSessions, stats.lastWeeklySummary, stats.history]);
+    if (!stats.onboarded) return false;
+    const lastSummary = stats.lastWeeklySummary;
+    const daysSinceSummary = lastSummary
+      ? Math.floor((Date.now() - new Date(lastSummary).getTime()) / 86400000)
+      : 999;
+    if (daysSinceSummary < 7) return false;
+    const sevenDaysAgo = Date.now() - 7 * 86400000;
+    const recentSessions = (stats.history || [])
+      .filter(s => new Date(s.date).getTime() > sevenDaysAgo);
+    if (recentSessions.length < 2) return false;
+    return true;
+  }, [stats.onboarded, stats.lastWeeklySummary, stats.history]);
   const [showWeekly, setShowWeekly] = useState(false);
   useEffect(() => { if (shouldShowWeekly && screen === 'home') setShowWeekly(true); }, [shouldShowWeekly, screen]);
 
 
+  useEffect(() => { audioDebug(); }, []);
   useEffect(() => { saveData(stats); }, [stats]);
 
   // Apply CSS vars for world
@@ -2606,11 +2638,16 @@ function App() {
   const [pendingSessionData, setPendingSessionData] = useState(null);
   const preMoodTimerRef = useRef(null);
 
-  const startSession = (segments, meta = {}) => {
-    setCurrentMood({pre:null, post:null});
+  const startSession = (segments, meta = {}, options = {}) => {
+    setCurrentMood({pre: options.preMood != null ? options.preMood : null, post:null});
     setMoodDelta(null);
-    setPendingSessionData({ segments, meta });
-    setShowPreMood(true);
+    if (options.skipPreMood) {
+      // Skip pre-mood screen entirely (e.g. SOS flow already asked)
+      actuallyStartSession(segments, meta);
+    } else {
+      setPendingSessionData({ segments, meta });
+      setShowPreMood(true);
+    }
   };
 
   // Auto-dismiss pre-mood after 5 seconds
@@ -3243,7 +3280,7 @@ function App() {
 
     return (
       <div className="screen-transition overflow-y-auto h-full no-scrollbar" style={{padding:'env(safe-area-inset-top, 48px) 24px 100px 24px'}}>
-        <button className="flex items-center gap-2 mb-5" onClick={() => { setScreen('home'); setTab('programs'); }} style={{color:'var(--text-3)'}}>
+        <button className="flex items-center gap-2 mb-5" onClick={() => { setScreen('home'); setTab('home'); }} style={{color:'var(--text-3)'}}>
           <Icon name="back" size={16}/><span className="font-body" style={{fontSize:13, fontWeight:400}}>{t.back}</span>
         </button>
         <div className="text-center mb-8">
@@ -3465,8 +3502,6 @@ function App() {
     if (screen === 'program_view') return renderProgramView();
     switch (tab) {
       case 'home': return renderHome();
-      case 'quick': return renderQuickDive();
-      case 'programs': return renderPrograms();
       case 'profile': return renderProfile();
       default: return renderHome();
     }
@@ -3488,8 +3523,6 @@ function App() {
           <div className="flex justify-around" style={{paddingTop:12, paddingBottom:'env(safe-area-inset-bottom, 24px)'}}>
             {[
               {id:'home', svgIcon:'home', labelKey:'home'},
-              {id:'quick', svgIcon:'quick', labelKey:'explore'},
-              {id:'programs', svgIcon:'programs', labelKey:'programs'},
               {id:'profile', svgIcon:'profile', labelKey:'profile'},
             ].map(tb => (
               <button key={tb.id} className="flex flex-col items-center py-1 px-3" style={{gap:3}}
@@ -3584,24 +3617,27 @@ function App() {
               <div className="flex flex-col gap-3">
                 <button className="glass p-5 w-full text-left" style={{borderRadius:14}}
                   onClick={() => {
+                    const sosPre = currentMood.pre;
                     setShowStressChoice(false); setSosStep('mood');
-                    startSession(STRESS_SOS_SESSIONS.quickReset, {scenario:'stress_sos_quick', category:'stress'});
+                    startSession(STRESS_SOS_SESSIONS.quickReset, {scenario:'stress_sos_quick', category:'stress'}, {skipPreMood:true, preMood:sosPre});
                   }}>
                   <div className="font-body" style={{fontSize:16, fontWeight:400, color:'rgba(226,232,240,0.92)'}}>Quick reset</div>
                   <div className="font-body mt-1" style={{fontSize:13, fontWeight:300, color:'var(--text-2)'}}>90 sec · Cyclic Sigh</div>
                 </button>
                 <button className="glass p-5 w-full text-left" style={{borderRadius:14}}
                   onClick={() => {
+                    const sosPre = currentMood.pre;
                     setShowStressChoice(false); setSosStep('mood');
-                    startSession(STRESS_SOS_SESSIONS.calmNow, {scenario:'stress_sos_calm', category:'stress'});
+                    startSession(STRESS_SOS_SESSIONS.calmNow, {scenario:'stress_sos_calm', category:'stress'}, {skipPreMood:true, preMood:sosPre});
                   }}>
                   <div className="font-body" style={{fontSize:16, fontWeight:400, color:'rgba(226,232,240,0.92)'}}>Calm down</div>
                   <div className="font-body mt-1" style={{fontSize:13, fontWeight:300, color:'var(--text-2)'}}>3 min · Cyclic Sigh</div>
                 </button>
                 <button className="glass p-5 w-full text-left" style={{borderRadius:14}}
                   onClick={() => {
+                    const sosPre = currentMood.pre;
                     setShowStressChoice(false); setSosStep('mood');
-                    startSession(STRESS_SOS_SESSIONS.prepareStress, {scenario:'stress_sos_prepare', category:'stress'});
+                    startSession(STRESS_SOS_SESSIONS.prepareStress, {scenario:'stress_sos_prepare', category:'stress'}, {skipPreMood:true, preMood:sosPre});
                   }}>
                   <div className="font-body" style={{fontSize:16, fontWeight:400, color:'rgba(226,232,240,0.92)'}}>Prepare for something</div>
                   <div className="font-body mt-1" style={{fontSize:13, fontWeight:300, color:'var(--text-2)'}}>5 min · Box Breathing</div>
