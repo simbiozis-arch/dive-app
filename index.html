@@ -346,7 +346,7 @@ const TECHNIQUES = {
 
 // ===== SCENARIOS =====
 const SCENARIOS = {
-  meeting:      { cat:'focus', svgIcon:'meeting', free:true, durations:[3,5,10] },
+  meeting:      { cat:'focus', svgIcon:'meeting', free:true, durations:[5,10] },
   presentation: { cat:'focus', svgIcon:'presentation', free:false, durations:[5,10] },
   call:         { cat:'focus', svgIcon:'call', free:false, durations:[3] },
   cant_focus:   { cat:'focus', svgIcon:'cant_focus', free:false, durations:[5] },
@@ -1934,7 +1934,7 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
               <Icon name={paused ? 'play' : 'pause'} size={16}/>
             </button>
             <button onClick={() => { if (engineRef.current) engineRef.current.skip(); }} className="flex items-center justify-center rounded-full" style={{width:44,height:44,background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.06)'}}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                 <polygon points="5,4 15,12 5,20" fill="rgba(226,232,240,0.8)"/>
                 <line x1="19" y1="5" x2="19" y2="19" stroke="rgba(226,232,240,0.8)" strokeWidth="2"/>
               </svg>
@@ -2388,6 +2388,7 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
           transform:'translate(-50%, -50%)',
           fontSize:14, fontWeight:300, letterSpacing:'0.06em',
           color:`rgba(220,225,235,${smallTextOpacity})`,
+          textAlign:'center', width:'80%', maxWidth:300,
         }}>{t.takeOneBreath}</div>
       )}
       {/* Breathing bubble — animates during all cycles */}
@@ -2480,6 +2481,7 @@ function App() {
   const [showRetestPrompt, setShowRetestPrompt] = useState(false);
   const [retestDays, setRetestDays] = useState(0);
   const [showStressChoice, setShowStressChoice] = useState(false);
+  const [sosStep, setSosStep] = useState('mood'); // 'mood' | 'choice'
   const [exploreCat, setExploreCat] = useState('focus');
   const ambientRef = useRef(new AmbientEngine());
   const world = (stats.world && WORLDS[stats.world]) ? stats.world : 'ocean';
@@ -2761,10 +2763,13 @@ function App() {
               }} />
             </div>
           )}
-          {/* Mood delta display */}
-          {moodDelta && completionStep === 'stats' && (
+          {/* Mood delta display — persists across all completion steps */}
+          {moodDelta && (
             <div className="mb-6 screen-transition">
-              <div className="font-body" style={{fontSize:15, fontWeight:300, color:'rgba(220,225,235,0.65)', lineHeight:1.7, textAlign:'center'}}>{moodDelta}</div>
+              <div className="font-mono" style={{fontSize:22, fontWeight:300, color:'rgba(220,225,235,0.8)', textAlign:'center', marginBottom:6}}>
+                {currentMood.pre} → {currentMood.post}
+              </div>
+              <div className="font-body" style={{fontSize:13, fontWeight:300, color:'rgba(220,225,235,0.45)', textAlign:'center'}}>{moodDelta}</div>
             </div>
           )}
 
@@ -2956,9 +2961,9 @@ function App() {
 
       {/* Daily recommendation card */}
       <button className="w-full text-left mb-6" style={{
-        minHeight:200, borderRadius:18, padding:'32px 24px', position:'relative', overflow:'hidden',
-        background:`linear-gradient(135deg, rgba(${accentRgb},0.10) 0%, rgba(${accentRgb},0.03) 100%)`,
-        border:`1px solid rgba(${accentRgb},0.22)`,
+        minHeight:200, borderRadius:14, padding:'32px 24px', position:'relative', overflow:'hidden',
+        background:'rgba(255,255,255,0.025)',
+        border:'1px solid rgba(255,255,255,0.04)',
         display:'flex', flexDirection:'column', justifyContent:'space-between',
       }} onClick={() => launchScenario(rec.scenario, rec.duration)}>
         <div>
@@ -2984,14 +2989,33 @@ function App() {
         </div>
       </div>
 
+      {/* Depth progress bar to next milestone */}
+      {(() => {
+        const milestones = [{depth:5,label:'A swimming pool'},{depth:10,label:'The reef edge'},{depth:15,label:'A coral reef'},{depth:25,label:'Beginner freediver'},{depth:40,label:'Where sunlight fades'},{depth:60,label:'Advanced freediver'},{depth:100,label:'The twilight zone'}];
+        const next = milestones.find(m => m.depth > stats.totalDepth) || milestones[milestones.length-1];
+        const prev = milestones.filter(m => m.depth <= stats.totalDepth).pop() || {depth:0};
+        const prog = next.depth > prev.depth ? Math.min(1, (stats.totalDepth - prev.depth) / (next.depth - prev.depth)) : 1;
+        return (
+          <div style={{marginBottom:16, opacity:0.5}}>
+            <div style={{height:3, borderRadius:2, background:'rgba(255,255,255,0.04)', overflow:'hidden'}}>
+              <div style={{height:'100%', width:`${prog*100}%`, borderRadius:2, background:`rgba(${accentRgb},0.4)`, transition:'width 600ms ease'}} />
+            </div>
+            <div className="flex justify-between mt-1" style={{fontSize:10, color:'rgba(220,225,235,0.25)'}}>
+              <span className="font-mono">{Math.round(stats.totalDepth)}m</span>
+              <span className="font-body">{next.depth}m · {next.label}</span>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Stress SOS button */}
       <button className="w-full mb-6" style={{
-        height:44, borderRadius:12, background:`rgba(${accentRgb},0.06)`, border:`1px solid rgba(${accentRgb},0.12)`,
+        height:44, borderRadius:14, background:`rgba(${accentRgb},0.06)`, border:`1px solid rgba(${accentRgb},0.12)`,
         color:'rgba(220,225,235,0.7)', display:'flex', alignItems:'center', justifyContent:'center', gap:8,
         fontSize:14, fontWeight:400,
       }} onClick={() => setShowStressChoice(true)}>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-        Stressed right now?
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        {t.stressedNow || 'Stressed right now?'}
       </button>
 
       {/* Programs — horizontal scroll */}
@@ -3404,7 +3428,7 @@ function App() {
 
       {/* Tab bar */}
       {showTabs && (
-        <div className="fixed bottom-0 left-0 right-0 z-40" style={{background:'rgba(7,12,21,0.85)', backdropFilter:'blur(20px)', WebkitBackdropFilter:'blur(20px)', borderTop:'1px solid rgba(255,255,255,0.04)'}}>
+        <div className="fixed bottom-0 left-0 right-0 z-40" style={{background:'rgba(7,12,21,0.75)', backdropFilter:'blur(24px)', WebkitBackdropFilter:'blur(24px)', borderTop:'1px solid rgba(255,255,255,0.03)'}}>
           <div className="flex justify-around" style={{paddingTop:12, paddingBottom:'env(safe-area-inset-bottom, 24px)'}}>
             {[
               {id:'home', svgIcon:'home', labelKey:'home'},
@@ -3491,30 +3515,37 @@ function App() {
         </div>
       )}
 
-      {/* Stress SOS choice overlay */}
+      {/* Stress SOS overlay — mood first, then choice */}
       {showStressChoice && (
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{background:'rgba(0,0,0,0.8)', backdropFilter:'blur(16px)'}}>
           <div className="screen-transition text-center z-10 px-6 w-full" style={{maxWidth:360}}>
-            <div className="flex flex-col gap-3">
-              <button className="glass p-5 w-full text-left" style={{borderRadius:16}}
-                onClick={() => {
-                  setShowStressChoice(false);
-                  startSession(STRESS_SOS_SESSIONS.calmNow, {scenario:'stress_sos_calm', category:'stress'});
-                }}>
-                <div className="font-body" style={{fontSize:16, fontWeight:400, color:'rgba(226,232,240,0.92)'}}>I need to calm down NOW</div>
-                <div className="font-body mt-1" style={{fontSize:13, fontWeight:300, color:'var(--text-2)'}}>3 min &middot; Cyclic Sigh</div>
-              </button>
-              <button className="glass p-5 w-full text-left" style={{borderRadius:16}}
-                onClick={() => {
-                  setShowStressChoice(false);
-                  startSession(STRESS_SOS_SESSIONS.prepareStress, {scenario:'stress_sos_prepare', category:'stress'});
-                }}>
-                <div className="font-body" style={{fontSize:16, fontWeight:400, color:'rgba(226,232,240,0.92)'}}>Prepare for something stressful</div>
-                <div className="font-body mt-1" style={{fontSize:13, fontWeight:300, color:'var(--text-2)'}}>5 min &middot; Box Breathing</div>
-              </button>
-            </div>
+            {sosStep === 'mood' ? (
+              <MoodScale label={t.howStressed || 'How stressed are you?'} lowLabel={t.moodLow || 'calm'} highLabel={t.moodHigh || 'stressed'} onSelect={(n) => {
+                setCurrentMood(m => ({...m, pre: n}));
+                setSosStep('choice');
+              }} />
+            ) : (
+              <div className="flex flex-col gap-3">
+                <button className="glass p-5 w-full text-left" style={{borderRadius:14}}
+                  onClick={() => {
+                    setShowStressChoice(false); setSosStep('mood');
+                    startSession(STRESS_SOS_SESSIONS.calmNow, {scenario:'stress_sos_calm', category:'stress'});
+                  }}>
+                  <div className="font-body" style={{fontSize:16, fontWeight:400, color:'rgba(226,232,240,0.92)'}}>I need to calm down NOW</div>
+                  <div className="font-body mt-1" style={{fontSize:13, fontWeight:300, color:'var(--text-2)'}}>3 min · Cyclic Sigh</div>
+                </button>
+                <button className="glass p-5 w-full text-left" style={{borderRadius:14}}
+                  onClick={() => {
+                    setShowStressChoice(false); setSosStep('mood');
+                    startSession(STRESS_SOS_SESSIONS.prepareStress, {scenario:'stress_sos_prepare', category:'stress'});
+                  }}>
+                  <div className="font-body" style={{fontSize:16, fontWeight:400, color:'rgba(226,232,240,0.92)'}}>Prepare for something stressful</div>
+                  <div className="font-body mt-1" style={{fontSize:13, fontWeight:300, color:'var(--text-2)'}}>5 min · Box Breathing</div>
+                </button>
+              </div>
+            )}
             <button className="font-body mt-6" style={{fontSize:13, color:'var(--text-3)', background:'none', border:'none', cursor:'pointer'}}
-              onClick={() => setShowStressChoice(false)}>
+              onClick={() => { setShowStressChoice(false); setSosStep('mood'); }}>
               {t.close}
             </button>
           </div>
