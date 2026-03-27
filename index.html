@@ -115,9 +115,11 @@ html,body,#root { width:100%; height:100%; overflow:hidden; font-family:'DM Sans
 }
 .dima-video video { width:100%; height:100%; object-fit:cover; }
 .font-mono, .phase-timer, .hold-timer, .completion-stat-number,
-.depth-number, .streak-number, .duration-badge, .mood-circle {
-  font-family: 'JetBrains Mono', monospace !important;
-  font-variant-numeric: tabular-nums;
+.depth-number, .streak-number, .duration-badge, .mood-circle,
+[class*="timer"], [class*="countdown"], [class*="depth-num"],
+[class*="stat-num"], [class*="streak"], [class*="count-num"] {
+  font-family: 'JetBrains Mono', 'SF Mono', monospace !important;
+  font-variant-numeric: tabular-nums !important;
 }
 </style>
 </head>
