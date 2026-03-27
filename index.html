@@ -147,7 +147,7 @@ const { useState, useEffect, useRef, useCallback, useMemo } = React;
 const LANG = {
   en: {
     appName:'DIVE',tagline:'Prepare. Breathe. Dive.',chooseLanguage:'Choose language',chooseWorld:'Choose your world',
-    ocean:'Ocean',space:'Space',memory:'Memory',
+    ocean:'Ocean',
     home:'Home',explore:'Explore',programs:'Programs',profile:'Me',settings:'Settings',
     todaysDive:"Today's dive",quickDives:'Quick Dives',myPrograms:'My Programs',seeAll:'See all',
     focus:'Focus',stress:'Stress',energy:'Energy',recovery:'Recovery',deep:'Deep',
@@ -182,11 +182,10 @@ const LANG = {
     voiceGuided:'Voice guided',
     bodyScanFull:"Forehead — release all tension. Eyes — heavy lids. Jaw — slightly open, tongue resting free. Neck — long, relaxed. Shoulders — drop them away from your ears. Arms — heavy, warm. Chest — open. Belly — soft. Legs — heavy. Feet — warm.",
     visOceanCalm:"You're floating in warm, clear water. Weightless. Supported on all sides. Sunlight filters through the surface. With every exhale, you sink deeper into stillness.",
-    visSpaceCalm:"You're in open space. Weightless. Silent. Below — Earth. Small, blue, slowly turning. Everything that weighs on you — on that tiny dot. You're here. In silence.",
     visMemoryCalm:"Remember a place where you felt completely at peace. See it clearly. Feel the air. Hear the sounds. You're there again. Nothing owed. Nowhere to be. Just existing.",
     sitDown:'Find a comfortable position. Back straight but relaxed. Close your eyes.',
     openEyes:"Open your eyes. You're ready.",sleepEnd:"Keep breathing. Sleep will come.",
-    oceanDesc:'Deep ocean, bubbles, wave sounds',spaceDesc:'Infinite cosmos, stars, silence',memoryDesc:'Warm memories, bokeh, harmony',
+    oceanDesc:'Deep ocean, bubbles, wave sounds',
     canChangeLater:'You can change this later',quickStart:'Quick start',categories:'Categories',
     back:'Back',close:'Close',done:'Done',sessions:'sessions',days:'days',
     ambientSound:'Ambient sound',vibration:'Vibration',premium:'Premium',active:'Active',free:'Free',
@@ -197,7 +196,7 @@ const LANG = {
     onb2title:'7 techniques',onb2sub:'Proven by science and depth',onb2desc:'Diaphragmatic, box, ujjayi, physiological sigh — and three more.',
     onb3title:'20 scenarios',onb3sub:'For every occasion',onb3desc:'Before a meeting, after a conflict, insomnia, morning anxiety — find the right one.',
     onb4title:'3 programs',onb4sub:'Step-by-step learning',onb4desc:'First Dive. Stress Shield. Deep Focus. With video coaching.',
-    paywallFeatures:['All 20 breathing scenarios','All programs with video coaching','10-minute deep sessions','Space world','Mood tracking & statistics'],
+    paywallFeatures:['All 20 breathing scenarios','All programs with video coaching','10-minute deep sessions','Bioluminescent deep-dive visuals','Mood tracking & statistics'],
     morningIntro:'Good morning. Five minutes of breathing before coffee. Your body will wake up faster.',
     overloadIntro:'Five minutes. Zero input. Just you and your breath.',
     conflictIntro:'Stop. Before replaying it in your head — breathe. Adrenaline leaves your blood in 3 to 5 minutes. Let it pass.',
@@ -228,12 +227,10 @@ const LANG = {
     missedYesterday:'You missed yesterday',surfaceBreathOffer:'Take a 1-min surface breath to save your {N}-day streak',surfaceBreathButton:'Surface Breath — 1 min',letItGo:'Let it go',streakSaved:'Streak saved ✓',freshStart:'Fresh start',
     buildHabit:'Build a daily habit?',habitMorning:'Morning 8:00',habitEvening:'Evening 21:00',habitNotNow:'Not now',
     paywallMonthly:'$9.99/mo',paywallYearly:'$49.99/yr',paywallYearlySave:'Save 58%',paywallTrialNote:"You won't be charged for 7 days. Cancel anytime.",paywallStartTrial:'Start free trial',
-    spaceLockedMsg:'Unlock Space: Premium or 30-day streak',
     holdTestTitle:"Let's find your starting depth",holdTestDesc:'Exhale fully. Then hold. Tap when you need to breathe.',holdTestStart:'Start',holdTestYourDepth:'Your starting depth',holdTestSwimmingPool:'A swimming pool',holdTestCoralReef:'A coral reef',holdTestShipwreck:'A shallow shipwreck',holdTestSunlightFades:'Where sunlight fades',holdTestTwilightZone:'The twilight zone',
     howStressed:'How stressed are you right now?',andNow:'And now?',moodLow:'low',moodHigh:'high',
     moodImprove:'{pre} \u2192 {post} \u00b7 \u2212{delta} points',moodSame:'Consistency builds resilience.',moodWorse:'Some sessions plant seeds for later.',
     techniques:'Techniques',masteryNone:'\u2014',masteryLearning:'Learning',masteryComfortable:'Comfortable',masteryMastered:'Mastered',
-    unlockSpaceStreak:'Unlock with premium \u2014 or 30 day streak',unlockSpaceDaysLeft:'{N} more days to unlock',
     goodMorning:'Good morning',goodAfternoon:'Good afternoon',goodEvening:'Good evening',goodNight:'Good night',
     day1Free:'Day 1 free',premiumLabel:'Premium',
     safetyQuestion:'Did you feel dizzy or lightheaded?',safetyYes:'Yes',safetyNo:'No',safetyMessage:"That's normal when starting out. We'll suggest gentler techniques.",
@@ -337,15 +334,7 @@ const WORLDS = {
     ambient: { baseFreq:65, filterFreq:300, lfoRate:0.08 },
     depthUnit:'m', depthLabel:'depth'
   },
-  space: {
-    icon: 'world',
-    palette: { accent:'#8b7ec8', accentRgb:'139,126,200', glow:'rgba(139,126,200,0.12)', card:'rgba(255,255,255,0.025)', text:'rgba(220,225,235,0.92)' },
-    bgGradient: 'radial-gradient(ellipse at 30% 20%, rgba(90,60,150,0.06) 0%, transparent 50%), radial-gradient(ellipse at 70% 80%, rgba(60,90,180,0.05) 0%, transparent 50%), #0d0b1a',
-    particles: { type:'stars', count:6, speed:[20,40], opacity:[0.03,0.08] },
-    ambient: { baseFreq:45, filterFreq:200, lfoRate:0.04 },
-    depthUnit:'km', depthLabel:'distance'
-  },
-  // memory world removed
+  // space world removed — ocean only
 };
 
 // ===== TECHNIQUES =====
@@ -397,7 +386,7 @@ const getSessionContent = (t, world) => ({
     5: [
       { type:'text', duration:10, text:t.sitDown, textKey:'sitDown' },
       { type:'breathing', technique:'box', duration:96, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
-      { type:'visualization', duration:20, texts:{ocean:t.visOceanCalm, space:t.visSpaceCalm} },
+      { type:'visualization', duration:20, texts:{ocean:t.visOceanCalm} },
       { type:'breathing', technique:'ujjayi', duration:166, params:{inhale:5,exhale:8} },
       { type:'text', duration:8, text:t.openEyes, textKey:'openEyes' },
     ],
@@ -407,7 +396,7 @@ const getSessionContent = (t, world) => ({
       { type:'breathing', technique:'box', duration:128, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
       { type:'bodyscan', duration:40, text:t.bodyScanFull, scanType:'short' },
       { type:'breathing', technique:'ujjayi', duration:150, params:{inhale:5,exhale:10} },
-      { type:'visualization', duration:30, texts:{ocean:t.visOceanCalm, space:t.visSpaceCalm} },
+      { type:'visualization', duration:30, texts:{ocean:t.visOceanCalm} },
       { type:'breathing', technique:'diaphragmatic', duration:144, params:{inhale:5,exhale:10} },
       { type:'text', duration:8, text:t.openEyes, textKey:'openEyes' },
     ]
@@ -597,7 +586,7 @@ const getSessionContent = (t, world) => ({
       { type:'breathing', technique:'segmented', duration:90, params:{belly:4,ribs:3,chest:3,exhale:8} },
       { type:'breathing', technique:'box', duration:100, params:{inhale:5,holdIn:5,exhale:5,holdOut:5} },
       { type:'breathing', technique:'ujjayi', duration:108, params:{inhale:6,exhale:12} },
-      { type:'visualization', duration:40, texts:{ocean:t.visOceanCalm, space:t.visSpaceCalm} },
+      { type:'visualization', duration:40, texts:{ocean:t.visOceanCalm} },
       { type:'breathing', technique:'physiological_sigh', duration:122, params:{inhale1:2,inhale2:1,exhale:7} },
       { type:'bodyscan', duration:60, text:t.bodyScanFull, scanType:'full' },
       { type:'text', duration:10, text:t.openEyes, textKey:'openEyes' },
@@ -653,7 +642,6 @@ const PROGRAMS = {
         { type:'breathing', technique:'ujjayi', duration:120, params:{inhale:5,exhale:10} },
         { type:'visualization', duration:40, texts:{
           ocean:'You are in the water. Warm, clear. Weightless. No pressure. Your body supported on all sides.',
-          space:'You are in open space. Weightless. Silent. Below you — Earth. All problems — far below.'
         }},
         { type:'breathing', technique:'physiological_sigh', duration:60, params:{inhale1:2,inhale2:1,exhale:7}, hint:'Double short inhale — in-IN — and a long soft exhale. Like a sigh of relief.' },
         { type:'text', duration:15, text:'Program complete. You have mastered five freediver techniques. Use them every day. They work.' },
@@ -698,7 +686,6 @@ const PROGRAMS = {
         { type:'breathing', technique:'box', duration:90, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
         { type:'visualization', duration:40, texts:{
           ocean:'Picture a stressful situation. See it clearly. You are observing from the side. Like a freediver looking at the depth before a dive — calmly.',
-          space:'Picture a stressful situation. It is far below, on Earth. You are looking from space. Different scale. Different perspective.'
         }},
         { type:'breathing', technique:'ujjayi', duration:120, params:{inhale:5,exhale:8} },
         { type:'text', duration:10, text:'The stress did not disappear. But you chose how to respond to it.' },
@@ -759,7 +746,6 @@ const PROGRAMS = {
         { type:'breathing', technique:'ujjayi', duration:180, params:{inhale:6,exhale:12} },
         { type:'visualization', duration:30, texts:{
           ocean:'You are in the water. No sounds, no thoughts. Only rhythm: inhale — movement — exhale. You are the rhythm.',
-          space:'You are in the cockpit. One screen before your eyes. One task. One action. Total clarity.'
         }},
         { type:'breathing', technique:'physiological_sigh', duration:60, params:{inhale1:2,inhale2:1,exhale:7} },
       ],
@@ -1111,7 +1097,6 @@ const AUDIO_MAP = {
   'bodyscan_full': '/audio/bodyscan_full.mp3',
   'bodyscan_sleep': '/audio/bodyscan_sleep.mp3',
   'vis_ocean_calm': '/audio/vis_ocean_calm.mp3',
-  'vis_space_calm': '/audio/vis_space_calm.mp3',
   // vis_memory_calm removed
 };
 
@@ -1206,49 +1191,7 @@ function OceanParticles({ world, diveProgress }) {
   </div>;
 }
 
-function SpaceParticles({ diveProgress }) {
-  const stars = useMemo(() => {
-    return Array.from({length: 60}, (_, i) => ({
-      id: i, left: Math.random() * 100, top: Math.random() * 100,
-      size: 1 + Math.random(),
-      opacity: 0.15 + Math.random() * 0.35,
-      twinkle: i < 15,
-      twinkleDur: 3 + Math.random() * 5,
-    }));
-  }, []);
-  const dust = useMemo(() => {
-    return Array.from({length: 6}, (_, i) => ({
-      id: i, top: 10 + Math.random() * 80,
-      delay: Math.random() * 20,
-      duration: 20 + Math.random() * 20,
-      opacity: 0.03 + Math.random() * 0.05,
-    }));
-  }, []);
-  const dimFactor = 1 - diveProgress * 0.8;
-  return <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-    {stars.map(s => (
-      <div key={s.id} className="absolute rounded-full" style={{
-        left: s.left + '%', top: s.top + '%',
-        width: s.size, height: s.size,
-        background: `rgba(255,255,255,${s.opacity * dimFactor})`,
-        '--base-opacity': s.opacity * dimFactor,
-        animation: s.twinkle ? `twinkle ${s.twinkleDur}s ease-in-out infinite` : 'none',
-      }} />
-    ))}
-    {dust.map(d => (
-      <div key={'d'+d.id} className="absolute" style={{
-        top: d.top + '%', left: '-5%', width: 2, height: 1,
-        background: `rgba(139,126,200,${d.opacity * dimFactor})`,
-        '--peak-opacity': d.opacity * dimFactor,
-        animation: `drift-h ${d.duration}s ${d.delay}s infinite linear`,
-        opacity: 0,
-      }} />
-    ))}
-  </div>;
-}
-
 function Particles({ world, diveProgress = 0 }) {
-  if (world === 'space') return <SpaceParticles diveProgress={diveProgress} />;
   return <OceanParticles world={world} diveProgress={diveProgress} />;
 }
 
@@ -1277,48 +1220,7 @@ const OceanBubble = React.forwardRef((props, ref) => {
   );
 });
 
-const PulsarObject = React.forwardRef((props, ref) => {
-  // ref targets a wrapper div for glow updates; rings use static initial styles
-  return (
-    <React.Fragment>
-      {/* Ring 3 (outermost) */}
-      <div className="pulsar-ring3" style={{
-        position:'absolute', borderRadius:'50%',
-        border:'1px solid rgba(139,126,200,0.13)',
-        boxShadow:'0 0 20px rgba(139,126,200,0.03)',
-        top:'50%', left:'50%', width:'92%', height:'92%',
-        transform:'translate(-50%,-50%)',
-        opacity: 0.42,
-      }} />
-      {/* Ring 2 */}
-      <div className="pulsar-ring2" style={{
-        position:'absolute', borderRadius:'50%',
-        border:'1.5px solid rgba(139,126,200,0.19)',
-        boxShadow:'0 0 15px rgba(139,126,200,0.04)',
-        top:'50%', left:'50%', width:'65%', height:'65%',
-        transform:'translate(-50%,-50%)',
-        opacity: 0.51,
-      }} />
-      {/* Ring 1 (innermost) */}
-      <div className="pulsar-ring1" style={{
-        position:'absolute', borderRadius:'50%',
-        border:'1.5px solid rgba(139,126,200,0.30)',
-        boxShadow:'0 0 12px rgba(139,126,200,0.05)',
-        top:'50%', left:'50%', width:'40%', height:'40%',
-        transform:'translate(-50%,-50%)',
-        opacity: 0.6,
-      }} />
-      {/* Core — ref targets this for glow manipulation */}
-      <div ref={ref} style={{
-        width:24, height:24, borderRadius:'50%',
-        background:'rgba(139,126,200,0.95)',
-        boxShadow:'0 0 26px rgba(139,126,200,0.5), 0 0 68px rgba(139,126,200,0.3), 0 0 110px rgba(139,126,200,0.1)',
-        zIndex:3,
-      }} />
-    </React.Fragment>
-  );
-});
-
+// PulsarObject removed (space world deleted)
 // MemoryOrb removed (memory world deleted)
 
 // ===== SESSION TEXT (fixed full-screen centered) =====
@@ -1711,11 +1613,7 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
       // Glow on the breathing object
       if (glowTargetRef.current) {
         const gi = s.glowIntensity;
-        if (world === 'ocean') {
-          glowTargetRef.current.style.boxShadow = `0 0 ${60+gi*200}px rgba(94,170,168,${gi}), 0 0 ${120+gi*300}px rgba(94,170,168,${gi*0.5}), inset 0 0 60px rgba(94,170,168,0.06)`;
-        } else if (world === 'space') {
-          glowTargetRef.current.style.boxShadow = `0 0 ${20+gi*60}px rgba(139,126,200,${0.3+gi*2}), 0 0 ${60+gi*80}px rgba(139,126,200,${0.15+gi*1.5}), 0 0 ${100+gi*100}px rgba(139,126,200,${gi})`;
-        }
+        glowTargetRef.current.style.boxShadow = `0 0 ${60+gi*200}px rgba(94,170,168,${gi}), 0 0 ${120+gi*300}px rgba(94,170,168,${gi*0.5}), inset 0 0 60px rgba(94,170,168,0.06)`;
       }
       // Phase label
       if (phaseLabelRef.current && s.phase) {
@@ -1856,8 +1754,7 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
                 animation:'slowRotate 60s linear infinite',
                 pointerEvents:'none',
               }} />
-              {world === 'ocean' && <OceanBubble ref={glowTargetRef} />}
-              {world === 'space' && <PulsarObject ref={glowTargetRef} />}
+              <OceanBubble ref={glowTargetRef} />
               {/* FIX2: countdown inside bubble */}
               <div ref={bubbleTimerRef} style={{
                 position:'absolute', top:'50%', left:'50%',
@@ -2571,7 +2468,7 @@ function App() {
   const [sosStep, setSosStep] = useState('mood'); // 'mood' | 'choice'
   const [exploreCat, setExploreCat] = useState('focus');
   const ambientRef = useRef(new AmbientEngine());
-  const world = (stats.world && WORLDS[stats.world]) ? stats.world : 'ocean';
+  const world = 'ocean'; // ocean only — space world removed
   const w = WORLDS[world];
   const palette = w.palette;
   const accentRgb = palette.accentRgb;
@@ -2736,7 +2633,6 @@ function App() {
     if (dur && dur >= 10) return false;
     return true;
   };
-  const selectWorld = (w) => setStats(s => ({...s, world: w}));
 
   const bg = w.bgGradient;
 
@@ -3154,7 +3050,7 @@ function App() {
                 <div className="font-body mt-2" style={{fontWeight:600, fontSize:13, color:'rgba(255,255,255,0.92)'}}>{t[nameKey]}</div>
                 <div className="flex gap-1 mt-2 flex-wrap">
                   {key === 'first_dive' && <span style={{padding:'3px 10px', borderRadius:6, background:'rgba(94,170,168,0.08)', border:'1px solid rgba(94,170,168,0.15)', fontSize:11, color:'rgba(94,170,168,0.7)'}}>{t.day1Free}</span>}
-                  {key !== 'first_dive' && !stats.isPremium && <span style={{padding:'3px 10px', borderRadius:6, background:'rgba(139,126,200,0.06)', border:'1px solid rgba(139,126,200,0.12)', fontSize:11, color:'rgba(139,126,200,0.5)'}}>{t.premiumLabel}</span>}
+                  {key !== 'first_dive' && !stats.isPremium && <span style={{padding:'3px 10px', borderRadius:6, background:'rgba(94,170,168,0.06)', border:'1px solid rgba(94,170,168,0.12)', fontSize:11, color:'rgba(94,170,168,0.5)'}}>{t.premiumLabel}</span>}
                 </div>
                 <div className="mt-2" style={{height:2, borderRadius:1, background:'rgba(255,255,255,0.04)'}}>
                   <div style={{height:'100%', borderRadius:1, width:`${progress/prog.days*100}%`, background:`rgba(${accentRgb},0.6)`}} />
@@ -3384,41 +3280,6 @@ function App() {
           ))}
         </div>
 
-        {/* World switch — always show, Space locked if not unlocked */}
-        {(() => {
-          const isSpaceUnlocked = stats.isPremium || (stats.longestStreak || stats.streak || 0) >= 30;
-          const daysToUnlock = Math.max(0, 30 - (stats.longestStreak || stats.streak || 0));
-          return (
-            <div className="mb-8" style={{borderTop:'1px solid rgba(255,255,255,0.03)', paddingTop:20}}>
-              <div className="font-body mb-4" style={{fontSize:11, fontWeight:600, color:'rgba(220,225,235,0.30)', letterSpacing:'0.12em', textTransform:'uppercase'}}>{t.world}</div>
-              <div className="flex gap-3">
-                {/* Ocean — always active */}
-                <button className="glass flex-1 p-4 text-center"
-                  style={{border: world === 'ocean' ? `1px solid rgba(${WORLDS.ocean.palette.accentRgb},0.3)` : '1px solid rgba(255,255,255,0.06)', boxShadow: world === 'ocean' ? `0 0 15px rgba(${WORLDS.ocean.palette.accentRgb},0.1)` : 'none'}}
-                  onClick={() => selectWorld('ocean')}>
-                  <div style={{color:WORLDS.ocean.palette.accent,opacity:0.5}}><Icon name="world" size={20}/></div>
-                  <div className="font-body mt-2" style={{fontSize:12, fontWeight:400, color:'rgba(226,232,240,0.6)'}}>{t.ocean}</div>
-                </button>
-                {/* Space — locked or unlocked */}
-                <button className="glass flex-1 p-4 text-center"
-                  style={{border: isSpaceUnlocked && world === 'space' ? `1px solid rgba(${WORLDS.space.palette.accentRgb},0.3)` : '1px solid rgba(255,255,255,0.06)', boxShadow: isSpaceUnlocked && world === 'space' ? `0 0 15px rgba(${WORLDS.space.palette.accentRgb},0.1)` : 'none', opacity: isSpaceUnlocked ? 1 : 0.5}}
-                  onClick={() => { if (isSpaceUnlocked) selectWorld('space'); else setShowPaywall(true); }}>
-                  <div style={{color:WORLDS.space.palette.accent,opacity:0.5}}>
-                    {isSpaceUnlocked ? <Icon name="world" size={20}/> : <Icon name="lock" size={20}/>}
-                  </div>
-                  <div className="font-body mt-2" style={{fontSize:12, fontWeight:400, color:'rgba(226,232,240,0.6)'}}>{t.space}</div>
-                  {!isSpaceUnlocked && (
-                    <div className="font-body mt-1" style={{fontSize:9, fontWeight:300, color:'var(--text-3)', lineHeight:1.3}}>
-                      {(stats.streak || 0) > 0
-                        ? (t.unlockSpaceDaysLeft || '{N} more days to unlock').replace('{N}', daysToUnlock)
-                        : (t.unlockSpaceStreak || 'Unlock with premium or 30-day streak')}
-                    </div>
-                  )}
-                </button>
-              </div>
-            </div>
-          );
-        })()}
 
         {/* Badges */}
         <div className="mb-8" style={{borderTop:'1px solid rgba(255,255,255,0.03)', paddingTop:20}}>
@@ -3535,14 +3396,7 @@ function App() {
 
   return (
     <div className="fixed inset-0" style={{background:bg}}>
-      {world === 'ocean' && <div className="ocean-caustics" />}
-      {world === 'space' && (
-        <div style={{
-          position:'fixed', top:'20%', right:'-10%', width:'40vw', height:'40vw',
-          borderRadius:'50%', pointerEvents:'none', zIndex:0,
-          background:'radial-gradient(circle, rgba(255,200,100,0.03) 0%, rgba(255,180,80,0.015) 30%, transparent 70%)'
-        }} />
-      )}
+      <div className="ocean-caustics" />
       <Particles world={world} />
       <div className="relative z-10 h-full">
         {renderScreen()}
