@@ -49,7 +49,10 @@ html,body,#root { width:100%; height:100%; overflow:hidden; font-family:'DM Sans
 @keyframes text-emerge { from { color:rgba(220,225,235,0); } to { color:rgba(220,225,235,0.6); } }
 @keyframes bg-emerge { from { background:#000; } to { background:linear-gradient(180deg, #0e3d5c 0%, #082a42 33%, #041520 66%, #020a10 100%); } }
 @keyframes hold-counter-pulse { 0%,100% { transform:scale(1); } 50% { transform:scale(1.03); } }
+@keyframes bubbleRise { 0%{transform:translateY(0) scale(1);opacity:0} 10%{opacity:0.6} 90%{opacity:0.4} 100%{transform:translateY(-100vh) scale(0.6);opacity:0} }
 @keyframes slowRotate { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+@keyframes surfaceUp { 0%{transform:translateY(0);opacity:0.9} 60%{opacity:1} 100%{transform:translateY(-40px);opacity:0} }
+@keyframes surfaceBgLighten { 0%{background:linear-gradient(180deg,#070c15 0%,#0c1322 100%)} 100%{background:linear-gradient(180deg,#1a3a5c 0%,#0e2840 100%)} }
 
 .font-display { font-family:'DM Sans',sans-serif; }
 .font-mono { font-family:'JetBrains Mono',monospace !important; font-variant-numeric:tabular-nums !important; }
@@ -69,6 +72,9 @@ html,body,#root { width:100%; height:100%; overflow:hidden; font-family:'DM Sans
 
 .no-scrollbar::-webkit-scrollbar { display:none; }
 .no-scrollbar { -ms-overflow-style:none; scrollbar-width:none; }
+
+button, [role="button"] { transition: transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1); }
+button:active, [role="button"]:active { transform: scale(0.97); transition: transform 80ms ease-out; }
 
 .screen-glow {
   position:fixed; top:-20%; left:-10%; width:60%; height:50%;
@@ -133,7 +139,7 @@ const LANG = {
   en: {
     appName:'DIVE',tagline:'Prepare. Breathe. Dive.',chooseLanguage:'Choose language',chooseWorld:'Choose your world',
     ocean:'Ocean',space:'Space',memory:'Memory',
-    home:'Home',explore:'Explore',programs:'Programs',profile:'Profile',settings:'Settings',
+    home:'Home',explore:'Explore',programs:'Programs',profile:'Me',settings:'Settings',
     todaysDive:"Today's dive",quickDives:'Quick Dives',myPrograms:'My Programs',seeAll:'See all',
     focus:'Focus',stress:'Stress',energy:'Energy',recovery:'Recovery',deep:'Deep',
     beforeMeeting:'Before a big meeting',beforeSpeech:'Before a speech',beforeCall:'Before a tough call',
@@ -1914,6 +1920,19 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
       onTouchStart={() => { setControlOpacity(1); if (controlFadeRef.current) clearTimeout(controlFadeRef.current); if (segType === 'breathing' && !paused) controlFadeRef.current = setTimeout(() => setControlOpacity(0.15), 3000); }}
       onClick={() => { setControlOpacity(1); if (controlFadeRef.current) clearTimeout(controlFadeRef.current); if (segType === 'breathing' && !paused) controlFadeRef.current = setTimeout(() => setControlOpacity(0.15), 3000); }}>
       <Particles world={world} diveProgress={diveProgress} />
+      {/* Session ambient: caustics + micro-bubbles */}
+      {segType === 'breathing' && (
+        <>
+          <div className="ocean-caustics" style={{opacity:0.25}} />
+          {Array.from({length:12}).map((_,i) => {
+            const size = 2 + Math.random() * 3;
+            const left = 5 + (i / 12) * 90;
+            const dur = 8 + Math.random() * 12;
+            const delay = Math.random() * 10;
+            return <div key={'mb'+i} style={{position:'fixed',bottom:0,left:`${left}%`,width:size,height:size,borderRadius:'50%',background:`rgba(${accentRgb},0.18)`,pointerEvents:'none',zIndex:2,animation:`bubbleRise ${dur}s linear ${delay}s infinite`}} />;
+          })}
+        </>
+      )}
       <div className="relative z-10 flex flex-col h-full">
         {/* Top bar */}
         <div className="flex items-center justify-between px-6" style={{paddingTop:'env(safe-area-inset-top, 48px)', paddingBottom:8, opacity:controlOpacity, transition:'opacity 600ms ease'}}>
@@ -1951,8 +1970,8 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
 
         {/* Exit confirm */}
         {showExitConfirm && (
-          <div className="absolute inset-0 flex items-center justify-center z-60" style={{background:'rgba(0,0,0,0.6)', backdropFilter:'blur(12px)'}}>
-            <div className="text-center screen-transition">
+          <div className="absolute inset-0 flex items-center justify-center" style={{zIndex:60, background:'rgba(0,0,0,0.7)', backdropFilter:'blur(12px)'}}>
+            <div className="text-center screen-transition" style={{zIndex:61}}>
               <div className="font-body mb-2" style={{fontSize:20, fontWeight:400, color:'rgba(226,232,240,0.95)'}}>{t.exitSession}</div>
               <div className="font-body mb-6" style={{fontSize:14, fontWeight:300, color:'var(--text-2)'}}>{t.exitConfirm}</div>
               <div className="flex gap-3 justify-center">
@@ -1965,8 +1984,8 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
 
         {/* Pause overlay */}
         {paused && !showExitConfirm && (
-          <div className="absolute inset-0 flex items-center justify-center z-60" style={{background:'rgba(0,0,0,0.6)', backdropFilter:'blur(12px)'}}>
-            <div className="text-center screen-transition">
+          <div className="absolute inset-0 flex items-center justify-center" style={{zIndex:60, background:'rgba(0,0,0,0.7)', backdropFilter:'blur(12px)'}}>
+            <div className="text-center screen-transition" style={{zIndex:61}}>
               <div className="font-body mb-6" style={{fontSize:32, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.1em'}}>{t.pause}</div>
               <button onClick={() => setPaused(false)} className="px-8 py-3 rounded-full font-body" style={{fontWeight:500, background:`rgba(${accentRgb},0.12)`, border:`1px solid rgba(${accentRgb},0.25)`, color:palette.accent}}>
                 {t.resume}
@@ -2471,6 +2490,7 @@ function App() {
   const [tab, setTab] = useState('home');
   const [showPaywall, setShowPaywall] = useState(false);
   const [showCompletion, setShowCompletion] = useState(false);
+  const [showSurfacing, setShowSurfacing] = useState(false);
   const [completionData, setCompletionData] = useState(null);
   const [completionFeeling, setCompletionFeeling] = useState(null);
   const [currentMood, setCurrentMood] = useState({pre:null, post:null});
@@ -2583,6 +2603,7 @@ function App() {
 
   const [showPreMood, setShowPreMood] = useState(false);
   const [pendingSessionData, setPendingSessionData] = useState(null);
+  const preMoodTimerRef = useRef(null);
 
   const startSession = (segments, meta = {}) => {
     setCurrentMood({pre:null, post:null});
@@ -2590,6 +2611,18 @@ function App() {
     setPendingSessionData({ segments, meta });
     setShowPreMood(true);
   };
+
+  // Auto-dismiss pre-mood after 5 seconds
+  useEffect(() => {
+    if (showPreMood && pendingSessionData) {
+      preMoodTimerRef.current = setTimeout(() => {
+        setShowPreMood(false);
+        actuallyStartSession(pendingSessionData.segments, pendingSessionData.meta);
+        setPendingSessionData(null);
+      }, 5000);
+      return () => clearTimeout(preMoodTimerRef.current);
+    }
+  }, [showPreMood, pendingSessionData]);
 
 
   const endSession = (completed = true) => {
@@ -2616,8 +2649,15 @@ function App() {
         const cycleDur = Object.values(s.params).reduce((a, b) => a + b, 0);
         return total + (cycleDur > 0 ? Math.floor(s.duration / cycleDur) : 0);
       }, 0) || Math.round(totalDur / 16);
-      setCompletionData({ duration: totalDur, techniques: techs, depth: sessionDepth(totalDur, mainTech), breathCycles, segments: segs, _lastScenario: activeSession.meta?.scenario });
-      setShowCompletion(true);
+      const cData = { duration: totalDur, techniques: techs, depth: sessionDepth(totalDur, mainTech), breathCycles, segments: segs, _lastScenario: activeSession.meta?.scenario };
+      setActiveSession(null);
+      setShowSurfacing(true);
+      setTimeout(() => {
+        setShowSurfacing(false);
+        setCompletionData(cData);
+        setShowCompletion(true);
+      }, 2200);
+      return;
     }
     setActiveSession(null);
   };
@@ -2640,7 +2680,7 @@ function App() {
     return <FirstBreathScreen palette={palette} accentRgb={accentRgb} t={t} ambientRef={ambientRef}
       onComplete={(goal, holdTimeResult) => { setStats(s => {
         const hDepth = holdTimeResult ? holdTimeToDepth(holdTimeResult) : null;
-        const newState = {...s, firstFeeling: goal, userGoal: goal, onboarded:true, world:'ocean', initialHoldTime: holdTimeResult ? Math.round(holdTimeResult*10)/10 : null, initialDepth: hDepth};
+        const newState = {...s, firstFeeling: goal, userGoal: goal, onboarded:true, world:'ocean', initialHoldTime: holdTimeResult ? Math.round(holdTimeResult*10)/10 : null, initialDepth: hDepth, totalDepth: hDepth ? Math.round((s.totalDepth + hDepth) * 10) / 10 : s.totalDepth};
         if (holdTimeResult && holdTimeResult > 0) {
           newState.breathTests = [...(s.breathTests || []), { date: new Date().toISOString(), holdTime: Math.round(holdTimeResult*10)/10, depth: hDepth }];
         }
@@ -2659,6 +2699,7 @@ function App() {
           <div style={{display:'flex', gap:16, justifyContent:'center'}}>
             {[1,2,3,4,5].map(n => (
               <button key={n} onClick={() => {
+                if (preMoodTimerRef.current) clearTimeout(preMoodTimerRef.current);
                 setCurrentMood(m => ({...m, pre:n}));
                 setShowPreMood(false);
                 actuallyStartSession(pendingSessionData.segments, pendingSessionData.meta);
@@ -2677,6 +2718,7 @@ function App() {
             <span style={{fontSize:11, color:'var(--text-3)'}}>stressed</span>
           </div>
           <button onClick={() => {
+            if (preMoodTimerRef.current) clearTimeout(preMoodTimerRef.current);
             setShowPreMood(false);
             actuallyStartSession(pendingSessionData.segments, pendingSessionData.meta);
             setPendingSessionData(null);
@@ -2689,6 +2731,18 @@ function App() {
   // Active session
   if (activeSession) {
     return <SessionPlayer segments={activeSession.segments} world={world} onComplete={() => endSession(true)} onExit={() => endSession(false)} t={t} voiceEnabled={stats.voiceEnabled} ambientRef={ambientRef} currentLang={currentLang} />;
+  }
+
+  // Surfacing transition
+  if (showSurfacing) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center" style={{animation:'surfaceBgLighten 2.2s ease-out forwards', background:'linear-gradient(180deg,#070c15 0%,#0c1322 100%)'}}>
+        <Particles world={world} />
+        <div className="z-10 text-center">
+          <div className="font-body" style={{fontSize:28, fontWeight:200, color:'rgba(220,225,235,0.85)', letterSpacing:'0.15em', animation:'surfaceUp 2.2s ease-out forwards'}}>Surfacing</div>
+        </div>
+      </div>
+    );
   }
 
   // Completion
@@ -2876,11 +2930,11 @@ function App() {
         </div>
         <div className="flex gap-3 mb-4">
           <div className="flex-1 glass p-4 text-center cursor-pointer" style={{border:'1px solid rgba(255,255,255,0.06)'}}>
-            <div className="font-body" style={{fontWeight:600, fontSize:14, color:'rgba(226,232,240,0.7)'}}>{monthlyPrice}</div>
+            <div className="font-body" style={{fontWeight:600, fontSize:13, color:'rgba(226,232,240,0.7)', whiteSpace:'nowrap'}}>{monthlyPrice}</div>
           </div>
           <div className="flex-1 glass p-5 text-center cursor-pointer" style={{border:`2px solid rgba(${accentRgb},0.4)`, boxShadow:`0 0 20px rgba(${accentRgb},0.12)`, transform:'scale(1.03)'}}>
-            <div className="font-body" style={{fontWeight:600, fontSize:16, color:palette.accent}}>{yearlyPrice}</div>
-            <div className="font-body" style={{fontSize:12, fontWeight:500, color:palette.accent, opacity:0.8, marginTop:3}}>{yearlySave}</div>
+            <div className="font-body" style={{fontWeight:600, fontSize:15, color:palette.accent, whiteSpace:'nowrap'}}>{yearlyPrice}</div>
+            <div className="font-body" style={{fontSize:11, fontWeight:500, color:palette.accent, opacity:0.8, marginTop:3, whiteSpace:'nowrap'}}>{yearlySave}</div>
           </div>
         </div>
         {trialNote && <div className="font-body text-center mb-4" style={{fontSize:11, fontWeight:400, color:'var(--text-3)', lineHeight:1.5}}>{trialNote}</div>}
@@ -2953,6 +3007,7 @@ function App() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <div className="font-body" style={{fontSize:24, fontWeight:200, color:'rgba(226,232,240,0.95)', letterSpacing:'0.25em', textTransform:'uppercase'}}>{t.appName}</div>
+          <div className="font-body" style={{fontSize:11, fontWeight:300, letterSpacing:'0.15em', color:'rgba(220,225,235,0.25)', marginTop:4}}>PREPARE &middot; BREATHE &middot; DIVE</div>
         </div>
       </div>
 
