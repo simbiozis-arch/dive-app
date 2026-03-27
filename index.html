@@ -1981,10 +1981,12 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
 
 // ===== FIRST BREATH SCREEN =====
 function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
-  const [breathPhase, setBreathPhase] = useState('cinematic'); // 'cinematic' | 'done' | 'feeling' | 'holdTest' | 'goal'
+  const [breathPhase, setBreathPhase] = useState('text_sequence'); // 'text_sequence' | 'cinematic' | 'done' | 'feeling' | 'holdTest' | 'goal'
   const [elapsed, setElapsed] = useState(0);
   const [currentPhase, setCurrentPhase] = useState(null);
   const [breathScale, setBreathScale] = useState(1.0);
+  const [introTextIdx, setIntroTextIdx] = useState(-1);
+  const [introTextOpacity, setIntroTextOpacity] = useState(0);
   const [holdTestPhase, setHoldTestPhase] = useState('intro'); // 'intro' | 'holding' | 'result'
   const [holdTime, setHoldTime] = useState(0);
   const holdStartRef = useRef(null);
@@ -1995,8 +1997,43 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
   const diveAudioRef = useRef(null);
   const firedEventsRef = useRef(new Set());
 
-  // 70s event-driven timeline: 7 voice clips + 4 breathing cycles
-  const totalDuration = 70;
+  // Text sequence before breathing
+  const INTRO_TEXTS = [
+    { text: 'DIVE', style: 'title', showFor: 2000, gapAfter: 500 },
+    { text: 'Before a meeting that matters', style: 'phrase', showFor: 2200, gapAfter: 300 },
+    { text: 'After a day that broke you', style: 'phrase', showFor: 2200, gapAfter: 300 },
+    { text: "When sleep won't come", style: 'phrase', showFor: 2000, gapAfter: 300 },
+    { text: 'When you need to be sharp', style: 'phrase', showFor: 2000, gapAfter: 500 },
+    { text: 'Prepare.', style: 'tagline', showFor: 1500, gapAfter: 200 },
+    { text: 'Breathe.', style: 'tagline', showFor: 1500, gapAfter: 200 },
+    { text: 'Dive.', style: 'accent', showFor: 1500, gapAfter: 800 },
+  ];
+
+  // Text sequence timer
+  useEffect(() => {
+    if (breathPhase !== 'text_sequence') return;
+    let idx = 0; let running = true;
+    const showNext = () => {
+      if (!running || idx >= INTRO_TEXTS.length) {
+        if (running) setBreathPhase('cinematic');
+        return;
+      }
+      setIntroTextIdx(idx);
+      setIntroTextOpacity(1);
+      const item = INTRO_TEXTS[idx];
+      idx++;
+      setTimeout(() => {
+        if (!running) return;
+        setIntroTextOpacity(0);
+        setTimeout(() => { if (running) showNext(); }, 400 + (item.gapAfter || 300));
+      }, item.showFor);
+    };
+    const t0 = setTimeout(showNext, 500);
+    return () => { running = false; clearTimeout(t0); };
+  }, [breathPhase]);
+
+  // Breathing phase setup
+  const totalDuration = 50; // ~50s of breathing after text
   const phases = ['inhale1','inhale2','exhale'];
   const phaseDurations = {inhale1:2,inhale2:1,exhale:7}; // 10s per cycle
   const phaseLabels = {inhale1:t.inhale,inhale2:t.inhale2,exhale:t.exhale};
@@ -2004,20 +2041,17 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
   const fbW = WORLDS.ocean;
   const oceanBg = fbW.bgGradient;
 
-  // Timeline events
+  // Timeline events for breathing phase (time relative to breathing phase start)
   const INTRO_EVENTS = [
-    { time:2,  type:'voice', file:'audio/intro_01_welcome.mp3' },
-    { time:6,  type:'voice', file:'audio/intro_02_freediver.mp3' },
-    { time:12, type:'voice', file:'audio/intro_03_follow.mp3' },
-    { time:18, type:'breath_start' }, // cycle 1
-    { time:28, type:'voice', file:'audio/intro_04_good.mp3' },
-    { time:31, type:'breath_start' }, // cycle 2
-    { time:41, type:'voice', file:'audio/intro_05_onemore.mp3' },
-    { time:44, type:'breath_start' }, // cycle 3
-    { time:54, type:'voice', file:'audio/intro_06_calming.mp3' },
-    { time:57, type:'breath_start' }, // cycle 4
-    { time:67, type:'voice', file:'audio/intro_07_ready.mp3' },
-    { time:70, type:'end' },
+    { time:1,  type:'voice', file:'audio/intro_01_welcome.mp3' },
+    { time:4,  type:'voice', file:'audio/intro_02_freediver.mp3' },
+    { time:9,  type:'voice', file:'audio/intro_03_follow.mp3' },
+    { time:13, type:'breath_start' }, // cycle 1
+    { time:23, type:'voice', file:'audio/intro_04_good.mp3' },
+    { time:26, type:'breath_start' }, // cycle 2
+    { time:36, type:'voice', file:'audio/intro_05_onemore.mp3' },
+    { time:39, type:'breath_start' }, // cycle 3
+    { time:49, type:'end' },
   ];
 
   // Voice clip player with quick fade-in
@@ -2299,18 +2333,47 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
     );
   }
 
-  // Cinematic breathing phase
-  const showText = elapsed >= 2;
-  const showBubble = elapsed >= 6; // bubble forms at 6s (with intro_02_freediver)
-  const bubbleOpacity = elapsed >= 6 ? Math.min((elapsed - 6) * 0.25, 1) : 0;
-  const lightSize = elapsed >= 2 ? Math.min((elapsed - 2) * 80, 320) : 0; // light grows 2-6s
-  const lightOpacity = elapsed >= 2 ? Math.min((elapsed - 2) * 0.5, 1) : 0;
-  const textOpacity = elapsed >= 2 ? Math.min((elapsed - 2) * 0.3, 0.6) : 0;
+  // TEXT SEQUENCE PHASE — cinematic text cards on black
+  if (breathPhase === 'text_sequence') {
+    const item = introTextIdx >= 0 && introTextIdx < INTRO_TEXTS.length ? INTRO_TEXTS[introTextIdx] : null;
+    const textStyles = {
+      title: { fontSize:42, fontWeight:200, letterSpacing:'0.3em', textTransform:'uppercase', color:'rgba(94,170,168,0.9)' },
+      phrase: { fontSize:20, fontWeight:300, lineHeight:1.6, color:'rgba(220,225,235,0.75)' },
+      tagline: { fontSize:24, fontWeight:400, color:'rgba(220,225,235,0.85)' },
+      accent: { fontSize:24, fontWeight:400, color:'rgba(94,170,168,0.9)' },
+    };
+    return (
+      <div className="fixed inset-0 flex items-center justify-center" style={{background:'#000', zIndex:100}}
+        onClick={() => setBreathPhase('cinematic')}>
+        {item && (
+          <p key={introTextIdx} className="font-body" style={{
+            textAlign:'center', maxWidth:300, padding:'0 24px',
+            opacity: introTextOpacity,
+            filter: `blur(${introTextOpacity > 0.5 ? 0 : 6}px)`,
+            transition: 'opacity 500ms ease, filter 500ms ease',
+            ...textStyles[item.style],
+          }}>
+            {item.text}
+          </p>
+        )}
+        <div className="font-body" style={{position:'fixed', bottom:40, left:'50%', transform:'translateX(-50%)', fontSize:11, color:'rgba(220,225,235,0.15)'}}>
+          tap to skip
+        </div>
+      </div>
+    );
+  }
+
+  // CINEMATIC BREATHING PHASE
+  const showBubble = elapsed >= 4;
+  const bubbleOpacity = elapsed >= 4 ? Math.min((elapsed - 4) * 0.25, 1) : 0;
+  const lightSize = elapsed >= 1 ? Math.min((elapsed - 1) * 100, 320) : 0;
+  const lightOpacity = elapsed >= 1 ? Math.min((elapsed - 1) * 0.4, 1) : 0;
+  const smallTextOpacity = elapsed >= 4 ? Math.min((elapsed - 4) * 0.15, 0.45) : 0;
 
   return (
     <div className="fixed inset-0 flex flex-col items-center justify-center" style={{background:cinematicBg, transition:'background 1s linear'}}>
-      {/* Teal light point emerges 2-4s */}
-      {elapsed >= 2 && !showBubble && (
+      {/* Teal light point emerges 1-4s */}
+      {elapsed >= 1 && !showBubble && (
         <div style={{
           position:'absolute', top:'50%', left:'50%', transform:'translate(-50%, -50%)',
           width: lightSize, height: lightSize, borderRadius:'50%',
@@ -2318,21 +2381,20 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
           transition:'width 2s ease-out, height 2s ease-out',
         }} />
       )}
-      {/* Text: Take one breath with us */}
-      {showText && (
+      {/* Small text: Take one breath with us */}
+      {elapsed >= 4 && (
         <div className="font-body z-10" style={{
-          position:'absolute', top: showBubble ? '22%' : '50%', left:'50%',
+          position:'absolute', top:'22%', left:'50%',
           transform:'translate(-50%, -50%)',
-          fontSize:18, fontWeight:300, letterSpacing:'0.04em',
-          color:`rgba(220,225,235,${textOpacity})`,
-          transition:'top 1s ease, color 2s ease',
+          fontSize:14, fontWeight:300, letterSpacing:'0.06em',
+          color:`rgba(220,225,235,${smallTextOpacity})`,
         }}>{t.takeOneBreath}</div>
       )}
-      {/* Breathing bubble — animates during all 4 cycles */}
+      {/* Breathing bubble — animates during all cycles */}
       {showBubble && (
         <div style={{opacity:bubbleOpacity, transition:'opacity 1s ease', width:'100%', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center'}}>
-          <div style={{position:'relative', width:'min(70vw, 260px)', aspectRatio:'1', margin:'0 auto', display:'flex', alignItems:'center', justifyContent:'center',
-            transform:`scale(${breathScale})`, transition:'transform 200ms ease-out'}}>
+          <div style={{position:'relative', width:'min(70vw, 280px)', aspectRatio:'1', margin:'0 auto', display:'flex', alignItems:'center', justifyContent:'center',
+            transform:`scale(${breathScale})`, willChange:'transform'}}>
             <OceanBubble />
           </div>
           {currentPhase && (
@@ -2344,8 +2406,8 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
           )}
         </div>
       )}
-      {/* Particles fade in after 4s */}
-      {elapsed >= 4 && <Particles world={fbWorld} />}
+      {/* Particles fade in after 6s */}
+      {elapsed >= 6 && <Particles world={fbWorld} />}
     </div>
   );
 }
