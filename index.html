@@ -90,6 +90,11 @@ html,body,#root { width:100%; height:100%; overflow:hidden; font-family:'DM Sans
 }
 .breathe-now-btn:active { transform:scale(0.97); background:rgba(94,170,168,0.14); }
 
+/* Session layout — 3-zone clean system */
+.session-controls-bar { position:fixed; top:0; left:0; right:0; z-index:20; transition:opacity 600ms ease; }
+.session-progress-bar { position:fixed; bottom:calc(56px + env(safe-area-inset-bottom,0px)); left:0; right:0; height:2px; z-index:15; background:rgba(255,255,255,0.03); }
+.session-info-zone { position:fixed; bottom:calc(80px + env(safe-area-inset-bottom,24px)); left:0; right:0; z-index:10; text-align:center; padding:0 24px; pointer-events:none; }
+
 /* FIX7: Contrast — mood circle borders, lock icons */
 .mood-circle { border:1.5px solid rgba(255,255,255,0.14) !important; }
 .duration-badge { color:rgba(220,225,235,0.58) !important; }
@@ -272,6 +277,26 @@ const PHASE_LANG_KEY = {
   inhale:'inhale',exhale:'exhale',holdIn:'hold',holdOut:'holdPause',
   belly:'belly',ribs:'ribs',chest:'chest',pause:'holdPause',
   inhale1:'inhale',inhale2:'inhale2',
+};
+// Direct display labels — no lang key lookup needed
+const PHASE_DISPLAY_LABEL = {
+  inhale:'INHALE', inhale1:'INHALE', inhale2:'+ INHALE',
+  exhale:'EXHALE', holdIn:'HOLD', holdOut:'PAUSE', hold:'HOLD', pause:'PAUSE',
+  belly:'INHALE 1/3', ribs:'INHALE 2/3', chest:'INHALE 3/3',
+};
+// Body instruction per phase
+const PHASE_INSTRUCTIONS = {
+  inhale:'Through your nose, belly expands',
+  inhale1:'Deep breath through your nose',
+  inhale2:'One more sip of air',
+  exhale:'Slow exhale through your mouth',
+  holdIn:"Hold gently, don't clench",
+  holdOut:'Empty pause, just wait',
+  hold:"Hold gently, don't clench",
+  pause:'Rest before the next breath',
+  belly:'Fill your belly first',
+  ribs:'Expand your ribcage',
+  chest:'Fill all the way up',
 };
 const PHASE_SUB_LANG_KEY = {
   diaphragmatic: {inhale:'subInhaleNose',exhale:'subExhaleMouth'},
@@ -911,6 +936,14 @@ const BADGE_NAMES = {
 const STORAGE_KEY = 'dive_app_data';
 function loadData() { try { const r = window.localStorage?.getItem(STORAGE_KEY); return r ? JSON.parse(r) : null; } catch { return null; } }
 function saveData(data) { try { window.localStorage?.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {} }
+// Depth-based background — darkens as user accumulates total depth
+function getDepthBackground(totalDepth) {
+  const p = Math.min(1, (totalDepth || 0) / 200);
+  const sR = Math.round(14 - p*6), sG = Math.round(61 - p*25), sB = Math.round(92 - p*35);
+  const dR = Math.max(0, Math.round(2 - p*2)), dG = Math.max(0, Math.round(10 - p*8)), dB = Math.max(0, Math.round(16 - p*12));
+  return `linear-gradient(180deg, rgb(${sR},${sG},${sB}) 0%, rgb(${dR},${dG},${dB}) 100%)`;
+}
+
 const defaultStats = () => ({
   totalSessions:0, streak:0, longestStreak:0, lastSessionDate:null, totalDepth:0, totalMinutes:0,
   techniquesUsed:[], categoriesUsed:[], nightSessions:0, morningSessions:0, programsCompleted:0,
@@ -1517,7 +1550,6 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
   const wrapperRef = useRef(null);
   const glowTargetRef = useRef(null);
   const phaseLabelRef = useRef(null);
-  const phaseTimerRef = useRef(null);
   const phaseSubRef = useRef(null);
   const progressFillRef = useRef(null);
   const timeDisplayRef = useRef(null);
@@ -1646,24 +1678,17 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
         const gi = s.glowIntensity;
         glowTargetRef.current.style.boxShadow = `0 0 ${60+gi*200}px rgba(94,170,168,${gi}), 0 0 ${120+gi*300}px rgba(94,170,168,${gi*0.5}), inset 0 0 60px rgba(94,170,168,0.06)`;
       }
-      // Phase label
+      // Phase label (Zone 3)
       if (phaseLabelRef.current && s.phase) {
-        const label = t[PHASE_LANG_KEY[s.phase]] || s.phase;
-        phaseLabelRef.current.textContent = label;
+        phaseLabelRef.current.textContent = PHASE_DISPLAY_LABEL[s.phase] || s.phase.toUpperCase();
       }
-      // Phase timer countdown
-      if (phaseTimerRef.current && s.phaseDuration > 0) {
-        phaseTimerRef.current.textContent = Math.ceil(Math.max(0, s.phaseDuration - s.phaseElapsed));
-      }
-      // Bubble inner countdown timer (FIX2)
+      // Bubble inner countdown (large, inside bubble)
       if (bubbleTimerRef.current) {
         bubbleTimerRef.current.textContent = s.phaseDuration > 0 ? Math.ceil(Math.max(0, s.phaseDuration - s.phaseElapsed)) : '';
       }
-      // Sub-instruction text
+      // Phase instruction (Zone 3)
       if (phaseSubRef.current) {
-        const subSeg = segments[s.segmentIndex];
-        const sub = subSeg?.technique ? (t[PHASE_SUB_LANG_KEY[subSeg.technique]?.[s.phase]] || '') : '';
-        phaseSubRef.current.textContent = sub;
+        phaseSubRef.current.textContent = PHASE_INSTRUCTIONS[s.phase] || '';
       }
       // Time display
       if (timeDisplayRef.current) {
@@ -1771,53 +1796,36 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
             {/* Breathing object wrapper — NO transition, scaled directly by ref */}
             <div ref={wrapperRef} style={{
               position: 'fixed', top: '42%', left: '50%',
-              width: 'min(80vw, 320px)', aspectRatio: '1',
+              width: 'min(76vw, 300px)', aspectRatio: '1',
               margin: 0,
               willChange: 'transform',
               transform: 'translate(-50%, -50%) scale(1)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               zIndex: 5,
             }}>
-              {/* Slow-rotating dashed ring */}
-              <div style={{
-                position:'absolute', inset:'-12px', borderRadius:'50%',
-                border:`1px dashed rgba(${accentRgb},0.06)`,
-                animation:'slowRotate 60s linear infinite',
-                pointerEvents:'none',
-              }} />
               <OceanBubble ref={glowTargetRef} />
-              {/* FIX2: countdown inside bubble */}
+              {/* Countdown inside bubble — large but ghosted */}
               <div ref={bubbleTimerRef} style={{
                 position:'absolute', top:'50%', left:'50%',
                 transform:'translate(-50%,-50%)',
                 fontFamily:"'JetBrains Mono',monospace",
-                fontSize:36, fontWeight:300, fontVariantNumeric:'tabular-nums',
-                color:'rgba(220,225,235,0.25)',
+                fontSize:48, fontWeight:200, fontVariantNumeric:'tabular-nums',
+                color:'rgba(220,225,235,0.20)',
                 pointerEvents:'none', userSelect:'none', zIndex:6,
               }} />
             </div>
-            {/* Phase info — SEPARATE from bubble, fixed to bottom area */}
-            <div style={{position:'fixed', bottom:'18%', left:'50%', transform:'translateX(-50%)', textAlign:'center', zIndex:10, width:'80%', maxWidth:340}}>
+            {/* Zone 3: phase info — fixed bottom, clean */}
+            <div style={{position:'fixed', bottom:'calc(80px + env(safe-area-inset-bottom, 24px))', left:0, right:0, textAlign:'center', zIndex:10, padding:'0 24px', pointerEvents:'none'}}>
               <div ref={phaseLabelRef} className="font-body" style={{
-                fontWeight:500, fontSize:14, letterSpacing:'0.1em', textTransform:'uppercase',
-                color:'rgba(220,225,235,0.7)', marginBottom:4, minHeight:18,
+                fontWeight:500, fontSize:14, letterSpacing:'0.15em', textTransform:'uppercase',
+                color:'rgba(220,225,235,0.55)', marginBottom:12, minHeight:18,
               }}>
               </div>
-              <div ref={phaseTimerRef} className="font-mono" style={{
-                fontWeight:300, fontSize:32, color:'rgba(220,225,235,0.5)',
-                fontVariantNumeric:'tabular-nums', minHeight:38,
+              <div ref={phaseSubRef} className="font-body" style={{
+                fontSize:15, fontWeight:300, color:'rgba(220,225,235,0.40)',
+                lineHeight:1.5, maxWidth:260, margin:'0 auto', minHeight:44,
               }}>
               </div>
-              <div className="font-body" style={{fontSize:13, fontWeight:400, color:'var(--text-2)', marginTop:8}}>
-                {techLabel}
-              </div>
-              <div ref={phaseSubRef} className="font-body" style={{fontSize:13,fontWeight:300,color:'var(--text-2)',maxWidth:280,lineHeight:1.6,marginTop:12,marginLeft:'auto',marginRight:'auto',minHeight:20}}>
-              </div>
-              {seg.hint && (
-                <div className="font-body text-deblur" style={{fontSize:13, fontWeight:300, lineHeight:1.6, color:'var(--text-2)', maxWidth:280, marginTop:8, marginLeft:'auto', marginRight:'auto'}}>
-                  {seg.hint}
-                </div>
-              )}
             </div>
           </div>
         );
@@ -1901,36 +1909,30 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
         </>
       )}
       <div className="relative z-10 flex flex-col h-full">
-        {/* Top bar */}
-        <div className="flex items-center justify-between px-6" style={{paddingTop:'env(safe-area-inset-top, 48px)', paddingBottom:8, opacity:controlOpacity, transition:'opacity 600ms ease'}}>
-          <button onClick={() => setShowExitConfirm(true)} className="flex items-center justify-center rounded-full" style={{width:44,height:44,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.06)'}}>
-            <Icon name="close" size={18}/>
+        {/* Zone 1: Top controls — fixed, fades during breathing */}
+        <div style={{position:'fixed', top:0, left:0, right:0, zIndex:20, padding:'12px 16px', paddingTop:'calc(12px + env(safe-area-inset-top, 44px))', display:'flex', justifyContent:'space-between', alignItems:'center', opacity:controlOpacity, transition:'opacity 600ms ease'}}>
+          <button onClick={() => setShowExitConfirm(true)} className="flex items-center justify-center rounded-full" style={{width:40,height:40,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.06)'}}>
+            <Icon name="close" size={16}/>
           </button>
-          <div ref={timeDisplayRef} className="font-mono" style={{fontSize:13, fontWeight:300, color:'rgba(226,232,240,0.5)'}}>
+          <div ref={timeDisplayRef} className="font-mono" style={{fontSize:13, fontWeight:300, color:'rgba(226,232,240,0.35)', letterSpacing:'0.02em'}}>
             0:00 / {Math.floor(totalDuration / 60)}:{String(Math.floor(totalDuration % 60)).padStart(2,'0')}
           </div>
           <div className="flex items-center gap-2">
-              <button onClick={() => setVoiceOn(v => !v)} className="flex items-center justify-center rounded-full" style={{width:44,height:44,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.06)', color: voiceOn ? palette.accent : 'var(--text-3)'}}>
-                <Icon name={voiceOn ? 'mic' : 'mic_off'} size={16}/>
-              </button>
-            <button onClick={() => { setHapticOn(h => !h); }} className="flex items-center justify-center rounded-full" style={{width:44,height:44,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.06)', color: hapticOn ? palette.accent : 'var(--text-3)'}}>
-              <Icon name={hapticOn ? 'haptic' : 'haptic_off'} size={16}/>
+            <button onClick={() => setVoiceOn(v => !v)} className="flex items-center justify-center rounded-full" style={{width:36,height:36,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.06)', color: voiceOn ? palette.accent : 'var(--text-3)'}}>
+              <Icon name={voiceOn ? 'mic' : 'mic_off'} size={14}/>
             </button>
-            <button onClick={() => setPaused(!paused)} className="flex items-center justify-center rounded-full" style={{width:44,height:44,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.06)'}}>
-              <Icon name={paused ? 'play' : 'pause'} size={16}/>
+            <button onClick={() => setPaused(!paused)} className="flex items-center justify-center rounded-full" style={{width:36,height:36,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.06)'}}>
+              <Icon name={paused ? 'play' : 'pause'} size={14}/>
             </button>
-            <button onClick={() => { if (engineRef.current) engineRef.current.skip(); }} className="flex items-center justify-center rounded-full" style={{width:44,height:44,background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.06)'}}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <polygon points="5,4 15,12 5,20" fill="rgba(226,232,240,0.8)"/>
-                <line x1="19" y1="5" x2="19" y2="19" stroke="rgba(226,232,240,0.8)" strokeWidth="2"/>
-              </svg>
+            <button onClick={() => { if (engineRef.current) engineRef.current.skip(); }} className="flex items-center justify-center rounded-full" style={{width:36,height:36,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.06)'}}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><polygon points="5,4 15,12 5,20" fill="rgba(226,232,240,0.6)"/><line x1="19" y1="5" x2="19" y2="19" stroke="rgba(226,232,240,0.6)" strokeWidth="2"/></svg>
             </button>
           </div>
         </div>
 
-        {/* Progress bar */}
-        <div className="relative" style={{height:2, borderRadius:1, background:'rgba(255,255,255,0.04)', margin:'0 24px 8px'}}>
-          <div ref={progressFillRef} className="absolute top-0 h-full" style={{width:'0%', borderRadius:1, background:`rgba(${accentRgb},0.6)`}} />
+        {/* Progress bar — fixed just above tab bar */}
+        <div style={{position:'fixed', bottom:'calc(56px + env(safe-area-inset-bottom, 0px))', left:0, right:0, height:2, background:'rgba(255,255,255,0.03)', zIndex:15}}>
+          <div ref={progressFillRef} style={{height:'100%', width:'0%', borderRadius:1, background:`rgba(${accentRgb},0.40)`, transition:'width 1s linear'}} />
         </div>
 
         {renderSegment()}
@@ -2669,7 +2671,7 @@ function App() {
     return true;
   };
 
-  const bg = w.bgGradient;
+  const bg = getDepthBackground(stats.totalDepth);
 
 
 
