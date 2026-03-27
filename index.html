@@ -35,20 +35,29 @@ html,body,#root { width:100%; height:100%; overflow:hidden; font-family:'DM Sans
 @keyframes twinkle { 0%,100%{opacity:var(--base-opacity)} 50%{opacity:0.05} }
 @keyframes bokeh-drift { 0%{transform:translate(0,0)} 25%{transform:translate(10px,-15px)} 50%{transform:translate(-8px,12px)} 75%{transform:translate(15px,5px)} 100%{transform:translate(0,0)} }
 @keyframes caustic-drift { 0%{transform:translateX(0)} 100%{transform:translateX(30px)} }
-@keyframes causticsDrift { 0%{transform:translateX(-3%) skewX(-1deg)} 100%{transform:translateX(3%) skewX(1deg)} }
+@keyframes causticsWave {
+  0%   { background-position: 20% 30%, 75% 60%, 45% 20%, 60% 80%; }
+  33%  { background-position: 35% 15%, 60% 75%, 55% 35%, 40% 65%; }
+  66%  { background-position: 15% 50%, 85% 40%, 35% 55%, 70% 45%; }
+  100% { background-position: 25% 25%, 70% 65%, 50% 25%, 55% 75%; }
+}
 .ocean-caustics {
-  position:fixed; top:0; left:0; right:0; height:35vh; pointer-events:none; z-index:1; opacity:0.4;
+  position:fixed; top:0; left:0; right:0; height:45vh; pointer-events:none; z-index:1; opacity:0.5;
   mix-blend-mode:soft-light;
   background:
-    repeating-linear-gradient(-45deg, transparent 0px, transparent 8px, rgba(94,170,168,0.015) 8px, rgba(94,170,168,0.015) 9px),
-    repeating-linear-gradient(30deg, transparent 0px, transparent 12px, rgba(94,170,168,0.012) 12px, rgba(94,170,168,0.012) 13px);
-  animation: causticsDrift 12s ease-in-out infinite alternate;
+    radial-gradient(ellipse 55% 35% at 20% 30%, rgba(94,170,168,0.09) 0%, transparent 70%),
+    radial-gradient(ellipse 35% 55% at 75% 60%, rgba(94,170,168,0.07) 0%, transparent 70%),
+    radial-gradient(ellipse 70% 25% at 45% 20%, rgba(94,170,168,0.06) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 60% at 60% 80%, rgba(94,170,168,0.05) 0%, transparent 70%);
+  background-size: 200% 200%, 200% 200%, 200% 200%, 200% 200%;
+  animation: causticsWave 10s ease-in-out infinite alternate;
 }
 @keyframes tentacle-sway { 0% { transform: rotate(-3deg) scaleY(1); } 100% { transform: rotate(3deg) scaleY(1.05); } }
 @keyframes light-emerge { 0% { width:4px; height:4px; opacity:0; } 100% { width:min(80vw,320px); height:min(80vw,320px); opacity:1; } }
 @keyframes text-emerge { from { color:rgba(220,225,235,0); } to { color:rgba(220,225,235,0.6); } }
 @keyframes bg-emerge { from { background:#000; } to { background:linear-gradient(180deg, #0e3d5c 0%, #082a42 33%, #041520 66%, #020a10 100%); } }
 @keyframes hold-counter-pulse { 0%,100% { transform:scale(1); } 50% { transform:scale(1.03); } }
+@keyframes tap-pulse { 0%,100% { opacity:0.3; } 50% { opacity:0.7; } }
 @keyframes bubbleRise { 0%{transform:translateY(0) scale(1);opacity:0} 10%{opacity:0.6} 90%{opacity:0.4} 100%{transform:translateY(-100vh) scale(0.6);opacity:0} }
 @keyframes slowRotate { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
 @keyframes surfaceUp { 0%{transform:translateY(0);opacity:0.9} 60%{opacity:1} 100%{transform:translateY(-40px);opacity:0} }
@@ -1472,7 +1481,7 @@ class SessionEngine {
       this._nextPhase(segment);
     }
     const t = this.phaseDuration > 0 ? Math.min(this.phaseElapsed / this.phaseDuration, 1) : 0;
-    const eased = t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2;
+    const eased = 0.5 - 0.5 * Math.cos(t * Math.PI); // cosine easing — zero velocity at both ends, no jitter
     const p = this.currentPhase;
     if (p==='inhale') {
       this.breathScale = 1.0 + 0.5*eased;
@@ -1544,6 +1553,15 @@ class SessionEngine {
     }
     if (this.onSegmentChange) this.onSegmentChange(this.currentSegmentIndex, seg);
   }
+  // FIX6: extend current segment if audio is longer than planned
+  extendCurrentSegment(minDuration) {
+    const seg = this.segments[this.currentSegmentIndex];
+    if (seg && seg.duration < minDuration) {
+      const diff = minDuration - seg.duration;
+      seg.duration = minDuration;
+      this.totalDuration += diff;
+    }
+  }
   pause() { this.isPaused = true; }
   resume() { this.isPaused = false; this._lastTime = performance.now(); }
   skip() {
@@ -1570,6 +1588,7 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
   const phaseSubRef = useRef(null);
   const progressFillRef = useRef(null);
   const timeDisplayRef = useRef(null);
+  const bubbleTimerRef = useRef(null); // FIX2: countdown inside bubble
   // React state only for structural/low-frequency changes
   const [segIndex, setSegIndex] = useState(0);
   const [segType, setSegType] = useState(segments[0]?.type || 'text');
@@ -1650,6 +1669,13 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
         ambientRef.current?.duck();
         const a = voicePlayer.play(audioKey, 0);
         if (a) {
+          // FIX6: extend segment if audio is longer than planned
+          a.addEventListener('loadedmetadata', () => {
+            if (a.duration && isFinite(a.duration) && engineRef.current) {
+              const needed = a.duration + 2;
+              if (needed > newSeg.duration) engineRef.current.extendCurrentSegment(needed);
+            }
+          }, { once: true });
           // Fade in over 500ms
           let vol = 0;
           const fadeInInterval = setInterval(() => {
@@ -1699,6 +1725,10 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
       // Phase timer countdown
       if (phaseTimerRef.current && s.phaseDuration > 0) {
         phaseTimerRef.current.textContent = Math.ceil(Math.max(0, s.phaseDuration - s.phaseElapsed));
+      }
+      // Bubble inner countdown timer (FIX2)
+      if (bubbleTimerRef.current) {
+        bubbleTimerRef.current.textContent = s.phaseDuration > 0 ? Math.ceil(Math.max(0, s.phaseDuration - s.phaseElapsed)) : '';
       }
       // Sub-instruction text
       if (phaseSubRef.current) {
@@ -1828,6 +1858,15 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
               }} />
               {world === 'ocean' && <OceanBubble ref={glowTargetRef} />}
               {world === 'space' && <PulsarObject ref={glowTargetRef} />}
+              {/* FIX2: countdown inside bubble */}
+              <div ref={bubbleTimerRef} style={{
+                position:'absolute', top:'50%', left:'50%',
+                transform:'translate(-50%,-50%)',
+                fontFamily:"'JetBrains Mono',monospace",
+                fontSize:36, fontWeight:300, fontVariantNumeric:'tabular-nums',
+                color:'rgba(220,225,235,0.25)',
+                pointerEvents:'none', userSelect:'none', zIndex:6,
+              }} />
             </div>
             {/* Phase info — SEPARATE from bubble, fixed to bottom area */}
             <div style={{position:'fixed', bottom:'18%', left:'50%', transform:'translateX(-50%)', textAlign:'center', zIndex:10, width:'80%', maxWidth:340}}>
@@ -2012,6 +2051,7 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
   const holdIntervalRef = useRef(null);
   const ambientFadeStarted = useRef(false);
   const introAudioRef = useRef(null);
+  const cinematicTimerRef = useRef(null); // FIX8: countdown inside cinematic bubble
   const voiceClipsRef = useRef([]);
   const diveAudioRef = useRef(null);
   const firedEventsRef = useRef(new Set());
@@ -2158,10 +2198,16 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
           const p = phases[phaseIdx];
           const d = phaseDurations[p];
           const prog = d > 0 ? Math.min(phaseElapsed / d, 1) : 0;
-          const eased = prog < 0.5 ? 4*prog*prog*prog : 1 - Math.pow(-2*prog+2,3)/2;
+          const eased = 0.5 - 0.5 * Math.cos(prog * Math.PI); // cosine easing
           if (p === 'inhale1') setBreathScale(1.0 + 0.5 * eased);
           else if (p === 'inhale2') setBreathScale(1.5 + 0.2 * eased);
           else if (p === 'exhale') setBreathScale(1.7 - 0.7 * eased);
+          // FIX8: update cinematic bubble timer via ref
+          if (cinematicTimerRef.current) {
+            cinematicTimerRef.current.textContent = Math.ceil(Math.max(0, d - phaseElapsed));
+          }
+        } else {
+          if (cinematicTimerRef.current) cinematicTimerRef.current.textContent = '';
         }
       }
 
@@ -2286,12 +2332,16 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
         <div className="fixed inset-0 flex flex-col items-center justify-center px-8" style={{background:oceanBg}}>
           <Particles world={fbWorld} />
           <div className="screen-transition text-center z-10">
-            <div className="font-body mb-4" style={{fontSize:24, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.04em'}}>{t.holdTestTitle || "Let's find your starting depth"}</div>
-            <div className="font-body mb-10" style={{fontSize:14, fontWeight:300, color:'rgba(220,225,235,0.55)', maxWidth:280, margin:'0 auto', lineHeight:1.7}}>{t.holdTestDesc || 'Exhale fully. Then hold. Tap when you need to breathe.'}</div>
+            <div className="font-body mb-8" style={{fontSize:22, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.04em'}}>{t.holdTestTitle || "Let's find your depth"}</div>
+            <div className="flex flex-col gap-3 mb-10" style={{maxWidth:260, margin:'0 auto 40px'}}>
+              {['1. Take a deep breath in', '2. Exhale fully and completely', '3. Hold — tap anywhere to stop'].map((step, i) => (
+                <div key={i} className="font-body" style={{fontSize:14, fontWeight:300, color: i === 2 ? `rgba(${accentRgb},0.8)` : 'rgba(220,225,235,0.6)', letterSpacing:'0.02em', textAlign:'left', paddingLeft:8}}>{step}</div>
+              ))}
+            </div>
             <button className="px-10 py-3 rounded-full font-body"
-              style={{fontWeight:500, background:`rgba(${accentRgb},0.12)`, border:`1px solid rgba(${accentRgb},0.25)`, color:palette.accent}}
+              style={{fontWeight:500, background:`rgba(${accentRgb},0.12)`, border:`1px solid rgba(${accentRgb},0.3)`, color:palette.accent, letterSpacing:'0.05em'}}
               onClick={startHoldTest}>
-              {t.holdTestStart || 'Start'}
+              Hold &amp; Start
             </button>
           </div>
         </div>
@@ -2299,15 +2349,22 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
     }
     if (holdTestPhase === 'holding') {
       const holdProgress = Math.min(holdTime / 120, 1);
-      const darken = Math.min(holdTime / 60, 0.5);
+      // FIX4: background DARKENS over time — rgb values go from ocean-blue → near-black
+      const d = Math.min(holdTime / 60, 1);
+      const topR = Math.round(14*(1-d)), topG = Math.round(61*(1-d)), topB = Math.round(92*(1-d));
+      const btmR = Math.round(2*(1-d)),  btmG = Math.round(10*(1-d)), btmB = Math.round(16*(1-d));
+      const holdBg = `linear-gradient(180deg, rgb(${topR},${topG},${topB}) 0%, rgb(${btmR},${btmG},${btmB}) 100%)`;
       return (
-        <div className="fixed inset-0 flex flex-col items-center justify-center px-8" style={{background:`linear-gradient(180deg, rgba(14,61,92,${1-darken}) 0%, rgba(2,10,16,${0.8+darken}) 100%)`}} onClick={stopHoldTest}>
+        <div className="fixed inset-0 flex flex-col items-center justify-center px-8" style={{background:holdBg, position:'relative'}} onClick={stopHoldTest}>
+          {/* FIX4: Left-edge depth meter */}
+          <div style={{position:'absolute', left:0, top:0, bottom:0, width:4, background:'rgba(94,170,168,0.08)', zIndex:5}}>
+            <div style={{position:'absolute', bottom:0, left:0, right:0, height:`${holdProgress*100}%`, background:`rgba(${accentRgb},0.45)`, transition:'height 100ms linear', borderRadius:'0 2px 0 0'}} />
+          </div>
           <div className="screen-transition text-center z-10" style={{width:'100%'}}>
             <div className="font-mono" style={{fontSize:56, fontWeight:300, color:'rgba(220,225,235,0.9)', fontVariantNumeric:'tabular-nums', animation:'hold-counter-pulse 2s ease-in-out infinite'}}>{holdTime.toFixed(1)}</div>
             <div className="font-body mt-2 mb-8" style={{fontSize:13, fontWeight:400, color:'rgba(220,225,235,0.4)', letterSpacing:'0.05em'}}>{t.hold || 'Hold'}</div>
-            <div style={{width:'80%', maxWidth:300, height:4, borderRadius:2, background:'rgba(255,255,255,0.06)', margin:'0 auto'}}>
-              <div style={{width:`${holdProgress*100}%`, height:'100%', borderRadius:2, background:`rgba(${accentRgb},0.6)`, transition:'width 100ms linear'}} />
-            </div>
+            {/* FIX1: pulsing tap-anywhere hint */}
+            <div className="font-body" style={{fontSize:12, fontWeight:300, color:'rgba(220,225,235,0.5)', letterSpacing:'0.08em', animation:'tap-pulse 2.5s ease-in-out infinite', marginBottom:24}}>tap anywhere to surface</div>
           </div>
         </div>
       );
@@ -2319,7 +2376,8 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
           <div className="screen-transition text-center z-10">
             <div className="font-body mb-6" style={{fontSize:16, fontWeight:300, color:'rgba(220,225,235,0.55)', letterSpacing:'0.04em'}}>{t.holdTestYourDepth || 'Your starting depth'}</div>
             <div className="font-mono mb-2" style={{fontSize:48, fontWeight:300, color:palette.accent}}>{holdDepth}<span style={{fontSize:24}}>m</span></div>
-            <div className="font-body mb-10" style={{fontSize:15, fontWeight:300, color:'rgba(220,225,235,0.5)'}}>{depthContext(holdDepth)}</div>
+            <div className="font-body mb-3" style={{fontSize:15, fontWeight:300, color:'rgba(220,225,235,0.5)'}}>{depthContext(holdDepth)}</div>
+            <div className="font-body mb-10" style={{fontSize:13, fontWeight:300, color:`rgba(${accentRgb},0.6)`, letterSpacing:'0.04em'}}>descended {holdDepth}m · surfaced safely</div>
             <button className="px-10 py-3 rounded-full font-body"
               style={{fontWeight:500, background:`rgba(${accentRgb},0.12)`, border:`1px solid rgba(${accentRgb},0.25)`, color:palette.accent}}
               onClick={() => setBreathPhase('goal')}>
@@ -2416,6 +2474,15 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
           <div style={{position:'relative', width:'min(70vw, 280px)', aspectRatio:'1', margin:'0 auto', display:'flex', alignItems:'center', justifyContent:'center',
             transform:`scale(${breathScale})`, willChange:'transform'}}>
             <OceanBubble />
+            {/* FIX8: countdown inside cinematic bubble */}
+            <div ref={cinematicTimerRef} style={{
+              position:'absolute', top:'50%', left:'50%',
+              transform:'translate(-50%,-50%)',
+              fontFamily:"'JetBrains Mono',monospace",
+              fontSize:36, fontWeight:300, fontVariantNumeric:'tabular-nums',
+              color:'rgba(220,225,235,0.25)',
+              pointerEvents:'none', userSelect:'none',
+            }} />
           </div>
           {currentPhase && (
             <div style={{marginTop:40, textAlign:'center'}}>
