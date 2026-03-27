@@ -23,7 +23,7 @@ html,body,#root { width:100%; height:100%; overflow:hidden; font-family:'DM Sans
   --accent:#5eaaa8; --accent-rgb:94,170,168; --accent-glow:rgba(94,170,168,0.12); --accent-text:#7ec8c8;
   --glow:rgba(94,170,168,0.12);
   --card:rgba(255,255,255,0.025); --text:rgba(220,225,235,0.92);
-  --text-2:rgba(220,225,235,0.55); --text-3:rgba(220,225,235,0.30);
+  --text-2:rgba(220,225,235,0.60); --text-3:rgba(220,225,235,0.35);
 }
 
 @keyframes fade-in { from{opacity:0} to{opacity:1} }
@@ -78,6 +78,21 @@ html,body,#root { width:100%; height:100%; overflow:hidden; font-family:'DM Sans
   transition: transform 120ms ease, background 120ms ease;
 }
 .glass:active { transform: scale(0.985); background: rgba(255,255,255,0.04); box-shadow: inset 0 0 30px rgba(94,170,168,0.04); }
+
+/* FIX1: Breathe Now instant CTA */
+.breathe-now-btn {
+  display:block; width:calc(100% - 0px); margin:0 0 16px;
+  padding:15px 0; border-radius:14px;
+  background:rgba(94,170,168,0.09); border:1px solid rgba(94,170,168,0.18);
+  font-family:'DM Sans',sans-serif; font-weight:500; font-size:16px;
+  letter-spacing:0.03em; color:rgba(94,170,168,0.9);
+  transition:transform 200ms cubic-bezier(0.34,1.56,0.64,1), background 150ms ease;
+}
+.breathe-now-btn:active { transform:scale(0.97); background:rgba(94,170,168,0.14); }
+
+/* FIX7: Contrast — mood circle borders, lock icons */
+.mood-circle { border:1.5px solid rgba(255,255,255,0.14) !important; }
+.duration-badge { color:rgba(220,225,235,0.58) !important; }
 
 .no-scrollbar::-webkit-scrollbar { display:none; }
 .no-scrollbar { -ms-overflow-style:none; scrollbar-width:none; }
@@ -758,19 +773,19 @@ const SESSION_INSIGHTS = [
   // Breathing science (20)
   {id:'sci1',text:'Your heart rate variability just improved. That means your nervous system is more flexible now than {cycles} cycles ago.',condition:()=>true},
   {id:'sci2',text:'You just hit cardiac coherence — the state where your heart, lungs, and brain synchronize. It takes about 3 minutes to reach.',condition:(s)=>s.duration>=180},
-  {id:'sci3',text:'Stanford researchers found that the cyclic physiological sigh is the fastest known breathing technique to reduce anxiety. You just did it.',condition:(s)=>(s.techniques||[]).includes('physiological_sigh')},
+  {id:'sci3',text:'Cyclic sighing improved mood and reduced anxiety faster than box breathing or meditation in a Stanford RCT. You just did it. (Balban et al., Cell Reports Medicine, 2023)',condition:(s)=>(s.techniques||[]).includes('physiological_sigh')},
   {id:'sci4',text:'Navy SEALs use box breathing before high-stakes missions. You just trained with the same protocol.',condition:(s)=>(s.techniques||[]).includes('box')},
   {id:'sci5',text:'Every long exhale stimulates your vagus nerve — the main highway between your brain and your calm-down system.',condition:()=>true},
   {id:'sci6',text:'Cortisol, the stress hormone, starts dropping within 90 seconds of slow breathing. You gave it {minutes} minutes.',condition:(s)=>s.duration>=90},
-  {id:'sci7',text:'At 6 breaths per minute, your body enters resonance — blood pressure waves and heart rate waves sync perfectly.',condition:()=>true},
+  {id:'sci7',text:'At 6 breaths per minute, your body enters resonance — blood pressure waves and heart rate waves sync perfectly. (Lehrer & Gevirtz, Applied Psychophysiology, 2014)',condition:()=>true},
   {id:'sci8',text:'Your diaphragm is the only skeletal muscle that works 24/7. You just gave it a focused workout.',condition:(s)=>(s.techniques||[]).includes('diaphragmatic')},
   {id:'sci9',text:'You just activated your parasympathetic nervous system. It is impossible to be in fight-or-flight and breathe slowly at the same time.',condition:()=>true},
   {id:'sci10',text:'With each session, your CO2 tolerance increases. That means less panic, more calm under pressure.',condition:()=>true},
   {id:'sci11',text:'Controlled breathing increases oxygen delivery to your prefrontal cortex — the part responsible for decisions and focus.',condition:()=>true},
   {id:'sci12',text:'You take about 22,000 breaths a day. Most are unconscious. You just made {cycles} of them intentional.',condition:()=>true},
-  {id:'sci13',text:'Slow breathing has been shown to lower blood pressure within a single session. Yours just ended.',condition:(s)=>s.duration>=300},
+  {id:'sci13',text:'Slow breathing lowered blood pressure within a single session in clinical trials. Yours just ended. (Russo et al., British Journal of Health Psychology, 2017)',condition:(s)=>s.duration>=300},
   {id:'sci14',text:'Nasal breathing filters, warms, and humidifies air. It also produces nitric oxide, which dilates blood vessels.',condition:()=>true},
-  {id:'sci15',text:'Research shows 4 weeks of daily breathwork significantly reduces anxiety scores. You are on day {streak}.',condition:(s)=>s.streak>=1},
+  {id:'sci15',text:'4 weeks of daily slow breathing significantly reduced anxiety scores in a controlled study. You are on day {streak}. (Ma et al., Frontiers in Psychology, 2017)',condition:(s)=>s.streak>=1},
   {id:'sci16',text:'Regular breathwork practice can increase HRV by 15-20% in just 8 weeks.',condition:(s)=>s.totalSessions>=5},
   {id:'sci17',text:'Your autonomic nervous system just shifted. It is one of the few involuntary systems you can control consciously.',condition:()=>true},
   {id:'sci18',text:'Extending your exhale longer than your inhale is the simplest way to activate the vagus nerve.',condition:()=>true},
@@ -810,7 +825,7 @@ const SESSION_INSIGHTS = [
   {id:'pr15',text:'Interoceptive awareness — the ability to sense your own body — increases with every session. You are getting better at listening.',condition:(s)=>s.totalSessions>=5},
   // Body & health (10)
   {id:'bh1',text:'Blood oxygen saturation typically rises 1-2% after controlled breathing. A small number with a real effect.',condition:()=>true},
-  {id:'bh2',text:'Slow breathing reduces systemic inflammation markers. It is one of the simplest anti-inflammatory practices that exists.',condition:(s)=>s.duration>=180},
+  {id:'bh2',text:'Slow breathing reduces systemic inflammation markers — one of the simplest anti-inflammatory practices that exists. (Fincham et al., Scientific Reports, 2023)',condition:(s)=>s.duration>=180},
   {id:'bh3',text:'Deep diaphragmatic breathing massages your internal organs — liver, stomach, intestines — with every cycle.',condition:(s)=>(s.techniques||[]).includes('diaphragmatic')},
   {id:'bh4',text:'Post-exercise breathwork accelerates recovery by shifting from sympathetic to parasympathetic dominance.',condition:()=>{const h=new Date().getHours(); return h>=6&&h<20;}},
   {id:'bh5',text:'Breathing before a meal improves digestion. The parasympathetic state is called rest-and-digest for a reason.',condition:()=>{const h=new Date().getHours(); return (h>=7&&h<9)||(h>=11&&h<14)||(h>=17&&h<20);}},
@@ -906,6 +921,8 @@ const defaultStats = () => ({
   techniqueStats:{},
   breathTests:[],
   safetyFlag:null,
+  introSeen:false,      // FIX2: skip cinematic on return visits
+  depthExplained:false, // FIX6: one-time depth tooltip
 });
 
 // ===== FIRST SESSION (cyclic sigh) =====
@@ -921,6 +938,9 @@ const FIRST_SESSION = (t) => [
 
 // ===== STRESS SOS SESSIONS =====
 const STRESS_SOS_SESSIONS = {
+  quickReset: [
+    { type:'breathing', technique:'physiological_sigh', duration:90, params:{inhale1:2,inhale2:1,exhale:7} },
+  ], // 90s — no intro, pure breathing
   calmNow: [
     { type:'text', duration:8, text:'Stop. Close your eyes. Follow the rhythm.' },
     { type:'breathing', technique:'physiological_sigh', duration:152, params:{inhale1:2,inhale2:1,exhale:7} },
@@ -1001,6 +1021,17 @@ function getDailyRecommendation(stats, t) {
 
   if (sessions >= 1 && sessions <= 7) {
     return dayProgression[Math.min(sessions, dayProgression.length - 1)];
+  }
+
+  // FIX10: If last 3 sessions used same scenario — show "Your go-to"
+  const lastThree = (stats.history || []).slice(-3);
+  if (lastThree.length === 3) {
+    const keys = lastThree.map(s => s.scenario).filter(Boolean);
+    if (keys.length === 3 && keys[0] === keys[1] && keys[1] === keys[2] && SCENARIOS[keys[0]]) {
+      const sc = SCENARIOS[keys[0]];
+      const displayName = getScenarioDisplayName(keys[0]);
+      return { scenario:keys[0], duration:sc.durations[0], title:'Your go-to', sub:displayName, isGoTo:true };
+    }
   }
 
   // Day 8+: time-based recommendations
@@ -2231,8 +2262,12 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
           <div className="screen-transition text-center z-10">
             <div className="font-body mb-8" style={{fontSize:22, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.04em'}}>{t.holdTestTitle || "Let's find your depth"}</div>
             <div className="flex flex-col gap-3 mb-10" style={{maxWidth:260, margin:'0 auto 40px'}}>
-              {['1. Take a deep breath in', '2. Exhale fully and completely', '3. Hold — tap anywhere to stop'].map((step, i) => (
-                <div key={i} className="font-body" style={{fontSize:14, fontWeight:300, color: i === 2 ? `rgba(${accentRgb},0.8)` : 'rgba(220,225,235,0.6)', letterSpacing:'0.02em', textAlign:'left', paddingLeft:8}}>{step}</div>
+              {[
+                '1. Take a deep breath IN through your nose',
+                '2. Now hold it',
+                '3. Tap when you need to let go',
+              ].map((step, i) => (
+                <div key={i} className="font-body" style={{fontSize:14, fontWeight:300, color: i === 1 ? `rgba(${accentRgb},0.8)` : 'rgba(220,225,235,0.6)', letterSpacing:'0.02em', textAlign:'left', paddingLeft:8}}>{step}</div>
               ))}
             </div>
             <button className="px-10 py-3 rounded-full font-body"
@@ -2330,7 +2365,7 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
             {item.text}
           </p>
         )}
-        <div className="font-body" style={{position:'fixed', bottom:40, left:'50%', transform:'translateX(-50%)', fontSize:11, color:'rgba(220,225,235,0.15)'}}>
+        <div className="font-body" style={{position:'fixed', bottom:40, left:'50%', transform:'translateX(-50%)', fontSize:11, color:'rgba(220,225,235,0.32)', letterSpacing:'0.06em'}}>
           tap to skip
         </div>
       </div>
@@ -2643,7 +2678,7 @@ function App() {
     return <FirstBreathScreen palette={palette} accentRgb={accentRgb} t={t} ambientRef={ambientRef}
       onComplete={(goal, holdTimeResult) => { setStats(s => {
         const hDepth = holdTimeResult ? holdTimeToDepth(holdTimeResult) : null;
-        const newState = {...s, firstFeeling: goal, userGoal: goal, onboarded:true, world:'ocean', initialHoldTime: holdTimeResult ? Math.round(holdTimeResult*10)/10 : null, initialDepth: hDepth, totalDepth: hDepth ? Math.round((s.totalDepth + hDepth) * 10) / 10 : s.totalDepth};
+        const newState = {...s, firstFeeling: goal, userGoal: goal, onboarded:true, introSeen:true, world:'ocean', initialHoldTime: holdTimeResult ? Math.round(holdTimeResult*10)/10 : null, initialDepth: hDepth, totalDepth: hDepth ? Math.round((s.totalDepth + hDepth) * 10) / 10 : s.totalDepth};
         if (holdTimeResult && holdTimeResult > 0) {
           newState.breathTests = [...(s.breathTests || []), { date: new Date().toISOString(), holdTime: Math.round(holdTimeResult*10)/10, depth: hDepth }];
         }
@@ -2816,7 +2851,8 @@ function App() {
           )}
           {completionStep === 'safety_msg' && (
             <div className="mb-6 screen-transition">
-              <div className="font-body mb-5" style={{fontSize:15, fontWeight:300, color:'rgba(220,225,235,0.65)', lineHeight:1.7, textAlign:'center', maxWidth:300, margin:'0 auto'}}>{t.safetyMessage}</div>
+              <div className="font-body mb-3" style={{fontSize:15, fontWeight:300, color:'rgba(220,225,235,0.65)', lineHeight:1.7, textAlign:'center', maxWidth:300, margin:'0 auto'}}>{t.safetyMessage}</div>
+              <div className="font-body mb-5" style={{fontSize:12, fontWeight:300, color:'rgba(220,225,235,0.3)', lineHeight:1.6, textAlign:'center', maxWidth:280, margin:'0 auto'}}>If symptoms persist, consult a healthcare professional.</div>
               <button className="px-8 py-3 rounded-full font-body mx-auto block"
                 style={{fontWeight:500, background:`rgba(${accentRgb},0.12)`, border:`1px solid rgba(${accentRgb},0.25)`, color:palette.accent}}
                 onClick={() => {
@@ -2919,6 +2955,12 @@ function App() {
   };
 
   // ===== HOME =====
+  // FIX1: instant breathe — no intro, no pre-mood, straight to bubble
+  const startInstantSession = () => {
+    const segs = [{ type:'breathing', technique:'physiological_sigh', duration:180, params:{inhale1:2,inhale2:1,exhale:7} }];
+    actuallyStartSession(segs, {scenario:'instant_breath', category:'stress'});
+  };
+
   const launchScenario = (id, dur) => {
     // Handle first session special case
     if (id === '_first_session') {
@@ -2952,7 +2994,14 @@ function App() {
         }
       }
     }
-    if (segs) startSession(segs, {scenario:id, category:sc.cat});
+    if (segs) {
+      // FIX3: skip leading text segments for users with 3+ sessions
+      if (stats.totalSessions >= 3) {
+        const firstBreathIdx = segs.findIndex(s => s.type === 'breathing');
+        if (firstBreathIdx > 0) segs = segs.slice(firstBreathIdx);
+      }
+      startSession(segs, {scenario:id, category:sc.cat});
+    }
   };
 
   function getGreeting(t) {
@@ -2975,7 +3024,14 @@ function App() {
       </div>
 
       {/* Time-based greeting */}
-      <div className="font-body mb-3" style={{fontSize:14, fontWeight:300, color:'var(--text-3)', textAlign:'left'}}>{getGreeting(t)}</div>
+      <div className="font-body mb-4" style={{fontSize:14, fontWeight:300, color:'var(--text-3)', textAlign:'left'}}>{getGreeting(t)}</div>
+
+      {/* FIX1: Breathe Now — instant CTA for returning users */}
+      {stats.totalSessions > 0 && (
+        <button className="breathe-now-btn" onClick={startInstantSession}>
+          Breathe now
+        </button>
+      )}
 
       {/* Daily recommendation card */}
       <button className="w-full text-left mb-6" style={{
@@ -2985,7 +3041,7 @@ function App() {
         display:'flex', flexDirection:'column', justifyContent:'space-between',
       }} onClick={() => launchScenario(rec.scenario, rec.duration)}>
         <div>
-          <div className="font-body mb-2" style={{fontSize:12, fontWeight:500, color:palette.accent, opacity:0.7, letterSpacing:'0.08em', textTransform:'uppercase'}}>{t.todaysDiveLabel}</div>
+          <div className="font-body mb-2" style={{fontSize:12, fontWeight:500, color:palette.accent, opacity:0.7, letterSpacing:'0.08em', textTransform:'uppercase'}}>{rec.isGoTo ? 'YOUR GO-TO' : t.todaysDiveLabel}</div>
           <div className="font-body mb-3" style={{fontSize:22, fontWeight:400, color:'rgba(226,232,240,0.95)', letterSpacing:'0.04em'}}>{rec.title}</div>
           <div className="font-body" style={{fontSize:14, fontWeight:300, color:'var(--text-2)'}}>{rec.sub}</div>
         </div>
@@ -3025,6 +3081,17 @@ function App() {
           </div>
         );
       })()}
+
+      {/* FIX6: One-time depth explainer tooltip */}
+      {stats.totalSessions === 1 && !stats.depthExplained && (
+        <div style={{padding:'10px 16px', marginBottom:16, borderRadius:10, background:'rgba(94,170,168,0.05)', border:'1px solid rgba(94,170,168,0.10)', fontSize:12, color:'rgba(220,225,235,0.5)', lineHeight:1.6}}>
+          Your depth grows with each session — like a freediver going deeper with practice.
+          <button onClick={() => setStats(s => ({...s, depthExplained:true}))}
+            style={{display:'block', marginTop:6, fontSize:11, color:palette.accent, opacity:0.7, background:'none', border:'none', cursor:'pointer', padding:0}}>
+            Got it
+          </button>
+        </div>
+      )}
 
       {/* Stress SOS button */}
       <button className="w-full mb-6" style={{
@@ -3370,11 +3437,22 @@ function App() {
           </div>
         )}
 
+        {/* FIX2: Replay intro */}
+        <button className="w-full py-3 font-body rounded-full mb-3" style={{fontSize:13, fontWeight:400, color:'var(--text-2)', border:'1px solid rgba(255,255,255,0.07)'}}
+          onClick={() => { setScreen('first_breath'); }}>
+          Replay intro
+        </button>
+
         {/* Reset */}
         <button className="w-full py-3 font-body rounded-full" style={{fontSize:13, fontWeight:400, color:'rgba(252,129,129,0.6)', border:'1px solid rgba(252,129,129,0.15)'}}
           onClick={() => { if (confirm(t.resetConfirm)) { setStats(defaultStats()); setScreen('first_breath'); }}}>
           {t.resetProgress}
         </button>
+
+        {/* FIX8: Medical disclaimer */}
+        <div style={{marginTop:24, paddingTop:16, borderTop:'1px solid rgba(255,255,255,0.03)', fontSize:11, color:'rgba(220,225,235,0.25)', lineHeight:1.6}}>
+          DIVE is a breathing exercise tool, not a medical device. Consult your doctor before starting any breathing practice, especially if you have cardiovascular or respiratory conditions. Based on peer-reviewed research including Balban et al. (Stanford, 2023).
+        </div>
       </div>
     );
   };
@@ -3505,9 +3583,17 @@ function App() {
                 <button className="glass p-5 w-full text-left" style={{borderRadius:14}}
                   onClick={() => {
                     setShowStressChoice(false); setSosStep('mood');
+                    startSession(STRESS_SOS_SESSIONS.quickReset, {scenario:'stress_sos_quick', category:'stress'});
+                  }}>
+                  <div className="font-body" style={{fontSize:16, fontWeight:400, color:'rgba(226,232,240,0.92)'}}>Quick reset</div>
+                  <div className="font-body mt-1" style={{fontSize:13, fontWeight:300, color:'var(--text-2)'}}>90 sec · Cyclic Sigh</div>
+                </button>
+                <button className="glass p-5 w-full text-left" style={{borderRadius:14}}
+                  onClick={() => {
+                    setShowStressChoice(false); setSosStep('mood');
                     startSession(STRESS_SOS_SESSIONS.calmNow, {scenario:'stress_sos_calm', category:'stress'});
                   }}>
-                  <div className="font-body" style={{fontSize:16, fontWeight:400, color:'rgba(226,232,240,0.92)'}}>I need to calm down NOW</div>
+                  <div className="font-body" style={{fontSize:16, fontWeight:400, color:'rgba(226,232,240,0.92)'}}>Calm down</div>
                   <div className="font-body mt-1" style={{fontSize:13, fontWeight:300, color:'var(--text-2)'}}>3 min · Cyclic Sigh</div>
                 </button>
                 <button className="glass p-5 w-full text-left" style={{borderRadius:14}}
@@ -3515,7 +3601,7 @@ function App() {
                     setShowStressChoice(false); setSosStep('mood');
                     startSession(STRESS_SOS_SESSIONS.prepareStress, {scenario:'stress_sos_prepare', category:'stress'});
                   }}>
-                  <div className="font-body" style={{fontSize:16, fontWeight:400, color:'rgba(226,232,240,0.92)'}}>Prepare for something stressful</div>
+                  <div className="font-body" style={{fontSize:16, fontWeight:400, color:'rgba(226,232,240,0.92)'}}>Prepare for something</div>
                   <div className="font-body mt-1" style={{fontSize:13, fontWeight:300, color:'var(--text-2)'}}>5 min · Box Breathing</div>
                 </button>
               </div>
