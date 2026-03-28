@@ -1182,7 +1182,9 @@ const AUDIO_MAP = {
   intro_07_ready: '/audio/intro_07_ready.mp3',
   // Ambient
   intro_ambient: '/audio/dive_intro_ambient.mp3',
+  dive_intro_ambient: '/audio/dive_intro_ambient.mp3',
   dive_splash: '/audio/dive_underwater.mp3',
+  dive_underwater: '/audio/dive_underwater.mp3',
   // Session text segments
   intro_sit: '/audio/intro_sit.mp3',
   intro_hands: '/audio/intro_hands.mp3',
@@ -1303,14 +1305,17 @@ function playPhaseCue(technique, phase, isFirstCycle) {
 const TEXT_VOICE_MAP = {
   sitDown: 'intro_sit',
   hands: 'intro_hands',
-  bodyScanShort: 'bodyscan_head',
+  bodyScanShort: 'bodyscan_short',
   bodyScanFull: 'bodyscan_full',
-  bodyScanHands: 'bodyscan_hands',
+  bodyScanHands: 'bodyscan_short',
+  bodyScanSleep: 'bodyscan_sleep',
   openEyes: 'session_end',
   openEyesShort: 'session_end_short',
+  openEyesSleep: 'session_end_sleep',
+  sleepEnd: 'session_end_sleep',
   visOceanCalm: 'vis_ocean_calm',
   visOceanFocus: 'vis_ocean_focus',
-  visOceanEnergy: 'vis_ocean_energy',
+  visOceanEnergy: 'vis_ocean_calm',
 };
 
 function mapTextToAudio(textKey) {
@@ -1400,7 +1405,20 @@ const OceanBubble = React.forwardRef((props, ref) => {
 // MemoryOrb removed (memory world deleted)
 
 // ===== SESSION TEXT (fixed full-screen centered) =====
-function SessionText({ text, bodyScanSentences, bodyScanIdx, visible }) {
+function SessionText({ text, texts, duration, bodyScanSentences, bodyScanIdx, visible }) {
+  const [mergedIdx, setMergedIdx] = React.useState(0);
+
+  // Crossfade between merged consecutive texts
+  React.useEffect(() => {
+    if (!texts || texts.length <= 1) return;
+    const perText = (duration || texts.length * 6) / texts.length;
+    const timer = setInterval(() => {
+      setMergedIdx(prev => Math.min(prev + 1, texts.length - 1));
+    }, perText * 1000);
+    setMergedIdx(0);
+    return () => clearInterval(timer);
+  }, [texts, duration]);
+
   if (!visible) return null;
   if (bodyScanSentences && bodyScanSentences.length > 0) {
     return (
@@ -1416,6 +1434,27 @@ function SessionText({ text, bodyScanSentences, bodyScanIdx, visible }) {
                 opacity: idx === bodyScanIdx ? 1 : 0,
               }}>
               {sentence}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  // Merged consecutive texts: crossfade between them
+  if (texts && texts.length > 1) {
+    return (
+      <div className="session-text-container">
+        <div className="session-text-segment" style={{position:'relative'}}>
+          {texts.map((t, idx) => (
+            <div key={idx} className="session-text-content bodyscan-crossfade"
+              style={{
+                position: idx === 0 ? 'relative' : 'absolute',
+                top: idx === 0 ? undefined : '50%', left: idx === 0 ? undefined : '50%',
+                transform: idx === 0 ? undefined : 'translate(-50%, -50%)',
+                width: idx === 0 ? undefined : '100%',
+                opacity: idx === mergedIdx ? 1 : 0,
+              }}>
+              {typeof t === 'string' ? t : ''}
             </div>
           ))}
         </div>
@@ -2007,7 +2046,7 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
           </div>
         );
       case 'text':
-        return <SessionText text={seg.text} visible={true} />;
+        return <SessionText text={seg.text} texts={seg.texts} duration={seg.duration} visible={true} />;
       case 'bodyscan':
         return <SessionText bodyScanSentences={bodyScanSentences} bodyScanIdx={bodyScanIdx} visible={true} />;
       case 'visualization': {
