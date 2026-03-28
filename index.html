@@ -994,6 +994,7 @@ const defaultStats = () => ({
   safetyFlag:null,
   difficultyLevel: 'beginner',
   lastRetestDate: null,
+  lastRetestDismiss: null,
   bestHoldDepth: 0,
   introSeen:false,      // FIX2: skip cinematic on return visits
   depthExplained:false, // FIX6: one-time depth tooltip
@@ -1021,6 +1022,26 @@ function sessionDepth(durationSec, technique) {
   const mult = { tidal:0.8, diaphragmatic:1.0, box:1.2, segmented:1.2, ujjayi:1.5, recovery:0.8, physiological_sigh:1.3 };
   return Math.round(((durationSec / 60) * (mult[technique] || 1.0)) * 10) / 10;
 }
+function detectFavourite(stats) {
+  const last10 = (stats.history || []).slice(-10);
+  const counts = {};
+  last10.forEach(s => {
+    const key = s.scenarioKey || s.scenario;
+    if (key && key !== 'stress_sos_quick' && key !== 'surface_breath' && key !== '_first_session')
+      counts[key] = (counts[key] || 0) + 1;
+  });
+  const top = Object.entries(counts).sort((a,b) => b[1]-a[1])[0];
+  return top && top[1] >= 3 ? top[0] : null;
+}
+
+function checkStreakOnOpen(stats) {
+  if (!stats.lastSessionDate || !stats.streak || stats.streak <= 0) return false;
+  const last = new Date(stats.lastSessionDate);
+  const today = new Date();
+  const diffDays = Math.floor((today - last) / 86400000);
+  return diffDays >= 2; // streak is about to break
+}
+
 function depthContext(m) {
   if (m < 5) return 'A swimming pool';
   if (m < 10) return 'The reef edge';
@@ -1082,15 +1103,12 @@ function getDailyRecommendation(stats, t) {
     return dayProgression[Math.min(sessions, dayProgression.length - 1)];
   }
 
-  // FIX10: If last 3 sessions used same scenario — show "Your go-to"
-  const lastThree = (stats.history || []).slice(-3);
-  if (lastThree.length === 3) {
-    const keys = lastThree.map(s => s.scenario).filter(Boolean);
-    if (keys.length === 3 && keys[0] === keys[1] && keys[1] === keys[2] && SCENARIOS[keys[0]]) {
-      const sc = SCENARIOS[keys[0]];
-      const displayName = getScenarioDisplayName(keys[0]);
-      return { scenario:keys[0], duration:sc.durations[0], title:'Your go-to', sub:displayName, isGoTo:true };
-    }
+  // Favourite detection — from last 10 sessions, 3+ uses of same scenario
+  const fav = detectFavourite(stats);
+  if (fav && SCENARIOS[fav] && Math.random() < 0.2) {
+    const sc = SCENARIOS[fav];
+    const displayName = getScenarioDisplayName(fav);
+    return { scenario:fav, duration:sc.durations[0], title:'Your go-to', sub:displayName, isGoTo:true };
   }
 
   // Day 8+: time-based recommendations
@@ -2867,7 +2885,7 @@ function AnimatedNumber({ value, suffix = '', duration = 1200 }) {
 }
 
 function formatDepth(meters) {
-  if (!meters || meters <= 0) return '0';
+  if (!meters || isNaN(meters) || meters <= 0) return '0';
   if (meters < 10) return meters.toFixed(1);
   return Math.round(meters).toString();
 }
@@ -3062,7 +3080,10 @@ function App() {
     if (screen === 'home' && stats.onboarded) {
       const lastTest = (stats.breathTests || [])[((stats.breathTests || []).length) - 1];
       const days = lastTest ? Math.floor((Date.now() - new Date(lastTest.date).getTime()) / 86400000) : 999;
-      if (days >= 7 && (stats.totalSessions || 0) >= 3 && !showRetestPrompt) {
+      // Check dismiss — only re-show after 1 day from dismiss
+      const dismissDate = stats.lastRetestDismiss;
+      const daysSinceDismiss = dismissDate ? Math.floor((Date.now() - new Date(dismissDate).getTime()) / 86400000) : 999;
+      if (days >= 7 && (stats.totalSessions || 0) >= 3 && daysSinceDismiss >= 1 && !showRetestPrompt) {
         setRetestDays(days);
         setShowRetestPrompt(true);
       }
@@ -3092,11 +3113,12 @@ function App() {
         ...prev, totalSessions: prev.totalSessions + 1, streak, longestStreak, lastSessionDate: today,
         totalDepth: Math.round((prev.totalDepth + depth) * 10) / 10,
         totalMinutes: prev.totalMinutes + Math.round((sessionInfo.duration || 0) / 60),
+        totalSeconds: (prev.totalSeconds || 0) + (sessionInfo.duration || 0),
         techniquesUsed: newTechs, categoriesUsed: newCats,
         nightSessions: prev.nightSessions + (isNight ? 1 : 0),
         morningSessions: prev.morningSessions + (isMorning ? 1 : 0),
         techniqueStats: newTechStats,
-        history: [...prev.history, { date: now.toISOString(), scenario: sessionInfo.scenario, duration: sessionInfo.duration, category: sessionInfo.category }].slice(-100),
+        history: [...prev.history, { date: now.toISOString(), scenario: sessionInfo.scenario, scenarioKey: sessionInfo.scenario, duration: sessionInfo.duration, category: sessionInfo.category, depth, mainTechnique: sessionInfo.mainTechnique || 'diaphragmatic', preMood: sessionInfo.preMood != null ? sessionInfo.preMood : null }].slice(-100),
       };
     });
   };
@@ -3172,7 +3194,7 @@ function App() {
       const breathSegs = segs.filter(s => s.type === 'breathing');
       const mainTech = breathSegs.length > 0 ? breathSegs.reduce((a, b) => b.duration > a.duration ? b : a).technique : 'diaphragmatic';
       const actualDur = (actualData && actualData.actualElapsed > 0) ? actualData.actualElapsed : totalDur;
-      updateStats({ duration: actualDur, techniques: techs, category: activeSession.meta?.category, scenario: activeSession.meta?.scenario, mainTechnique: mainTech });
+      updateStats({ duration: actualDur, techniques: techs, category: activeSession.meta?.category, scenario: activeSession.meta?.scenario, mainTechnique: mainTech, preMood: currentMood.pre });
       if (activeSession.meta?.programId && activeSession.meta?.day !== undefined) {
         setStats(prev => {
           const pp = {...(prev.programProgress || {})};
@@ -3280,6 +3302,12 @@ function App() {
             const newState = {...s, firstFeeling: goal, userGoal: goal, onboarded:true, introSeen:true, world:'ocean', initialHoldTime: holdTimeResult ? Math.round(holdTimeResult*10)/10 : null, initialDepth: hDepth, totalDepth: hDepth ? Math.round((s.totalDepth + hDepth) * 10) / 10 : s.totalDepth};
             if (holdTimeResult && holdTimeResult > 0) {
               newState.breathTests = [...(s.breathTests || []), { date: new Date().toISOString(), holdTime: Math.round(holdTimeResult*10)/10, depth: hDepth }];
+              // Also save to standalone localStorage array for cross-reference
+              try {
+                const tests = JSON.parse(localStorage.getItem('dive-breath-tests') || '[]');
+                tests.push({ date: new Date().toISOString(), holdTime: Math.round(holdTimeResult*10)/10, depth: hDepth });
+                localStorage.setItem('dive-breath-tests', JSON.stringify(tests));
+              } catch(e) {}
               // Update difficulty level (only upgrade)
               const newBestDepth = Math.max(s.bestHoldDepth || 0, hDepth || 0);
               const newLevel = getDifficultyLevel(newBestDepth);
@@ -3703,7 +3731,7 @@ function App() {
             </div>
             <div className="flex justify-between mt-1" style={{fontSize:10, color:'rgba(220,225,235,0.25)'}}>
               <span className="font-mono">{formatDepth(stats.totalDepth)}m</span>
-              <span className="font-body">{next.depth}m · {next.label}</span>
+              <span className="font-body">{formatDepth(next.depth)}m · {next.label}</span>
             </div>
           </div>
         );
@@ -4126,8 +4154,11 @@ function App() {
                     <div className="font-body" style={{fontSize:14, fontWeight:400, color:'rgba(226,232,240,0.8)'}}>{getScenarioDisplayName(h.scenario)}</div>
                     <div className="font-body" style={{fontSize:11, fontWeight:400, color:'var(--text-3)', marginTop:2}}>{new Date(h.date).toLocaleDateString('en', {month:'short', day:'numeric'})}</div>
                   </div>
-                  <div className="font-mono" style={{fontSize:12, fontWeight:300, color:'var(--text-3)'}}>
-                    {Math.round((h.duration || 0)/60)}min
+                  <div style={{textAlign:'right'}}>
+                    <div className="font-mono" style={{fontSize:12, fontWeight:300, color:'var(--text-3)'}}>
+                      {Math.round((h.duration || 0)/60)}min
+                    </div>
+                    {h.depth > 0 && <div className="font-mono" style={{fontSize:10, fontWeight:300, color:palette.accent, opacity:0.5}}>{formatDepth(h.depth)}m</div>}
                   </div>
                 </div>
               ))}
@@ -4298,7 +4329,7 @@ function App() {
                 style={{fontWeight:400, fontSize:13, color:'var(--text-3)', border:'1px solid rgba(255,255,255,0.06)'}}
                 onClick={() => {
                   setShowSurfaceBreath(false);
-                  setStats(s => ({...s, streak: 0}));
+                  setStats(s => ({...s, streak: 1, lastSessionDate: new Date().toISOString().split('T')[0]}));
                 }}>
                 {t.letItGo}
               </button>
@@ -4308,13 +4339,21 @@ function App() {
       )}
 
       {/* Retest prompt overlay */}
-      {showRetestPrompt && (
+      {showRetestPrompt && (() => {
+        const prevTest = (stats.breathTests || []).slice(-1)[0];
+        const prevDepth = prevTest ? prevTest.depth : null;
+        return (
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{background:'rgba(0,0,0,0.8)', backdropFilter:'blur(16px)'}}>
           <div className="screen-transition text-center z-10 px-8">
-            <div className="font-body mb-4" style={{fontSize:20, fontWeight:300, color:'rgba(226,232,240,0.95)'}}>{t.retestTitle}</div>
-            <div className="font-body mb-8" style={{fontSize:14, fontWeight:400, color:'var(--text-2)', maxWidth:280, margin:'0 auto', lineHeight:1.6}}>
-              {retestDays === 999 ? '' : retestDays} {t.retestSub}
+            <div className="font-body mb-4" style={{fontSize:20, fontWeight:300, color:'rgba(226,232,240,0.95)'}}>Time to check your progress</div>
+            <div className="font-body mb-4" style={{fontSize:14, fontWeight:400, color:'var(--text-2)', maxWidth:280, margin:'0 auto', lineHeight:1.6}}>
+              {retestDays === 999 ? '' : retestDays + ' days since your last test.'}
             </div>
+            {prevDepth != null && (
+              <div className="font-body mb-6" style={{fontSize:13, fontWeight:300, color:palette.accent, opacity:0.7}}>
+                Previous depth: {formatDepth(prevDepth)}m
+              </div>
+            )}
             <div className="flex flex-col gap-3 items-center">
               <button className="px-8 py-3 rounded-full font-body w-full max-w-xs"
                 style={{fontWeight:500, background:`rgba(${accentRgb},0.12)`, border:`1px solid rgba(${accentRgb},0.25)`, color:palette.accent}}
@@ -4326,13 +4365,14 @@ function App() {
               </button>
               <button className="px-8 py-3 rounded-full font-body w-full max-w-xs"
                 style={{fontWeight:400, fontSize:13, color:'var(--text-3)', border:'1px solid rgba(255,255,255,0.06)'}}
-                onClick={() => setShowRetestPrompt(false)}>
+                onClick={() => { setShowRetestPrompt(false); setStats(s => ({...s, lastRetestDismiss: new Date().toISOString()})); }}>
                 {t.retestLater}
               </button>
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* Stress SOS overlay removed — SOS is now instant from home button */}
 
