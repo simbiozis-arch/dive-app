@@ -1486,6 +1486,9 @@ class SessionEngine {
     this.onComplete = null;
     this._lastTime = null;
     this._rafId = null;
+    this.actualElapsed = 0;
+    this.actualBreathCycles = 0;
+    this._lastPhase = null;
     // Initialize first segment
     const seg = segments[0];
     if (seg && seg.type === 'breathing') {
@@ -1510,6 +1513,7 @@ class SessionEngine {
     }
     this.segmentElapsed += delta;
     this.totalElapsed += delta;
+    this.actualElapsed += delta;
     const segment = this.segments[this.currentSegmentIndex];
     if (!segment) return;
     // Video segments with duration 0 wait for skip()
@@ -1586,6 +1590,7 @@ class SessionEngine {
     }
   }
   _nextPhase(segment) {
+    const prevPhase = this.currentPhase;
     const phases = Object.keys(segment.params);
     const idx = phases.indexOf(this.currentPhase);
     if (idx >= phases.length - 1) {
@@ -1593,6 +1598,10 @@ class SessionEngine {
       this.currentPhase = phases[0];
     } else {
       this.currentPhase = phases[idx + 1];
+    }
+    const newPhase = this.currentPhase;
+    if ((prevPhase === 'exhale' && newPhase === 'inhale') || (prevPhase === 'exhale' && newPhase === 'belly')) {
+      this.actualBreathCycles++;
     }
     this.phaseElapsed = 0;
     this.phaseDuration = segment.params[this.currentPhase] || 4;
@@ -1863,7 +1872,7 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
       setCurrentSeg(seg);
       handleSegmentTransition(index, seg);
     };
-    engine.onComplete = () => onComplete();
+    engine.onComplete = () => onComplete({ actualElapsed: Math.round(engine.actualElapsed), actualBreathCycles: engine.actualBreathCycles });
 
     // Also trigger audio for first segment if it's a non-breathing segment
     const firstSeg = segments[0];
@@ -2032,9 +2041,6 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
             0:00 / {Math.floor(totalDuration / 60)}:{String(Math.floor(totalDuration % 60)).padStart(2,'0')}
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => setVoiceOn(v => !v)} className="flex items-center justify-center rounded-full" style={{width:36,height:36,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.06)', color: voiceOn ? palette.accent : 'var(--text-3)'}}>
-              <Icon name={voiceOn ? 'mic' : 'mic_off'} size={14}/>
-            </button>
             <button onClick={() => setPaused(!paused)} className="flex items-center justify-center rounded-full" style={{width:36,height:36,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.06)'}}>
               <Icon name={paused ? 'play' : 'pause'} size={14}/>
             </button>
@@ -2592,6 +2598,12 @@ function AnimatedNumber({ value, duration = 1200 }) {
   return display;
 }
 
+function formatDepth(meters) {
+  if (!meters) return '0';
+  if (meters < 10) return parseFloat(meters.toFixed(1)).toString();
+  return Math.round(meters).toString();
+}
+
 async function audioDebug() {
   const files = [
     '/audio/dive_intro_ambient.mp3',
@@ -2691,6 +2703,7 @@ function App() {
   const [showStressChoice, setShowStressChoice] = useState(false);
   const [sosStep, setSosStep] = useState('mood'); // 'mood' | 'choice'
   const [exploreCat, setExploreCat] = useState('focus');
+  const [isReplayIntro, setIsReplayIntro] = useState(false);
   const ambientRef = useRef(new AmbientEngine());
   const world = 'ocean'; // ocean only — space world removed
   const w = WORLDS[world];
@@ -2875,7 +2888,7 @@ function App() {
   }, [showPreMood, pendingSessionData]);
 
 
-  const endSession = (completed = true) => {
+  const endSession = (completed = true, actualData = null) => {
     ambientRef.current.fadeOut();
     setTimeout(() => ambientRef.current.destroy(), 2500);
     if (completed && activeSession) {
@@ -2884,7 +2897,8 @@ function App() {
       const techs = [...new Set(segs.filter(s => s.type === 'breathing').map(s => s.technique))];
       const breathSegs = segs.filter(s => s.type === 'breathing');
       const mainTech = breathSegs.length > 0 ? breathSegs.reduce((a, b) => b.duration > a.duration ? b : a).technique : 'diaphragmatic';
-      updateStats({ duration: totalDur, techniques: techs, category: activeSession.meta?.category, scenario: activeSession.meta?.scenario, mainTechnique: mainTech });
+      const actualDur = (actualData && actualData.actualElapsed > 0) ? actualData.actualElapsed : totalDur;
+      updateStats({ duration: actualDur, techniques: techs, category: activeSession.meta?.category, scenario: activeSession.meta?.scenario, mainTechnique: mainTech });
       if (activeSession.meta?.programId && activeSession.meta?.day !== undefined) {
         setStats(prev => {
           const pp = {...(prev.programProgress || {})};
@@ -2895,11 +2909,13 @@ function App() {
           return {...prev, programProgress: pp, programsCompleted};
         });
       }
-      const breathCycles = segs.filter(s => s.type === 'breathing').reduce((total, s) => {
-        const cycleDur = Object.values(s.params).reduce((a, b) => a + b, 0);
-        return total + (cycleDur > 0 ? Math.floor(s.duration / cycleDur) : 0);
-      }, 0) || Math.round(totalDur / 16);
-      const cData = { duration: totalDur, techniques: techs, depth: sessionDepth(totalDur, mainTech), breathCycles, segments: segs, _lastScenario: activeSession.meta?.scenario };
+      const breathCycles = (actualData && actualData.actualBreathCycles > 0)
+        ? actualData.actualBreathCycles
+        : (segs.filter(s => s.type === 'breathing').reduce((total, s) => {
+            const cycleDur = Object.values(s.params).reduce((a, b) => a + b, 0);
+            return total + (cycleDur > 0 ? Math.floor(s.duration / cycleDur) : 0);
+          }, 0) || Math.round(totalDur / 16));
+      const cData = { duration: actualDur, techniques: techs, depth: sessionDepth(actualDur, mainTech), breathCycles, segments: segs, _lastScenario: activeSession.meta?.scenario };
       ph('session_complete', { scenario: activeSession.meta?.scenario, depth: cData.depth, preMood: currentMood.pre, postMood: currentMood.post });
       setActiveSession(null);
       setShowSurfacing(true);
@@ -2929,14 +2945,21 @@ function App() {
   // ===== FIRST BREATH SCREEN =====
   if (screen === 'first_breath') {
     return <FirstBreathScreen palette={palette} accentRgb={accentRgb} t={t} ambientRef={ambientRef}
-      onComplete={(goal, holdTimeResult) => { setStats(s => {
-        const hDepth = holdTimeResult ? holdTimeToDepth(holdTimeResult) : null;
-        const newState = {...s, firstFeeling: goal, userGoal: goal, onboarded:true, introSeen:true, world:'ocean', initialHoldTime: holdTimeResult ? Math.round(holdTimeResult*10)/10 : null, initialDepth: hDepth, totalDepth: hDepth ? Math.round((s.totalDepth + hDepth) * 10) / 10 : s.totalDepth};
-        if (holdTimeResult && holdTimeResult > 0) {
-          newState.breathTests = [...(s.breathTests || []), { date: new Date().toISOString(), holdTime: Math.round(holdTimeResult*10)/10, depth: hDepth }];
+      onComplete={(goal, holdTimeResult) => {
+        if (!isReplayIntro) {
+          setStats(s => {
+            const hDepth = holdTimeResult ? holdTimeToDepth(holdTimeResult) : null;
+            const newState = {...s, firstFeeling: goal, userGoal: goal, onboarded:true, introSeen:true, world:'ocean', initialHoldTime: holdTimeResult ? Math.round(holdTimeResult*10)/10 : null, initialDepth: hDepth, totalDepth: hDepth ? Math.round((s.totalDepth + hDepth) * 10) / 10 : s.totalDepth};
+            if (holdTimeResult && holdTimeResult > 0) {
+              newState.breathTests = [...(s.breathTests || []), { date: new Date().toISOString(), holdTime: Math.round(holdTimeResult*10)/10, depth: hDepth }];
+            }
+            return newState;
+          });
+          ph('onboarding_complete', { goal, holdTime: holdTimeResult });
         }
-        return newState;
-      }); ph('onboarding_complete', { goal, holdTime: holdTimeResult }); setScreen('home'); setTab('home'); }} />;
+        setIsReplayIntro(false);
+        setScreen('home'); setTab('home');
+      }} />;
   }
 
 
@@ -2981,7 +3004,7 @@ function App() {
 
   // Active session
   if (activeSession) {
-    return <SessionPlayer segments={activeSession.segments} world={world} onComplete={() => endSession(true)} onExit={() => endSession(false)} t={t} voiceEnabled={stats.voiceEnabled} ambientRef={ambientRef} currentLang={currentLang} />;
+    return <SessionPlayer segments={activeSession.segments} world={world} onComplete={(actualData) => endSession(true, actualData)} onExit={() => endSession(false)} t={t} voiceEnabled={stats.voiceEnabled} ambientRef={ambientRef} currentLang={currentLang} />;
   }
 
   // Surfacing transition
@@ -3257,6 +3280,16 @@ function App() {
     }
   };
 
+  const handleScenarioTap = (id) => {
+    const sc = SCENARIOS[id];
+    if (!sc) return;
+    if (sc.durations && sc.durations.length > 1) {
+      setDurationPickerScenario({ id, ...sc });
+    } else {
+      launchScenario(id, sc.durations[0] || null);
+    }
+  };
+
   function getGreeting(t) {
     const hour = new Date().getHours();
     if (hour >= 5 && hour < 12) return t.goodMorning;
@@ -3312,7 +3345,7 @@ function App() {
           {stats.streak > 0 ? <><span className="font-mono">{stats.streak}</span> {t.dayStreak}</> : t.streakStart}
         </div>
         <div className="font-body" style={{fontSize:12, fontWeight:400, color:'var(--text-3)'}}>
-          <span className="font-mono">{stats.totalDepth}</span> {WORLDS[world].depthUnit} {t.depth}
+          <span className="font-mono">{formatDepth(stats.totalDepth)}</span> {WORLDS[world].depthUnit} {t.depth}
         </div>
       </div>
 
@@ -3328,7 +3361,7 @@ function App() {
               <div style={{height:'100%', width:`${prog*100}%`, borderRadius:2, background:`rgba(${accentRgb},0.4)`, transition:'width 600ms ease'}} />
             </div>
             <div className="flex justify-between mt-1" style={{fontSize:10, color:'rgba(220,225,235,0.25)'}}>
-              <span className="font-mono">{Math.round(stats.totalDepth)}m</span>
+              <span className="font-mono">{formatDepth(stats.totalDepth)}m</span>
               <span className="font-body">{next.depth}m · {next.label}</span>
             </div>
           </div>
@@ -3400,11 +3433,11 @@ function App() {
         <div className="space-y-2">
           {Object.entries(SCENARIOS).filter(([_, s]) => s.cat === quickDiveCat).map(([id, sc]) => (
             <button key={id} className="glass w-full text-left flex items-center gap-3 px-4 py-3" style={{position:'relative'}}
-              onClick={() => launchScenario(id)}>
+              onClick={() => handleScenarioTap(id)}>
               <span style={{color:palette.accent,opacity:0.5}}><Icon name={sc.svgIcon || id} size={18}/></span>
               <div className="flex-1">
                 <div className="font-body" style={{fontWeight:500, fontSize:13, color:'rgba(255,255,255,0.85)'}}>{t[SCENARIO_LANG_KEY[id]]}</div>
-                <div className="font-mono mt-1" style={{fontSize:11, fontWeight:300, color:'rgba(255,255,255,0.35)'}}>{sc.durations[0]} {t.min}</div>
+                <div className="font-mono mt-1" style={{fontSize:11, fontWeight:300, color:'rgba(255,255,255,0.35)'}}>{sc.durations.map(d => d + ' ' + t.min).join(' / ')}</div>
               </div>
               {!checkAccess(sc) && <span style={{color:'var(--text-3)', opacity:0.4}}><Icon name="lock" size={12}/></span>}
             </button>
@@ -3463,7 +3496,7 @@ function App() {
       <div className="space-y-3">
         {Object.entries(SCENARIOS).filter(([_, sc]) => sc.cat === exploreCat).map(([id, sc]) => (
           <button key={id} className="glass p-5 w-full text-left flex items-center gap-4"
-            onClick={() => launchScenario(id)}>
+            onClick={() => handleScenarioTap(id)}>
             <span style={{color:palette.accent,opacity:0.6}}><Icon name={sc.svgIcon || id} size={24}/></span>
             <div className="flex-1">
               <div className="font-body" style={{fontWeight:600, fontSize:15, color:'rgba(255,255,255,0.92)'}}>{t[SCENARIO_LANG_KEY[id]]}</div>
@@ -3575,6 +3608,9 @@ function App() {
     </div>
   );
 
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [durationPickerScenario, setDurationPickerScenario] = useState(null);
+
   const renderProfile = () => {
     const earned = BADGES.filter(b => b.condition(stats));
     return (
@@ -3583,7 +3619,7 @@ function App() {
 
         {/* Total depth — hero number with animated number */}
         <div className="text-center mb-6">
-          <div className="font-mono" style={{fontSize:48, fontWeight:200, color:palette.accent}}><AnimatedNumber value={stats.totalDepth} /></div>
+          <div className="font-mono" style={{fontSize:48, fontWeight:200, color:palette.accent}}>{formatDepth(stats.totalDepth)}</div>
           <div className="font-body" style={{fontSize:12, fontWeight:400, color:'var(--text-3)', letterSpacing:'0.05em', marginTop:2}}>{t.totalDepth} ({WORLDS[world].depthUnit})</div>
         </div>
 
@@ -3692,15 +3728,27 @@ function App() {
 
         {/* FIX2: Replay intro */}
         <button className="w-full py-3 font-body rounded-full mb-3" style={{fontSize:13, fontWeight:400, color:'var(--text-2)', border:'1px solid rgba(255,255,255,0.07)'}}
-          onClick={() => { setScreen('first_breath'); }}>
+          onClick={() => { setIsReplayIntro(true); setScreen('first_breath'); }}>
           Replay intro
         </button>
 
         {/* Reset */}
         <button className="w-full py-3 font-body rounded-full" style={{fontSize:13, fontWeight:400, color:'rgba(252,129,129,0.6)', border:'1px solid rgba(252,129,129,0.15)'}}
-          onClick={() => { if (confirm(t.resetConfirm)) { setStats(defaultStats()); setScreen('first_breath'); }}}>
+          onClick={() => setShowResetConfirm(true)}>
           {t.resetProgress}
         </button>
+        {showResetConfirm && (
+          <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:100,padding:'24px'}}>
+            <div style={{background:'rgba(12,22,40,0.98)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:'16px',padding:'24px',maxWidth:'320px',width:'100%'}}>
+              <p style={{fontSize:'16px',fontWeight:400,color:'rgba(220,225,235,0.88)',marginBottom:'8px'}}>Reset all progress?</p>
+              <p style={{fontSize:'13px',color:'rgba(220,225,235,0.45)',marginBottom:'24px',lineHeight:1.5}}>Depth, streak, sessions, and settings will be permanently deleted.</p>
+              <div style={{display:'flex',gap:'12px'}}>
+                <button onClick={() => setShowResetConfirm(false)} style={{flex:1,padding:'10px',borderRadius:'10px',background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',color:'rgba(220,225,235,0.7)',fontSize:'14px',cursor:'pointer'}}>Cancel</button>
+                <button onClick={() => { setShowResetConfirm(false); setStats(defaultStats()); setScreen('first_breath'); }} style={{flex:1,padding:'10px',borderRadius:'10px',background:'rgba(180,60,60,0.12)',border:'1px solid rgba(180,60,60,0.25)',color:'rgba(220,130,130,0.85)',fontSize:'14px',cursor:'pointer'}}>Delete everything</button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* FIX8: Medical disclaimer */}
         <div style={{marginTop:24, paddingTop:16, borderTop:'1px solid rgba(255,255,255,0.03)', fontSize:11, color:'rgba(220,225,235,0.25)', lineHeight:1.6}}>
@@ -3867,6 +3915,22 @@ function App() {
       )}
 
       {showPaywall && <PaywallModal />}
+
+      {/* Duration picker bottom sheet */}
+      {durationPickerScenario && (
+        <div onClick={() => setDurationPickerScenario(null)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'flex-end',zIndex:50}}>
+          <div onClick={e => e.stopPropagation()} style={{width:'100%',padding:'24px',paddingBottom:'calc(24px + env(safe-area-inset-bottom, 16px))',background:'rgba(12,19,34,0.98)',borderRadius:'20px 20px 0 0',borderTop:'1px solid rgba(255,255,255,0.06)'}}>
+            <p style={{fontSize:'16px',fontWeight:400,color:'rgba(220,225,235,0.88)',marginBottom:'16px'}}>{t[SCENARIO_LANG_KEY[durationPickerScenario.id]] || durationPickerScenario.id}</p>
+            <div style={{display:'flex',gap:'12px'}}>
+              {(durationPickerScenario.durations || []).map(d => (
+                <button key={d} onClick={() => { launchScenario(durationPickerScenario.id, d); setDurationPickerScenario(null); }} style={{flex:1,padding:'14px',borderRadius:'12px',background:'rgba(255,255,255,0.025)',border:'1px solid rgba(255,255,255,0.06)',fontSize:'15px',color:'rgba(220,225,235,0.88)',cursor:'pointer'}}>
+                  {Math.round(d/60)} {t.min}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Weekly summary overlay */}
       {showWeekly && (() => {
