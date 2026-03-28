@@ -931,8 +931,8 @@ function getSessionInsight(stats, completionData, lang) {
 
   // Replace placeholders
   text = text.replace(/\{cycles\}/g, cycles)
-    .replace(/\{depth\}/g, depth)
-    .replace(/\{totalDepth\}/g, totalDepth)
+    .replace(/\{depth\}/g, formatDepth(depth))
+    .replace(/\{totalDepth\}/g, formatDepth(totalDepth))
     .replace(/\{streak\}/g, streak)
     .replace(/\{minutes\}/g, minutes)
     .replace(/\{totalMinutes\}/g, totalMinutes)
@@ -2522,9 +2522,9 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
           <Particles world={fbWorld} />
           <div className="screen-transition text-center z-10">
             <div className="font-body mb-6" style={{fontSize:16, fontWeight:300, color:'rgba(220,225,235,0.55)', letterSpacing:'0.04em'}}>{t.holdTestYourDepth || 'Your starting depth'}</div>
-            <div className="font-mono mb-2" style={{fontSize:48, fontWeight:300, color:palette.accent}}>{holdDepth}<span style={{fontSize:24}}>m</span></div>
+            <div className="font-mono mb-2" style={{fontSize:48, fontWeight:300, color:palette.accent}}>{formatDepth(holdDepth)}<span style={{fontSize:24}}>m</span></div>
             <div className="font-body mb-3" style={{fontSize:15, fontWeight:300, color:'rgba(220,225,235,0.5)'}}>{depthContext(holdDepth)}</div>
-            <div className="font-body mb-10" style={{fontSize:13, fontWeight:300, color:`rgba(${accentRgb},0.6)`, letterSpacing:'0.04em'}}>descended {holdDepth}m · surfaced safely</div>
+            <div className="font-body mb-10" style={{fontSize:13, fontWeight:300, color:`rgba(${accentRgb},0.6)`, letterSpacing:'0.04em'}}>descended {formatDepth(holdDepth)}m · surfaced safely</div>
             <button className="px-10 py-3 rounded-full font-body"
               style={{fontWeight:500, background:`rgba(${accentRgb},0.12)`, border:`1px solid rgba(${accentRgb},0.25)`, color:palette.accent}}
               onClick={() => setBreathPhase('goal')}>
@@ -3329,7 +3329,7 @@ function App() {
           <div className="font-body mb-3" style={{fontSize:28, fontWeight:300, color:'rgba(226,232,240,0.95)'}}>{t.diveComplete}</div>
           <div style={{borderTop:'1px solid rgba(255,255,255,0.04)', borderBottom:'1px solid rgba(255,255,255,0.04)', padding:'20px 0', margin:'24px 0'}}>
             <div className="flex justify-center" style={{gap:0}}>
-              {[[Math.round(completionData.duration / 60), t.duration || t.min],[completionData.breathCycles || Math.round(completionData.duration / 16), t.breathCycles || 'Breaths'],[completionData.depth, WORLDS[world].depthUnit]].map(([val,label],i) => (
+              {[[Math.round(completionData.duration / 60), t.duration || t.min],[completionData.breathCycles || Math.round(completionData.duration / 16), t.breathCycles || 'Breaths'],[formatDepth(completionData.depth), WORLDS[world].depthUnit]].map(([val,label],i) => (
                 <div key={i} className="text-center flex-1" style={{animation:`count-up 600ms ${i*150}ms ease-out both`}}>
                   <div className="font-mono" style={{fontSize:28, fontWeight:300, color:palette.accent}}>{val}</div>
                   <div className="font-body" style={{fontSize:11, fontWeight:300, color:'var(--text-3)', marginTop:4, letterSpacing:'0.05em', textTransform:'lowercase'}}>{label}</div>
@@ -4313,7 +4313,7 @@ function App() {
             <div style={{display:'flex',gap:'12px'}}>
               {(durationPickerScenario.durations || []).map(d => (
                 <button key={d} onClick={() => { launchScenario(durationPickerScenario.id, d); setDurationPickerScenario(null); }} style={{flex:1,padding:'14px',borderRadius:'12px',background:'rgba(255,255,255,0.025)',border:'1px solid rgba(255,255,255,0.06)',fontSize:'15px',color:'rgba(220,225,235,0.88)',cursor:'pointer'}}>
-                  {Math.round(d/60)} {t.min}
+                  {d} {t.min}
                 </button>
               ))}
             </div>
@@ -4328,7 +4328,7 @@ function App() {
           return (Date.now() - d.getTime()) < 7 * 86400000;
         }) || [];
         const weekMinutes = weekSessions.reduce((s, h) => s + Math.round((h.duration || 0) / 60), 0);
-        const weekDepth = Math.round(stats.totalDepth * 10) / 10;
+        const weekDepth = formatDepth(stats.totalDepth);
         // Most used technique from recent history
         const techCounts = {};
         (stats.history || []).slice(-20).forEach(h => {
