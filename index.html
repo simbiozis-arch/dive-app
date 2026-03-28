@@ -426,6 +426,122 @@ function getDifficultyLevel(initialHoldDepth) {
   return DIFFICULTY_LEVELS.find(l => d >= l.minDepth && d < l.maxDepth) || DIFFICULTY_LEVELS[0];
 }
 
+// ===== CUSTOM PATTERN PRESETS =====
+const CUSTOM_PRESETS = {
+  relaxation: { inhale: 4, holdIn: 0, exhale: 8, holdOut: 0, doubleInhale: false, name: 'Relaxation' },
+  focus: { inhale: 4, holdIn: 4, exhale: 4, holdOut: 4, doubleInhale: false, name: 'Focus' },
+  energy: { inhale: 4, holdIn: 0, exhale: 2, holdOut: 0, doubleInhale: false, name: 'Energy' },
+  sleep: { inhale: 4, holdIn: 0, exhale: 8, holdOut: 4, doubleInhale: false, name: 'Sleep' },
+  freediver: { inhale: 4, holdIn: 8, exhale: 4, holdOut: 4, doubleInhale: false, name: 'Freediver' },
+};
+
+// ===== ADAPTIVE DIFFICULTY (5 LEVELS) =====
+const LEVELS = {
+  novice: { id: 1, name: 'Novice', depthMin: 0, mult: 0.8 },
+  basic: { id: 2, name: 'Basic', depthMin: 10, mult: 1.0 },
+  intermediate: { id: 3, name: 'Intermediate', depthMin: 25, mult: 1.2 },
+  advanced: { id: 4, name: 'Advanced', depthMin: 40, mult: 1.5 },
+  expert: { id: 5, name: 'Expert', depthMin: 60, mult: 2.0 },
+};
+
+const LEVEL_TIMINGS = {
+  novice: {
+    physiological_sigh: { inhale1:2, inhale2:1, exhale:5 },
+    diaphragmatic: { inhale:4, exhale:6 },
+    box: { inhale:3, holdIn:3, exhale:3, holdOut:3 },
+    segmented: { belly:2, ribs:2, chest:2, exhale:5 },
+    ujjayi: { inhale:4, exhale:6 },
+    tidal: { inhale:3, exhale:5, pause:2 },
+    recovery: { inhale:3, holdIn:1, exhale:2 },
+  },
+  basic: {
+    physiological_sigh: { inhale1:2, inhale2:1, exhale:7 },
+    diaphragmatic: { inhale:5, exhale:10 },
+    box: { inhale:4, holdIn:4, exhale:4, holdOut:4 },
+    segmented: { belly:3, ribs:3, chest:3, exhale:8 },
+    ujjayi: { inhale:5, exhale:8 },
+    tidal: { inhale:4, exhale:6, pause:2 },
+    recovery: { inhale:3, holdIn:1, exhale:2 },
+  },
+  intermediate: {
+    physiological_sigh: { inhale1:3, inhale2:1, exhale:9 },
+    diaphragmatic: { inhale:6, exhale:12 },
+    box: { inhale:5, holdIn:5, exhale:5, holdOut:5 },
+    segmented: { belly:3, ribs:3, chest:3, exhale:10 },
+    ujjayi: { inhale:6, exhale:10 },
+    tidal: { inhale:5, exhale:7, pause:2 },
+    recovery: { inhale:3, holdIn:2, exhale:3 },
+  },
+  advanced: {
+    physiological_sigh: { inhale1:3, inhale2:2, exhale:10 },
+    diaphragmatic: { inhale:7, exhale:14 },
+    box: { inhale:6, holdIn:6, exhale:6, holdOut:6 },
+    segmented: { belly:4, ribs:4, chest:4, exhale:12 },
+    ujjayi: { inhale:7, exhale:12 },
+    tidal: { inhale:5, exhale:8, pause:3 },
+    recovery: { inhale:4, holdIn:2, exhale:3 },
+  },
+  expert: {
+    physiological_sigh: { inhale1:4, inhale2:2, exhale:14 },
+    diaphragmatic: { inhale:8, exhale:16 },
+    box: { inhale:8, holdIn:8, exhale:8, holdOut:8 },
+    segmented: { belly:5, ribs:5, chest:5, exhale:15 },
+    ujjayi: { inhale:8, exhale:14 },
+    tidal: { inhale:6, exhale:10, pause:3 },
+    recovery: { inhale:4, holdIn:3, exhale:4 },
+  },
+};
+
+function determineLevel(breathTests) {
+  if (!breathTests || breathTests.length === 0) return 'basic';
+  const bestDepth = Math.max(...breathTests.map(t => holdTimeToDepth(t.holdTime)));
+  if (bestDepth >= 60) return 'expert';
+  if (bestDepth >= 40) return 'advanced';
+  if (bestDepth >= 25) return 'intermediate';
+  if (bestDepth >= 10) return 'basic';
+  return 'novice';
+}
+
+function getSessionTimings(technique, level) {
+  return LEVEL_TIMINGS[level]?.[technique] || LEVEL_TIMINGS.basic[technique] || {};
+}
+
+// ===== HAPTIC PATTERN GENERATORS (eyes-closed mode) =====
+const HAPTIC_PATTERNS = {
+  inhale(durationMs) {
+    const steps = Math.floor(durationMs / 200);
+    const p = [];
+    for (let i = 0; i < steps; i++) {
+      const t = i / steps;
+      p.push(20 + Math.round(t * 100), Math.max(60, 200 - Math.round(t * 140)));
+    }
+    return p;
+  },
+  exhale(durationMs) {
+    const steps = Math.floor(durationMs / 200);
+    const p = [];
+    for (let i = 0; i < steps; i++) {
+      const t = i / steps;
+      p.push(120 - Math.round(t * 100), 60 + Math.round(t * 160));
+    }
+    return p;
+  },
+  hold(durationMs) {
+    const beats = Math.floor(durationMs / 2000);
+    const p = [];
+    for (let i = 0; i < beats; i++) p.push(15, 1985);
+    return p;
+  },
+  transition: [200],
+};
+
+function mapPhaseToHaptic(phase) {
+  if (['inhale','inhale1','inhale2','belly','ribs','chest'].includes(phase)) return 'inhale';
+  if (phase === 'exhale') return 'exhale';
+  if (['holdIn','hold','holdOut','pause'].includes(phase)) return 'hold';
+  return 'hold';
+}
+
 // ===== SCENARIOS =====
 const SCENARIOS = {
   meeting:      { cat:'focus', svgIcon:'meeting', free:true, durations:[5,10] },
@@ -993,6 +1109,7 @@ const defaultStats = () => ({
   breathTests:[],
   safetyFlag:null,
   difficultyLevel: 'beginner',
+  level: 'basic',
   lastRetestDate: null,
   lastRetestDismiss: null,
   bestHoldDepth: 0,
@@ -1018,9 +1135,10 @@ const FIRST_SESSION = (t) => [
 function holdTimeToDepth(holdSeconds) {
   return Math.max(1, Math.round((holdSeconds / 2) * 0.75));
 }
-function sessionDepth(durationSec, technique) {
-  const mult = { tidal:0.8, diaphragmatic:1.0, box:1.2, segmented:1.2, ujjayi:1.5, recovery:0.8, physiological_sigh:1.3 };
-  return Math.round(((durationSec / 60) * (mult[technique] || 1.0)) * 10) / 10;
+function sessionDepth(durationSec, technique, level) {
+  const baseMult = { tidal:0.8, diaphragmatic:1.0, box:1.2, segmented:1.2, ujjayi:1.5, recovery:0.8, physiological_sigh:1.3, custom:1.0 };
+  const levelMult = LEVELS[level || 'basic']?.mult || 1.0;
+  return Math.round(((durationSec / 60) * (baseMult[technique] || 1.0) * levelMult) * 10) / 10;
 }
 function detectFavourite(stats) {
   const last10 = (stats.history || []).slice(-10);
@@ -1940,11 +2058,23 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
           }
         }
       }
-      // Haptic on phase change (WOW 2: advanced haptic)
+      // Haptic on phase change (WOW 2: advanced haptic + eyes-closed enhanced)
       if (s.phase && s.phase !== lastPhaseRef.current) {
         lastPhaseRef.current = s.phase;
         if (hapticEnabledRef.current && navigator.vibrate) {
-          try { hapticForPhase(s.phase, s.phaseDuration); } catch {}
+          try {
+            if (eyesClosedMode) {
+              navigator.vibrate(0); // cancel previous
+              navigator.vibrate(HAPTIC_PATTERNS.transition);
+              setTimeout(() => {
+                const hType = mapPhaseToHaptic(s.phase);
+                const pattern = HAPTIC_PATTERNS[hType]?.(s.phaseDuration * 1000);
+                if (pattern?.length) navigator.vibrate(pattern);
+              }, 250);
+            } else {
+              hapticForPhase(s.phase, s.phaseDuration);
+            }
+          } catch {}
         }
       }
     };
@@ -2801,7 +2931,7 @@ function CustomPatternScreen({ onBack, onStart, onSave }) {
       </div>
 
       {/* Safety warning */}
-      {cp.holdIn > 8 && (
+      {(cp.holdIn > 8 || cp.holdOut > 8) && (
         <div style={{padding:'12px 16px', marginBottom:12, borderRadius:10, background:'rgba(255,180,0,0.07)', border:'1px solid rgba(255,180,0,0.18)', fontSize:12, color:'rgba(255,200,80,0.8)', lineHeight:1.6, fontFamily:"'DM Sans',sans-serif"}}>
           Hold &gt;8 sec may cause light-headedness. Start shorter if new to breathwork.
         </div>
@@ -3106,7 +3236,7 @@ function App() {
         streak = diff === 1 ? prev.streak + 1 : 1;
       }
       const longestStreak = Math.max(prev.longestStreak || 0, streak);
-      const depth = sessionDepth(sessionInfo.duration || 0, sessionInfo.mainTechnique || 'diaphragmatic');
+      const depth = sessionDepth(sessionInfo.duration || 0, sessionInfo.mainTechnique || 'diaphragmatic', prev.level || 'basic');
       const newTechStats = {...(prev.techniqueStats || {})};
       (sessionInfo.techniques || []).forEach(tc => { newTechStats[tc] = (newTechStats[tc] || 0) + 1; });
       return {
@@ -3139,8 +3269,18 @@ function App() {
   };
 
   const actuallyStartSession = (segments, meta = {}) => {
+    // Apply adaptive difficulty level timings to breathing segments
+    const userLevel = stats.level || 'basic';
+    segments.forEach(seg => {
+      if (seg.type === 'breathing' && seg.technique !== 'custom') {
+        const levelTimings = getSessionTimings(seg.technique, userLevel);
+        if (levelTimings && Object.keys(levelTimings).length > 0) {
+          seg.params = { ...seg.params, ...levelTimings };
+        }
+      }
+    });
     const mergedSegs = mergeConsecutiveTexts(segments);
-    ph('session_start', { scenario: meta?.scenario, technique: segments.find(s=>s.type==='breathing')?.technique, duration: segments.reduce((a,s)=>a+(s.duration||0),0) });
+    ph('session_start', { scenario: meta?.scenario, technique: segments.find(s=>s.type==='breathing')?.technique, duration: segments.reduce((a,s)=>a+(s.duration||0),0), level: userLevel });
     setActiveSession({ segments: mergedSegs, meta });
     if (stats.soundEnabled) { ambientRef.current.init(WORLDS[world].ambient); ambientRef.current.fadeIn(); }
     // P1.2: MediaSession metadata so lock screen shows session info
@@ -3211,7 +3351,7 @@ function App() {
             const cycleDur = Object.values(s.params).reduce((a, b) => a + b, 0);
             return total + (cycleDur > 0 ? Math.floor(s.duration / cycleDur) : 0);
           }, 0) || Math.round(totalDur / 16));
-      const cData = { duration: actualDur, techniques: techs, depth: sessionDepth(actualDur, mainTech), breathCycles, segments: segs, _lastScenario: activeSession.meta?.scenario };
+      const cData = { duration: actualDur, techniques: techs, depth: sessionDepth(actualDur, mainTech, stats.level || 'basic'), breathCycles, segments: segs, _lastScenario: activeSession.meta?.scenario };
       ph('session_complete', { scenario: activeSession.meta?.scenario, depth: cData.depth, preMood: currentMood.pre, postMood: currentMood.post });
       setActiveSession(null);
       setShowSurfacing(true);
@@ -3315,6 +3455,12 @@ function App() {
               const newLevelIdx = DIFFICULTY_LEVELS.findIndex(l => l.id === newLevel.id);
               newState.bestHoldDepth = newBestDepth;
               newState.difficultyLevel = newLevelIdx > currentLevelIdx ? newLevel.id : (s.difficultyLevel || 'beginner');
+              // Update adaptive level (LEVELS system)
+              const allTests = [...(s.breathTests || []), { holdTime: Math.round(holdTimeResult*10)/10 }];
+              const newAdaptiveLevel = determineLevel(allTests);
+              if (LEVELS[newAdaptiveLevel].id > LEVELS[s.level || 'basic'].id) {
+                newState.level = newAdaptiveLevel;
+              }
               newState.lastRetestDate = new Date().toISOString();
               if (newLevelIdx > currentLevelIdx) {
                 setLevelUpMessage('Level up! You are now ' + newLevel.label);
@@ -3714,7 +3860,7 @@ function App() {
           fontSize:11, fontFamily:"'DM Sans',sans-serif", fontWeight:500,
           color:'rgba(94,170,168,0.8)',
         }}>
-          {getDifficultyLevel(stats.bestHoldDepth)?.label || 'Beginner'}
+          {LEVELS[stats.level || 'basic']?.name || getDifficultyLevel(stats.bestHoldDepth)?.label || 'Basic'}
         </span>
       </div>
 
