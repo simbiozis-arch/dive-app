@@ -536,6 +536,17 @@ const HAPTIC_PATTERNS = {
   transition: [200],
 };
 
+const HAPTIC = {
+  phaseChange: () => navigator.vibrate?.(15),
+  inhaleCue: () => navigator.vibrate?.(40),
+  exhaleCue: () => navigator.vibrate?.(20),
+  holdCue: () => navigator.vibrate?.([30, 20, 30]),
+  textMoment: () => navigator.vibrate?.([50, 30, 50]),
+  sessionStart: () => navigator.vibrate?.([100, 50, 100, 50, 100]),
+  splash: () => navigator.vibrate?.(200),
+  celebrate: () => navigator.vibrate?.([50, 30, 50, 30, 80, 40, 120]),
+};
+
 function mapPhaseToHaptic(phase) {
   if (['inhale','inhale1','inhale2','belly','ribs','chest'].includes(phase)) return 'inhale';
   if (phase === 'exhale') return 'exhale';
@@ -1097,7 +1108,7 @@ const SUPABASE_URL = 'https://yvylaclvvxuykpatwaob.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_sg5vD96S6ntmDCknW3LufQ_2DbcHV9K';
 const supabaseClient = window.supabase?.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-function isDemo(user) { return !user || user.id === 'demo' || user.isDemo; }
+function isDemo(user) { return !user || user.id === 'demo' || user.isDemo || user.isLocal; }
 
 async function cloudSaveProfile(userId, stats) {
   if (!supabaseClient || isDemo({ id: userId })) return;
@@ -2010,7 +2021,7 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
     }
 
     if (audioKey && AUDIO_MAP[audioKey]) {
-      // 1-second silence gap before voice starts
+      // 600ms silence gap before voice starts (matches text deblur animation)
       setTimeout(() => {
         ambientRef.current?.duck();
         const a = voicePlayer.play(audioKey, 0);
@@ -2039,7 +2050,7 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
             ambientRef.current?.unduck();
           }, fadeOutTime);
         }
-      }, 1000);
+      }, 600);
     }
   }, [voiceOn, currentLang, world, t]);
 
@@ -2441,6 +2452,17 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
   const voiceClipsRef = useRef([]);
   const diveAudioRef = useRef(null);
   const firedEventsRef = useRef(new Set());
+  const [bubbleReveal, setBubbleReveal] = useState('hidden'); // 'hidden' | 'glow' | 'forming' | 'ready'
+
+  // Bubble reveal phases after text sequence ends
+  useEffect(() => {
+    if (breathPhase === 'cinematic') {
+      const t1 = setTimeout(() => setBubbleReveal('glow'), 500);
+      const t2 = setTimeout(() => setBubbleReveal('forming'), 2000);
+      const t3 = setTimeout(() => setBubbleReveal('ready'), 3500);
+      return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+    }
+  }, [breathPhase]);
 
   // Text sequence before breathing
   const INTRO_TEXTS = [
@@ -2646,9 +2668,8 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
   // Breath hold test depth calculation — uses global holdTimeToDepth + depthContext
 
   const startHoldTest = () => {
-    setHoldTestPhase('holding');
+    setHoldTestPhase('splash');
     setHoldTime(0);
-    holdStartRef.current = Date.now();
     // Play dive/splash audio
     try {
       const da = new Audio('audio/dive_underwater.mp3');
@@ -2666,11 +2687,18 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
         }, 50);
       }, 4000);
     } catch {}
-    holdIntervalRef.current = setInterval(() => {
-      if (!holdStartRef.current) return;
-      const h = (Date.now() - holdStartRef.current) / 1000;
-      setHoldTime(h);
-    }, 100);
+    // Vibrate splash
+    HAPTIC.splash();
+    // After 2 seconds, start actual timer
+    setTimeout(() => {
+      setHoldTestPhase('holding');
+      holdStartRef.current = Date.now();
+      holdIntervalRef.current = setInterval(() => {
+        if (!holdStartRef.current) return;
+        const h = (Date.now() - holdStartRef.current) / 1000;
+        setHoldTime(h);
+      }, 100);
+    }, 2000);
   };
 
   const stopHoldTest = () => {
@@ -2736,6 +2764,17 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
               onClick={startHoldTest}>
               Hold &amp; Start
             </button>
+          </div>
+        </div>
+      );
+    }
+    if (holdTestPhase === 'splash') {
+      return (
+        <div className="fixed inset-0 flex flex-col items-center justify-center px-8" style={{background:'linear-gradient(180deg, rgb(10,44,66) 0%, rgb(1,7,11) 100%)', transition:'background 1s linear'}}>
+          <Particles world={fbWorld} />
+          <div className="screen-transition text-center z-10">
+            <div className="font-body" style={{fontSize:28, fontWeight:200, color:'rgba(94,170,168,0.8)', letterSpacing:'0.15em', animation:'hold-counter-pulse 1s ease-in-out infinite'}}>Diving...</div>
+            <div className="font-mono mt-6" style={{fontSize:48, fontWeight:300, color:'rgba(220,225,235,0.3)'}}>—</div>
           </div>
         </div>
       );
@@ -2841,8 +2880,9 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
   }
 
   // CINEMATIC BREATHING PHASE
-  const showBubble = elapsed >= 2;
-  const bubbleOpacity = elapsed >= 2 ? Math.min((elapsed - 2) * 0.5, 1) : 0;
+  const showBubble = bubbleReveal !== 'hidden';
+  const bubbleOpacity = bubbleReveal === 'hidden' ? 0 : bubbleReveal === 'glow' ? 0.3 : bubbleReveal === 'forming' ? 0.8 : 1;
+  const bubbleScale = bubbleReveal === 'hidden' ? 0.2 : bubbleReveal === 'glow' ? 0.4 : bubbleReveal === 'forming' ? 0.85 : 1;
   const lightSize = elapsed >= 1 ? Math.min((elapsed - 1) * 100, 320) : 0;
   const lightOpacity = elapsed >= 1 ? Math.min((elapsed - 1) * 0.4, 1) : 0;
   const smallTextOpacity = elapsed >= 4 ? Math.min((elapsed - 4) * 0.15, 0.45) : 0;
@@ -2850,7 +2890,7 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
   return (
     <div className="fixed inset-0 flex flex-col items-center justify-center" style={{background:cinematicBg, transition:'background 1s linear'}}>
       {/* Teal light point emerges 1-4s */}
-      {elapsed >= 1 && !showBubble && (
+      {elapsed >= 1 && bubbleReveal !== 'ready' && (
         <div style={{
           position:'absolute', top:'50%', left:'50%', transform:'translate(-50%, -50%)',
           width: lightSize, height: lightSize, borderRadius:'50%',
@@ -2870,7 +2910,7 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
       )}
       {/* Breathing bubble — animates during all cycles */}
       {showBubble && (
-        <div style={{opacity:bubbleOpacity, transition:'opacity 1s ease', width:'100%', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center'}}>
+        <div style={{opacity:bubbleOpacity, transform:`scale(${bubbleScale})`, transition:'opacity 1500ms ease-out, transform 1500ms ease-out', width:'100%', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center'}}>
           {/* BUG1: positioned absolutely so translate(-50%,-50%) anchor works like session player */}
           <div ref={cinematicBubbleRef} style={{
             position:'absolute', top:'42%', left:'50%',
@@ -3220,15 +3260,39 @@ function App() {
   const [authLoading, setAuthLoading] = useState(true);
 
   useEffect(() => {
-    if (!supabaseClient) { setAuthLoading(false); return; }
-    supabaseClient.auth.getSession().then(({ data: { session } }) => {
-      setAuthUser(session?.user ?? null);
+    if (!supabaseClient) {
+      // No Supabase available — local-only mode
+      setAuthUser({ id: 'local', isLocal: true });
       setAuthLoading(false);
+      return;
+    }
+
+    // Get existing session
+    supabaseClient.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setAuthUser(session.user);
+        setAuthLoading(false);
+      }
     });
-    const { data: { subscription } } = supabaseClient.auth.onAuthStateChange((_event, session) => {
-      setAuthUser(session?.user ?? null);
-    });
-    return () => subscription.unsubscribe();
+
+    // Listen for auth state changes (catches redirects, magic links)
+    const { data: { subscription } } = supabaseClient.auth.onAuthStateChange(
+      (event, session) => {
+        setAuthUser(session?.user ?? null);
+        setAuthLoading(false);
+        // Clean URL after auth redirect
+        if (event === 'SIGNED_IN' && (window.location.hash || window.location.search.includes('code='))) {
+          window.history.replaceState(null, '', window.location.pathname);
+        }
+      }
+    );
+
+    // Timeout: if still loading after 3s, go to auth screen
+    const timeout = setTimeout(() => {
+      setAuthLoading(false);
+    }, 3000);
+
+    return () => { subscription.unsubscribe(); clearTimeout(timeout); };
   }, []);
 
   const [stats, setStats] = useState(() => loadData() || defaultStats());
@@ -3981,7 +4045,7 @@ function App() {
   const renderHome = () => {
     const rec = getDailyRecommendation(stats, t);
     return (
-    <div className="screen-transition overflow-y-auto h-full no-scrollbar" style={{padding:'env(safe-area-inset-top, 48px) 24px 100px 24px'}}>
+    <div className="screen-transition overflow-y-auto h-full no-scrollbar" style={{padding:'env(safe-area-inset-top, 48px) 24px 140px 24px'}}>
       <div className="flex items-center justify-between mb-6">
         <div>
           <div className="font-body" style={{fontSize:24, fontWeight:200, color:'rgba(226,232,240,0.95)', letterSpacing:'0.25em', textTransform:'uppercase'}}>{t.appName}</div>
@@ -3994,7 +4058,7 @@ function App() {
 
       {/* Daily recommendation card */}
       <button className="w-full text-left mb-6" style={{
-        minHeight:'max(180px, 42vh)', borderRadius:14, padding:'32px 24px', position:'relative', overflow:'hidden',
+        minHeight:'max(150px, 35vh)', borderRadius:14, padding:'32px 24px', position:'relative', overflow:'hidden',
         background:'rgba(255,255,255,0.024)',
         border:'1px solid rgba(255,255,255,0.05)',
         display:'flex', flexDirection:'column', justifyContent:'space-between',
@@ -4080,26 +4144,52 @@ function App() {
         </div>
       )}
 
-      {/* Stress SOS button — instant, no questions */}
-      <button className="w-full mb-6" style={{
-        height:44, borderRadius:14, background:`rgba(${accentRgb},0.06)`, border:`1px solid rgba(${accentRgb},0.12)`,
-        color:'rgba(220,225,235,0.7)', display:'flex', alignItems:'center', justifyContent:'center', gap:8,
-        fontSize:14, fontWeight:400,
-      }} onClick={() => {
-        setCurrentMood({pre: null, post: null});
-        setMoodDelta(null);
-        ph('sos_used', {});
-        const segs = [{ type:'breathing', technique:'physiological_sigh', duration:90, params:{inhale1:2,inhale2:1,exhale:7} }];
-        actuallyStartSession(segs, {scenario:'stress_sos', category:'stress', isSOSSession:true});
+      {/* SOS + Breathe now — fixed action bar above tab bar */}
+      <div style={{
+        position:'fixed', bottom:64, left:0, right:0,
+        padding:'8px 20px', paddingTop:20,
+        display:'flex', gap:8,
+        background:'linear-gradient(0deg, rgba(2,10,16,0.95) 0%, transparent 100%)',
+        zIndex:20, pointerEvents:'none',
       }}>
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-        Stressed? Breathe.
-      </button>
+        <button style={{
+          flex:1, height:44, borderRadius:14, background:`rgba(${accentRgb},0.06)`, border:`1px solid rgba(${accentRgb},0.12)`,
+          color:'rgba(220,225,235,0.7)', display:'flex', alignItems:'center', justifyContent:'center', gap:8,
+          fontSize:14, fontWeight:400, pointerEvents:'auto', cursor:'pointer',
+        }} onClick={() => {
+          setCurrentMood({pre: null, post: null});
+          setMoodDelta(null);
+          ph('sos_used', {});
+          const segs = [{ type:'breathing', technique:'physiological_sigh', duration:90, params:{inhale1:2,inhale2:1,exhale:7} }];
+          actuallyStartSession(segs, {scenario:'stress_sos', category:'stress', isSOSSession:true});
+        }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          Stressed? Breathe.
+        </button>
+        <button className="breathe-now-btn" style={{flex:1, pointerEvents:'auto'}} onClick={() => setScreen('breathe-choice')}>
+          Breathe now
+        </button>
+      </div>
 
-      {/* Breathe Now — always visible */}
-      <button className="breathe-now-btn" onClick={() => setScreen('breathe-choice')}>
-        Breathe now
-      </button>
+      {/* Daily insight */}
+      {(() => {
+        const HOME_INSIGHTS = [
+          "Navy SEALs use box breathing to perform under fire",
+          "5 minutes of cyclic sighing reduces cortisol more than meditation",
+          "Freedivers slow their heart from 80 to 30 bpm with breath alone",
+          "Your diaphragm is the only skeletal muscle that works 24/7",
+          "Exhaling longer than inhaling activates your vagus nerve",
+          "3 physiological sighs can reset your nervous system in 90 seconds",
+          "Japanese pearl divers hold their breath for 2+ minutes",
+        ];
+        return (
+          <div style={{margin:'16px 0', padding:'14px 16px', borderRadius:12, background:'rgba(255,255,255,0.015)', border:'1px solid rgba(255,255,255,0.03)'}}>
+            <p className="font-body" style={{fontSize:13, fontWeight:300, color:'rgba(220,225,235,0.45)', lineHeight:1.5, margin:0}}>
+              {HOME_INSIGHTS[Math.floor(Date.now() / 86400000) % HOME_INSIGHTS.length]}
+            </p>
+          </div>
+        );
+      })()}
 
       {/* Programs — horizontal scroll */}
       <div className="mb-6">
