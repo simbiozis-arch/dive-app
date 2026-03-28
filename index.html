@@ -9,8 +9,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>DIVE</title>
 <link rel="manifest" href="manifest.json">
-<script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@200;300;400;500;600&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet">
@@ -2561,7 +2561,16 @@ function App() {
   useEffect(() => { if (shouldShowWeekly && screen === 'home') setShowWeekly(true); }, [shouldShowWeekly, screen]);
 
 
-  useEffect(() => { audioDebug(); }, []);
+  useEffect(() => {
+    audioDebug();
+    // Handle /?sos=true shortcut (PWA shortcut from manifest)
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('sos') === 'true' && stats.onboarded) {
+      window.history.replaceState({}, '', '/');
+      const segs = [{ type:'breathing', technique:'physiological_sigh', duration:90, params:{inhale1:2,inhale2:1,exhale:7} }];
+      actuallyStartSession(segs, {scenario:'stress_sos_quick', category:'stress'});
+    }
+  }, []);
   useEffect(() => { saveData(stats); }, [stats]);
 
   // Apply CSS vars for world
@@ -3719,6 +3728,11 @@ try {
   ReactDOM.createRoot(document.getElementById('root')).render(<App />);
 } catch(e) {
   document.getElementById('root').innerHTML = '<pre style="color:red;padding:20px">'+e.message+'\n'+e.stack+'</pre>';
+}
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
 }
 </script>
 </body>

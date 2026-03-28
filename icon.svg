@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="108" fill="#051225"/>
+  <text x="256" y="310" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-weight="200" font-size="220" fill="#5eaaa8" letter-spacing="20">DIVE</text>
+  <circle cx="256" cy="420" r="6" fill="#5eaaa8" opacity="0.4"/>
+</svg>
