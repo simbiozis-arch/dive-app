@@ -20,7 +20,8 @@ posthog.init('phc_ikhnznxs5W5eX1ZjDV4fzzwO6iMl2wIjwo9BOn46fPG', {api_host: 'http
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@200;300;400;500;600&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet">
 <style>
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-html,body,#root { background: linear-gradient(180deg, #0e3d5c 0%, #041520 50%, #020a10 100%) !important; min-height: 100dvh; }
+html,body { background: #020a10 !important; min-height: 100vh; min-height: 100dvh; margin: 0; padding: 0; }
+#root { background: linear-gradient(180deg, #0e3d5c 0%, #041520 50%, #020a10 100%) !important; min-height: 100vh; min-height: 100dvh; }
 html,body,#root { width:100%; height:100%; overflow:hidden; font-family:'DM Sans',sans-serif; }
 :root {
   --bg-1:#070c15; --bg-2:#0c1322; --bg-3:#111b2e; --bg-4:#182640;
@@ -1935,11 +1936,12 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
     if (!engineRef.current) return;
     if (paused) {
       engineRef.current.pause();
-      ambientRef.current?.ctx?.suspend();
+      if (ambientRef.current?.ctx?.state === 'running') ambientRef.current.ctx.suspend();
       if (voicePlayer.current) voicePlayer.current.pause();
+      if (navigator.vibrate) navigator.vibrate(0);
     } else {
       engineRef.current.resume();
-      ambientRef.current?.ctx?.resume();
+      if (ambientRef.current?.ctx?.state === 'suspended') ambientRef.current.ctx.resume();
       if (voicePlayer.current && voicePlayer.current.paused) voicePlayer.current.play().catch(()=>{});
     }
   }, [paused]);
@@ -1971,6 +1973,7 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
               width: 'min(76vw, 300px)', aspectRatio: '1',
               margin: 0,
               willChange: 'transform',
+              transition: 'none',
               transform: 'translate(-50%, -50%) scale(1)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               zIndex: 5,
@@ -2099,13 +2102,6 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
             0:00 / {Math.floor(totalDuration / 60)}:{String(Math.floor(totalDuration % 60)).padStart(2,'0')}
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => setHapticOn(h => !h)} className="flex items-center justify-center rounded-full" style={{
-              width:36, height:36, borderRadius:'50%',
-              border: hapticOn ? '1px solid rgba(94,170,168,0.6)' : '1px solid rgba(255,255,255,0.06)',
-              background: hapticOn ? 'rgba(94,170,168,0.12)' : 'rgba(255,255,255,0.04)',
-              color: hapticOn ? 'rgba(94,170,168,0.9)' : 'rgba(255,255,255,0.3)',
-              fontSize:16, cursor:'pointer',
-            }}>〜</button>
             <button onClick={() => setPaused(!paused)} className="flex items-center justify-center rounded-full" style={{width:36,height:36,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.06)'}}>
               <Icon name={paused ? 'play' : 'pause'} size={14}/>
             </button>
@@ -2124,8 +2120,8 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
 
         {/* Exit confirm */}
         {showExitConfirm && (
-          <div className="absolute inset-0 flex items-center justify-center" style={{zIndex:60, background:'rgba(0,0,0,0.7)', backdropFilter:'blur(12px)'}}>
-            <div className="text-center screen-transition" style={{zIndex:61}}>
+          <div style={{position:'fixed', inset:0, background:'rgba(0,0,0,0.65)', zIndex:60, display:'flex', alignItems:'center', justifyContent:'center', backdropFilter:'blur(12px)'}}>
+            <div className="text-center screen-transition" style={{background:'rgba(12,19,34,0.95)', border:'1px solid rgba(255,255,255,0.06)', borderRadius:16, padding:24, maxWidth:280, width:'calc(100% - 48px)', zIndex:61}}>
               <div className="font-body mb-2" style={{fontSize:20, fontWeight:400, color:'rgba(226,232,240,0.95)'}}>{t.exitSession}</div>
               <div className="font-body mb-6" style={{fontSize:14, fontWeight:300, color:'var(--text-2)'}}>{t.exitConfirm}</div>
               <div className="flex gap-3 justify-center">
@@ -2186,7 +2182,7 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
   const [breathPhase, setBreathPhase] = useState('text_sequence'); // 'text_sequence' | 'cinematic' | 'done' | 'feeling' | 'holdTest' | 'goal'
   const [elapsed, setElapsed] = useState(0);
   const [currentPhase, setCurrentPhase] = useState(null);
-  const [breathScale, setBreathScale] = useState(1.0);
+  const cinematicBubbleRef = useRef(null); // BUG1: ref-based scale to avoid transition jumps
   const [introTextIdx, setIntroTextIdx] = useState(-1);
   const [introTextOpacity, setIntroTextOpacity] = useState(0);
   const [holdTestPhase, setHoldTestPhase] = useState('intro'); // 'intro' | 'holding' | 'result'
@@ -2343,9 +2339,12 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
           const d = phaseDurations[p];
           const prog = d > 0 ? Math.min(phaseElapsed / d, 1) : 0;
           const eased = 0.5 - 0.5 * Math.cos(prog * Math.PI); // cosine easing
-          if (p === 'inhale1') setBreathScale(1.0 + 0.5 * eased);
-          else if (p === 'inhale2') setBreathScale(1.5 + 0.2 * eased);
-          else if (p === 'exhale') setBreathScale(1.7 - 0.7 * eased);
+          let sc = 1.0;
+          if (p === 'inhale1') sc = 1.0 + 0.5 * eased;
+          else if (p === 'inhale2') sc = 1.5 + 0.2 * eased;
+          else if (p === 'exhale') sc = 1.7 - 0.7 * eased;
+          // BUG1: direct DOM update — no React state, no CSS transition jumps
+          if (cinematicBubbleRef.current) cinematicBubbleRef.current.style.transform = `translate(-50%, -50%) scale(${sc})`;
           // FIX8: update cinematic bubble timer via ref
           if (cinematicTimerRef.current) {
             cinematicTimerRef.current.textContent = Math.ceil(Math.max(0, d - phaseElapsed));
@@ -2619,8 +2618,14 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
       {/* Breathing bubble — animates during all cycles */}
       {showBubble && (
         <div style={{opacity:bubbleOpacity, transition:'opacity 1s ease', width:'100%', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center'}}>
-          <div style={{position:'relative', width:'min(70vw, 280px)', aspectRatio:'1', margin:'0 auto', display:'flex', alignItems:'center', justifyContent:'center',
-            transform:`scale(${breathScale})`, willChange:'transform'}}>
+          {/* BUG1: positioned absolutely so translate(-50%,-50%) anchor works like session player */}
+          <div ref={cinematicBubbleRef} style={{
+            position:'absolute', top:'42%', left:'50%',
+            width:'min(70vw, 280px)', aspectRatio:'1',
+            willChange:'transform', transition:'none',
+            transform:'translate(-50%, -50%) scale(1)',
+            display:'flex', alignItems:'center', justifyContent:'center',
+          }}>
             <OceanBubble />
             {/* FIX8: countdown inside cinematic bubble */}
             <div ref={cinematicTimerRef} style={{
@@ -2633,7 +2638,7 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
             }} />
           </div>
           {currentPhase && (
-            <div style={{marginTop:40, textAlign:'center'}}>
+            <div style={{position:'fixed', bottom:'calc(80px + env(safe-area-inset-bottom, 24px))', left:0, right:0, textAlign:'center', pointerEvents:'none'}}>
               <div className="font-body" style={{fontWeight:500, fontSize:14, letterSpacing:'0.1em', textTransform:'uppercase', color:'rgba(220,225,235,0.7)', marginBottom:4}}>
                 {phaseLabels[currentPhase]}
               </div>
@@ -2817,8 +2822,8 @@ function AnimatedNumber({ value, duration = 1200 }) {
 }
 
 function formatDepth(meters) {
-  if (!meters) return '0';
-  if (meters < 10) return parseFloat(meters.toFixed(1)).toString();
+  if (!meters || meters <= 0) return '0';
+  if (meters < 10) return meters.toFixed(1);
   return Math.round(meters).toString();
 }
 
