@@ -9,6 +9,10 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>DIVE</title>
 <link rel="manifest" href="manifest.json">
+<script>
+!function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="capture identify alias people.set people.set_once set_config register register_once unregister opt_out_capturing has_opted_out_capturing opt_in_capturing reset isFeatureEnabled onFeatureFlags getFeatureFlag getFeatureFlagPayload reloadFeatureFlags group updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures getActiveMatchingSurveys getSurveys onSessionId".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+posthog.init('phc_PLACEHOLDER', {api_host: 'https://us.i.posthog.com', person_profiles: 'identified_only'});
+</script>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -163,6 +167,11 @@ button:active, [role="button"]:active { transform: scale(0.97); transition: tran
 <div id="root"></div>
 <script type="text/babel">
 const { useState, useEffect, useRef, useCallback, useMemo } = React;
+
+// ===== POSTHOG SAFE WRAPPER =====
+const ph = (event, props) => {
+  try { window.posthog?.capture(event, props); } catch(e) {}
+};
 
 // ===== LANG =====
 const LANG = {
@@ -1152,17 +1161,61 @@ class AmbientEngine {
 }
 
 // ===== AUDIO MAP =====
-// Only text/bodyscan/visualization voice files — NO breathing phase cues
 const AUDIO_MAP = {
-  'intro_sit': '/audio/intro_sit.mp3',
-  'intro_hands': '/audio/intro_hands.mp3',
-  'session_end': '/audio/session_end.mp3',
-  'session_end_sleep': '/audio/session_end_sleep.mp3',
-  'bodyscan_short': '/audio/bodyscan_short.mp3',
-  'bodyscan_full': '/audio/bodyscan_full.mp3',
-  'bodyscan_sleep': '/audio/bodyscan_sleep.mp3',
-  'vis_ocean_calm': '/audio/vis_ocean_calm.mp3',
-  // vis_memory_calm removed
+  // Onboarding intro voice
+  intro_01_welcome: '/audio/intro_01_welcome.mp3',
+  intro_02_freediver: '/audio/intro_02_freediver.mp3',
+  intro_03_follow: '/audio/intro_03_follow.mp3',
+  intro_04_good: '/audio/intro_04_good.mp3',
+  intro_05_onemore: '/audio/intro_05_onemore.mp3',
+  intro_06_calming: '/audio/intro_06_calming.mp3',
+  intro_07_ready: '/audio/intro_07_ready.mp3',
+  // Ambient
+  intro_ambient: '/audio/dive_intro_ambient.mp3',
+  dive_splash: '/audio/dive_underwater.mp3',
+  // Session text segments
+  intro_sit: '/audio/intro_sit.mp3',
+  intro_hands: '/audio/intro_hands.mp3',
+  bodyscan_head: '/audio/bodyscan_short.mp3',
+  bodyscan_full: '/audio/bodyscan_full.mp3',
+  bodyscan_hands: '/audio/bodyscan_short.mp3',
+  session_end: '/audio/session_end.mp3',
+  session_end_short: '/audio/session_end.mp3',
+  session_end_sleep: '/audio/session_end_sleep.mp3',
+  vis_ocean_calm: '/audio/vis_ocean_calm.mp3',
+  vis_ocean_focus: '/audio/vis_ocean_focus.mp3',
+  vis_ocean_energy: '/audio/vis_ocean_calm.mp3',
+  // Box breathing phase cues
+  box_cue_inhale: '/audio/box_cue_inhale.mp3',
+  box_cue_hold: '/audio/box_cue_hold.mp3',
+  box_cue_exhale: '/audio/box_cue_exhale.mp3',
+  box_cue_pause: '/audio/box_cue_pause.mp3',
+  // Technique intros
+  box_intro: '/audio/box_intro.mp3',
+  diaphragmatic_intro: '/audio/diaphragmatic_cue.mp3',
+  segmented_intro: '/audio/segmented_intro.mp3',
+  ujjayi_intro: '/audio/ujjayi_intro.mp3',
+  recovery_intro: '/audio/recovery_intro.mp3',
+  sigh_intro: '/audio/sigh_intro.mp3',
+  tidal_intro: '/audio/tidal_intro.mp3',
+  // Technique phase cues
+  diaphragmatic_cue: '/audio/diaphragmatic_cue.mp3',
+  diaphragmatic_exhale: '/audio/diaphragmatic_exhale.mp3',
+  segmented_belly: '/audio/segmented_belly.mp3',
+  segmented_ribs: '/audio/segmented_ribs.mp3',
+  segmented_chest: '/audio/segmented_chest.mp3',
+  segmented_exhale: '/audio/segmented_exhale.mp3',
+  ujjayi_cue: '/audio/ujjayi_cue.mp3',
+  ujjayi_exhale: '/audio/ujjayi_exhale.mp3',
+  recovery_cue: '/audio/recovery_cue.mp3',
+  recovery_exhale: '/audio/recovery_exhale.mp3',
+  sigh_cue: '/audio/sigh_cue.mp3',
+  sigh_exhale: '/audio/sigh_exhale.mp3',
+  tidal_cue: '/audio/tidal_cue.mp3',
+  tidal_exhale: '/audio/tidal_exhale.mp3',
+  // Legacy keys
+  bodyscan_short: '/audio/bodyscan_short.mp3',
+  bodyscan_sleep: '/audio/bodyscan_sleep.mp3',
 };
 
 // ===== VOICE PLAYER =====
@@ -1201,6 +1254,54 @@ class VoicePlayer {
   }
 }
 const voicePlayer = new VoicePlayer();
+
+function playPhaseCue(technique, phase, isFirstCycle) {
+  if (!voicePlayer.enabled) return;
+  const tech = technique === 'physiological_sigh' ? 'sigh' : technique;
+
+  // Play technique intro only on first cycle, first inhale phase
+  if (isFirstCycle && (phase === 'inhale' || phase === 'inhale1' || phase === 'belly')) {
+    const introKey = `${tech}_intro`;
+    if (AUDIO_MAP[introKey]) { voicePlayer.play(introKey); return; }
+  }
+
+  // Box breathing: specific per-phase cues
+  if (tech === 'box') {
+    const boxMap = { inhale: 'box_cue_inhale', holdIn: 'box_cue_hold', exhale: 'box_cue_exhale', holdOut: 'box_cue_pause' };
+    if (boxMap[phase] && AUDIO_MAP[boxMap[phase]]) voicePlayer.play(boxMap[phase]);
+    return;
+  }
+
+  // Segmented breathing: belly/ribs/chest cues
+  if (tech === 'segmented') {
+    const segMap = { belly: 'segmented_belly', ribs: 'segmented_ribs', chest: 'segmented_chest', exhale: 'segmented_exhale' };
+    if (segMap[phase] && AUDIO_MAP[segMap[phase]]) voicePlayer.play(segMap[phase]);
+    return;
+  }
+
+  // Other techniques: _cue on inhale phases, _exhale on exhale
+  if (['ujjayi','recovery','sigh','tidal','diaphragmatic'].includes(tech)) {
+    if (phase === 'inhale' || phase === 'inhale1') {
+      const k = `${tech}_cue`; if (AUDIO_MAP[k]) voicePlayer.play(k);
+    }
+    if (phase === 'exhale') {
+      const k = `${tech}_exhale`; if (AUDIO_MAP[k]) voicePlayer.play(k);
+    }
+  }
+}
+
+const TEXT_VOICE_MAP = {
+  sitDown: 'intro_sit',
+  hands: 'intro_hands',
+  bodyScanShort: 'bodyscan_head',
+  bodyScanFull: 'bodyscan_full',
+  bodyScanHands: 'bodyscan_hands',
+  openEyes: 'session_end',
+  openEyesShort: 'session_end_short',
+  visOceanCalm: 'vis_ocean_calm',
+  visOceanFocus: 'vis_ocean_focus',
+  visOceanEnergy: 'vis_ocean_energy',
+};
 
 function mapTextToAudio(textKey) {
   const map = {
@@ -1616,7 +1717,10 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
     let audioKey = null;
     if (newSeg.type === 'text') {
       if (newSeg.textKey) {
-        audioKey = mapTextToAudio(newSeg.textKey);
+        // Check TEXT_VOICE_MAP first, then legacy mapTextToAudio
+        audioKey = (TEXT_VOICE_MAP[newSeg.textKey] && AUDIO_MAP[TEXT_VOICE_MAP[newSeg.textKey]])
+          ? TEXT_VOICE_MAP[newSeg.textKey]
+          : mapTextToAudio(newSeg.textKey);
       } else {
         if (newSeg.text === t.sitDown) audioKey = 'intro_sit';
         else if (newSeg.text === t.sleepEnd) audioKey = 'session_end_sleep';
@@ -1740,6 +1844,15 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
         if (hapticEnabledRef.current && navigator.vibrate) {
           try { hapticForPhase(s.phase, s.phaseDuration); } catch {}
         }
+      }
+    };
+
+    // PHASE CHANGE: play audio cues
+    engine.onPhaseChange = (phase, cycleCount) => {
+      const curSegIdx = engineRef.current ? engineRef.current.currentSegmentIndex : 0;
+      const curSeg = segments[curSegIdx];
+      if (curSeg && curSeg.type === 'breathing' && voiceEnabled) {
+        playPhaseCue(curSeg.technique || '', phase, cycleCount === 0);
       }
     };
 
@@ -2509,6 +2622,49 @@ async function audioDebug() {
   console.log('=== END AUDIO DEBUG ===');
 }
 
+// ===== ERROR BOUNDARY =====
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  componentDidCatch(error, info) {
+    console.error('DIVE Error:', error, info);
+  }
+  render() {
+    if (this.state.hasError) {
+      return React.createElement('div', {
+        style: {
+          position: 'fixed', inset: 0,
+          background: '#051225',
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          color: 'rgba(220,225,235,0.7)',
+          fontFamily: "'DM Sans', sans-serif",
+          padding: '24px',
+          textAlign: 'center',
+        }
+      },
+        React.createElement('p', { style: { fontSize: '18px', marginBottom: '16px' } }, 'Something went wrong'),
+        React.createElement('button', {
+          onClick: () => window.location.reload(),
+          style: {
+            padding: '12px 24px', borderRadius: '12px',
+            background: 'rgba(94,170,168,0.1)',
+            border: '1px solid rgba(94,170,168,0.2)',
+            color: 'rgba(94,170,168,0.8)',
+            fontSize: '15px', cursor: 'pointer',
+          }
+        }, 'Restart')
+      );
+    }
+    return this.props.children;
+  }
+}
+
 function App() {
   const currentLang = 'en';
   const [stats, setStats] = useState(() => loadData() || defaultStats());
@@ -2563,6 +2719,7 @@ function App() {
 
   useEffect(() => {
     audioDebug();
+    ph('app_open', { totalSessions: stats.totalSessions, streak: stats.currentStreak, totalDepth: stats.totalDepth });
     // Handle /?sos=true shortcut (PWA shortcut from manifest)
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('sos') === 'true' && stats.onboarded) {
@@ -2572,6 +2729,25 @@ function App() {
     }
   }, []);
   useEffect(() => { saveData(stats); }, [stats]);
+
+  // P1.2: Background audio — resume on app visibility restore
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (!document.hidden) {
+        // App resumed — resume AudioContext if suspended
+        if (ambientRef.current?.ctx?.state === 'suspended') {
+          ambientRef.current.ctx.resume();
+        }
+        // Resume voice audio if playing
+        if (voicePlayer.current && voicePlayer.current.paused) {
+          voicePlayer.current.play().catch(() => {});
+        }
+      }
+      // When hidden: do nothing — let audio continue naturally
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, []);
 
   // Apply CSS vars for world
   useEffect(() => {
@@ -2638,9 +2814,36 @@ function App() {
     });
   };
 
+  const mergeConsecutiveTexts = (segs) => {
+    const result = [];
+    for (let i = 0; i < segs.length; i++) {
+      if (segs[i].type === 'text' && result.length > 0 && result[result.length - 1].type === 'text') {
+        const prev = result[result.length - 1];
+        prev.duration = (prev.duration || 5) + (segs[i].duration || 5) + 2;
+        prev.texts = prev.texts || [prev.text || prev.textKey];
+        prev.texts.push(segs[i].text || segs[i].textKey);
+      } else {
+        result.push({...segs[i]});
+      }
+    }
+    return result;
+  };
+
   const actuallyStartSession = (segments, meta = {}) => {
-    setActiveSession({ segments, meta });
+    const mergedSegs = mergeConsecutiveTexts(segments);
+    ph('session_start', { scenario: meta?.scenario, technique: segments.find(s=>s.type==='breathing')?.technique, duration: segments.reduce((a,s)=>a+(s.duration||0),0) });
+    setActiveSession({ segments: mergedSegs, meta });
     if (stats.soundEnabled) { ambientRef.current.init(WORLDS[world].ambient); ambientRef.current.fadeIn(); }
+    // P1.2: MediaSession metadata so lock screen shows session info
+    if ('mediaSession' in navigator) {
+      try {
+        navigator.mediaSession.metadata = new window.MediaMetadata({
+          title: 'DIVE — Breathing Session',
+          artist: 'DIVE',
+        });
+        navigator.mediaSession.setActionHandler('pause', () => {});
+      } catch(e) {}
+    }
   };
 
   const [showPreMood, setShowPreMood] = useState(false);
@@ -2697,6 +2900,7 @@ function App() {
         return total + (cycleDur > 0 ? Math.floor(s.duration / cycleDur) : 0);
       }, 0) || Math.round(totalDur / 16);
       const cData = { duration: totalDur, techniques: techs, depth: sessionDepth(totalDur, mainTech), breathCycles, segments: segs, _lastScenario: activeSession.meta?.scenario };
+      ph('session_complete', { scenario: activeSession.meta?.scenario, depth: cData.depth, preMood: currentMood.pre, postMood: currentMood.post });
       setActiveSession(null);
       setShowSurfacing(true);
       setTimeout(() => {
@@ -2706,6 +2910,7 @@ function App() {
       }, 2200);
       return;
     }
+    ph('session_exit', { scenario: activeSession?.meta?.scenario });
     setActiveSession(null);
   };
 
@@ -2731,7 +2936,7 @@ function App() {
           newState.breathTests = [...(s.breathTests || []), { date: new Date().toISOString(), holdTime: Math.round(holdTimeResult*10)/10, depth: hDepth }];
         }
         return newState;
-      }); setScreen('home'); setTab('home'); }} />;
+      }); ph('onboarding_complete', { goal, holdTime: holdTimeResult }); setScreen('home'); setTab('home'); }} />;
   }
 
 
@@ -2990,7 +3195,7 @@ function App() {
           {startTrialLabel}
         </button>
         <button className="w-full py-2 font-body" style={{fontSize:12, fontWeight:400, color:'var(--text-3)'}}
-          onClick={() => { setStats(s => ({...s, isPremium:true})); setShowPaywall(false); }}>
+          onClick={() => { ph('paywall_converted', { plan: 'demo' }); setStats(s => ({...s, isPremium:true})); setShowPaywall(false); }}>
           {t.demoUnlock}
         </button>
         <button className="w-full py-2 font-body" style={{fontSize:12, fontWeight:400, color:'rgba(226,232,240,0.2)'}}
@@ -3017,10 +3222,10 @@ function App() {
     }
     const sc = SCENARIOS[id];
     if (!sc) return;
-    if (!checkAccess(sc)) { setShowPaywall(true); return; }
+    if (!checkAccess(sc)) { ph('paywall_shown', {}); setShowPaywall(true); return; }
     const d = dur || sc.durations[0];
     // Check 10min premium restriction
-    if (d >= 10 && !sc.free && !stats.isPremium) { setShowPaywall(true); return; }
+    if (d >= 10 && !sc.free && !stats.isPremium) { ph('paywall_shown', {}); setShowPaywall(true); return; }
     let segs = getSessionContent(t, world)[id]?.[d];
     // Fallback: if no segments for this duration, generate a generic session
     if (!segs || segs.length === 0) {
@@ -3146,7 +3351,7 @@ function App() {
         height:44, borderRadius:14, background:`rgba(${accentRgb},0.06)`, border:`1px solid rgba(${accentRgb},0.12)`,
         color:'rgba(220,225,235,0.7)', display:'flex', alignItems:'center', justifyContent:'center', gap:8,
         fontSize:14, fontWeight:400,
-      }} onClick={() => setShowStressChoice(true)}>
+      }} onClick={() => { ph('sos_used', { preMood: currentMood.pre }); setShowStressChoice(true); }}>
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
         {t.stressedNow || 'Stressed right now?'}
       </button>
@@ -3725,7 +3930,9 @@ function App() {
 }
 
 try {
-  ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  ReactDOM.createRoot(document.getElementById('root')).render(
+    React.createElement(ErrorBoundary, null, React.createElement(App))
+  );
 } catch(e) {
   document.getElementById('root').innerHTML = '<pre style="color:red;padding:20px">'+e.message+'\n'+e.stack+'</pre>';
 }
