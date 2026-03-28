@@ -67,6 +67,12 @@ html,body,#root { width:100%; height:100%; overflow:hidden; font-family:'DM Sans
 @keyframes surfaceUp { 0%{transform:translateY(0);opacity:0.9} 60%{opacity:1} 100%{transform:translateY(-40px);opacity:0} }
 @keyframes pulse { 0%,100%{opacity:0.15;transform:scale(1)} 50%{opacity:0.4;transform:scale(1.5)} }
 @keyframes surfaceBgLighten { 0%{background:linear-gradient(180deg,#070c15 0%,#0c1322 100%)} 100%{background:linear-gradient(180deg,#1a3a5c 0%,#0e2840 100%)} }
+.intro-title { font-family:'DM Sans',sans-serif; font-weight:200; font-size:42px; letter-spacing:0.3em; text-transform:uppercase; color:rgba(94,170,168,0.9); }
+.intro-phrase { font-family:'DM Sans',sans-serif; font-weight:300; font-size:20px; line-height:1.6; color:rgba(220,225,235,0.70); }
+.intro-tagline { font-family:'DM Sans',sans-serif; font-weight:400; font-size:24px; color:rgba(220,225,235,0.80); }
+.intro-tagline-accent { font-family:'DM Sans',sans-serif; font-weight:400; font-size:24px; color:rgba(94,170,168,0.9); }
+.hold-tap-hint { animation: hintPulse 2s ease-in-out infinite; }
+@keyframes hintPulse { 0%,100% { opacity:0.25; } 50% { opacity:0.55; } }
 
 .font-display { font-family:'DM Sans',sans-serif; }
 .font-mono { font-family:'JetBrains Mono',monospace !important; font-variant-numeric:tabular-nums !important; }
@@ -2237,7 +2243,7 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
     { text: 'When you need to be sharp', style: 'phrase', showFor: 2000, gapAfter: 500 },
     { text: 'Prepare.', style: 'tagline', showFor: 1500, gapAfter: 200 },
     { text: 'Breathe.', style: 'tagline', showFor: 1500, gapAfter: 200 },
-    { text: 'Dive.', style: 'accent', showFor: 1500, gapAfter: 800 },
+    { text: 'Dive.', style: 'tagline-accent', showFor: 1500, gapAfter: 800 },
   ];
 
   // Text sequence timer
@@ -2510,9 +2516,9 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
             <div className="font-body mb-8" style={{fontSize:22, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.04em'}}>{t.holdTestTitle || "Let's find your depth"}</div>
             <div className="flex flex-col gap-3 mb-10" style={{maxWidth:260, margin:'0 auto 40px'}}>
               {[
-                '1. Take a deep breath IN through your nose',
+                '1. Take a big breath IN through your nose',
                 '2. Now hold it',
-                '3. Tap when you need to let go',
+                '3. Tap when you need to breathe',
               ].map((step, i) => (
                 <div key={i} className="font-body" style={{fontSize:14, fontWeight:300, color: i === 1 ? `rgba(${accentRgb},0.8)` : 'rgba(220,225,235,0.6)', letterSpacing:'0.02em', textAlign:'left', paddingLeft:8}}>{step}</div>
               ))}
@@ -2528,22 +2534,29 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
     }
     if (holdTestPhase === 'holding') {
       const holdProgress = Math.min(holdTime / 120, 1);
-      // FIX4: background DARKENS over time — rgb values go from ocean-blue → near-black
-      const d = Math.min(holdTime / 60, 1);
-      const topR = Math.round(14*(1-d)), topG = Math.round(61*(1-d)), topB = Math.round(92*(1-d));
-      const btmR = Math.round(2*(1-d)),  btmG = Math.round(10*(1-d)), btmB = Math.round(16*(1-d));
-      const holdBg = `linear-gradient(180deg, rgb(${topR},${topG},${topB}) 0%, rgb(${btmR},${btmG},${btmB}) 100%)`;
+      // Background DARKENS based on hold progress
+      const progress = Math.min(1, holdTime / 60);
+      const r1 = Math.round(14 * (1 - progress * 0.7));
+      const g1 = Math.round(61 * (1 - progress * 0.7));
+      const b1 = Math.round(92 * (1 - progress * 0.7));
+      const r2 = Math.round(2 * (1 - progress * 0.7));
+      const g2 = Math.round(10 * (1 - progress * 0.7));
+      const b2 = Math.round(16 * (1 - progress * 0.7));
+      const holdBg = `linear-gradient(180deg, rgb(${r1},${g1},${b1}) 0%, rgb(${r2},${g2},${b2}) 100%)`;
       return (
         <div className="fixed inset-0 flex flex-col items-center justify-center px-8" style={{background:holdBg}} onClick={stopHoldTest}>
-          {/* FIX4: Left-edge depth meter */}
-          <div style={{position:'absolute', left:0, top:0, bottom:0, width:4, background:'rgba(94,170,168,0.08)', zIndex:5}}>
-            <div style={{position:'absolute', bottom:0, left:0, right:0, height:`${holdProgress*100}%`, background:`rgba(${accentRgb},0.45)`, transition:'height 100ms linear', borderRadius:'0 2px 0 0'}} />
+          {/* Left-edge depth meter — fills downward */}
+          <div style={{position:'fixed', left:'16px', top:'20%', bottom:'20%', width:'2px', background:'rgba(255,255,255,0.03)', borderRadius:'1px'}}>
+            <div style={{position:'absolute', top:0, width:'2px', height:`${progress*100}%`, background:'rgba(94,170,168,0.3)', borderRadius:'1px', transition:'height 0.5s linear'}} />
+            <div style={{position:'absolute', top:`${progress*100}%`, left:'8px', fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', color:'rgba(94,170,168,0.4)'}}>
+              {Math.round(holdTime * 0.8)}m
+            </div>
           </div>
           <div className="screen-transition text-center z-10" style={{width:'100%'}}>
             <div className="font-mono" style={{fontSize:56, fontWeight:300, color:'rgba(220,225,235,0.9)', fontVariantNumeric:'tabular-nums', animation:'hold-counter-pulse 2s ease-in-out infinite'}}>{holdTime.toFixed(1)}</div>
             <div className="font-body mt-2 mb-8" style={{fontSize:13, fontWeight:400, color:'rgba(220,225,235,0.4)', letterSpacing:'0.05em'}}>{t.hold || 'Hold'}</div>
-            {/* FIX1: pulsing tap-anywhere hint */}
-            <div className="font-body" style={{fontSize:12, fontWeight:300, color:'rgba(220,225,235,0.5)', letterSpacing:'0.08em', animation:'tap-pulse 2.5s ease-in-out infinite', marginBottom:24}}>tap anywhere to surface</div>
+            {/* Pulsing tap-anywhere hint */}
+            <div className="font-body hold-tap-hint" style={{fontSize:12, fontWeight:300, color:'rgba(220,225,235,0.5)', letterSpacing:'0.08em', marginBottom:24}}>tap anywhere to surface</div>
           </div>
         </div>
       );
@@ -2553,10 +2566,10 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
         <div className="fixed inset-0 flex flex-col items-center justify-center px-8" style={{background:oceanBg}}>
           <Particles world={fbWorld} />
           <div className="screen-transition text-center z-10">
-            <div className="font-body mb-6" style={{fontSize:16, fontWeight:300, color:'rgba(220,225,235,0.55)', letterSpacing:'0.04em'}}>{t.holdTestYourDepth || 'Your starting depth'}</div>
+            <div className="font-body mb-6" style={{fontSize:16, fontWeight:300, color:'rgba(220,225,235,0.55)', letterSpacing:'0.04em'}}>Your starting depth</div>
             <div className="font-mono mb-2" style={{fontSize:48, fontWeight:300, color:palette.accent}}>{formatDepth(holdDepth)}<span style={{fontSize:24}}>m</span></div>
             <div className="font-body mb-3" style={{fontSize:15, fontWeight:300, color:'rgba(220,225,235,0.5)'}}>{depthContext(holdDepth)}</div>
-            <div className="font-body mb-10" style={{fontSize:13, fontWeight:300, color:`rgba(${accentRgb},0.6)`, letterSpacing:'0.04em'}}>descended {formatDepth(holdDepth)}m · surfaced safely</div>
+            <div className="font-body mb-10" style={{fontSize:13, fontWeight:300, color:`rgba(${accentRgb},0.6)`, letterSpacing:'0.04em'}}>You descended {formatDepth(holdDepth)}m and surfaced safely.</div>
             <button className="px-10 py-3 rounded-full font-body"
               style={{fontWeight:500, background:`rgba(${accentRgb},0.12)`, border:`1px solid rgba(${accentRgb},0.25)`, color:palette.accent}}
               onClick={() => setBreathPhase('goal')}>
@@ -2594,9 +2607,9 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
     const item = introTextIdx >= 0 && introTextIdx < INTRO_TEXTS.length ? INTRO_TEXTS[introTextIdx] : null;
     const textStyles = {
       title: { fontSize:42, fontWeight:200, letterSpacing:'0.3em', textTransform:'uppercase', color:'rgba(94,170,168,0.9)' },
-      phrase: { fontSize:20, fontWeight:300, lineHeight:1.6, color:'rgba(220,225,235,0.75)' },
-      tagline: { fontSize:24, fontWeight:400, color:'rgba(220,225,235,0.85)' },
-      accent: { fontSize:24, fontWeight:400, color:'rgba(94,170,168,0.9)' },
+      phrase: { fontSize:20, fontWeight:300, lineHeight:1.6, color:'rgba(220,225,235,0.70)' },
+      tagline: { fontSize:24, fontWeight:400, color:'rgba(220,225,235,0.80)' },
+      'tagline-accent': { fontSize:24, fontWeight:400, color:'rgba(94,170,168,0.9)' },
     };
     return (
       <div className="fixed inset-0 flex items-center justify-center" style={{background:'#000', zIndex:100}}
