@@ -1007,25 +1007,7 @@ const FIRST_SESSION = (t) => [
 ]; // Total: 10+15+120+10+120+15+10 = 300s
 
 // ===== STRESS SOS SESSIONS =====
-const STRESS_SOS_SESSIONS = {
-  quickReset: [
-    { type:'breathing', technique:'physiological_sigh', duration:90, params:{inhale1:2,inhale2:1,exhale:7} },
-  ], // 90s — no intro, pure breathing
-  calmNow: [
-    { type:'text', duration:8, text:'Stop. Close your eyes. Follow the rhythm.' },
-    { type:'breathing', technique:'physiological_sigh', duration:152, params:{inhale1:2,inhale2:1,exhale:7} },
-    { type:'text', duration:10, text:'The storm is passing. You chose to breathe through it.' },
-    { type:'text', duration:10, text:'Open your eyes. You are calmer than you were 3 minutes ago.' },
-  ], // 180s total
-  prepareStress: [
-    { type:'text', duration:10, text:'Find a comfortable position. Back straight. Close your eyes.' },
-    { type:'breathing', technique:'box', duration:128, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
-    { type:'text', duration:12, text:'Box breathing activates both branches of your nervous system. You are building a shield.' },
-    { type:'breathing', technique:'box', duration:128, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
-    { type:'text', duration:12, text:'Whatever comes next — you are ready.' },
-    { type:'text', duration:10, text:'Open your eyes. You are prepared.' },
-  ], // 300s total
-};
+// STRESS_SOS_SESSIONS removed — SOS is now instant from home button
 
 // ===== DEPTH CALCULATION =====
 function holdTimeToDepth(holdSeconds) {
@@ -2923,8 +2905,7 @@ function App() {
   const [surfaceBreathStreak, setSurfaceBreathStreak] = useState(0);
   const [showRetestPrompt, setShowRetestPrompt] = useState(false);
   const [retestDays, setRetestDays] = useState(0);
-  const [showStressChoice, setShowStressChoice] = useState(false);
-  const [sosStep, setSosStep] = useState('mood'); // 'mood' | 'choice'
+  // showStressChoice removed — SOS is instant
   const [exploreCat, setExploreCat] = useState('focus');
   const [isReplayIntro, setIsReplayIntro] = useState(false);
   const [customPatterns, setCustomPatterns] = useState(() => {
@@ -3365,9 +3346,9 @@ function App() {
                 const pre = currentMood.pre;
                 if (pre !== null && n !== null) {
                   const delta = pre - n;
-                  if (delta > 0) setMoodDelta((t.moodImprove || '{pre} \u2192 {post} \u00b7 \u2212{delta} points').replace('{pre}',pre).replace('{post}',n).replace('{delta}',delta));
-                  else if (delta === 0) setMoodDelta(t.moodSame || 'Consistency builds resilience.');
-                  else setMoodDelta(t.moodWorse || 'Some sessions plant seeds for later.');
+                  if (delta > 0) setMoodDelta(`Dropped ${delta} point${delta > 1 ? 's' : ''}`);
+                  else if (delta === 0) setMoodDelta('Consistency builds resilience');
+                  else setMoodDelta('Some sessions plant seeds for later');
                 }
                 // Store mood in last history entry
                 setStats(s => {
@@ -3384,8 +3365,8 @@ function App() {
               }} />
             </div>
           )}
-          {/* Mood delta display — persists across all completion steps */}
-          {moodDelta && (
+          {/* Mood delta display — only if pre-mood was captured (not SOS) */}
+          {moodDelta && currentMood.pre !== null && (
             <div className="mb-6 screen-transition">
               <div className="font-mono" style={{fontSize:22, fontWeight:300, color:'rgba(220,225,235,0.8)', textAlign:'center', marginBottom:6}}>
                 {currentMood.pre} → {currentMood.post}
@@ -3516,15 +3497,10 @@ function App() {
   };
 
   // ===== HOME =====
-  // Instant breathe — no intro, no pre-mood, straight to bubble
-  const startInstantSession = () => {
-    const segs = [{ type:'breathing', technique:'physiological_sigh', duration:180, params:{inhale1:2,inhale2:1,exhale:7} }];
-    actuallyStartSession(segs, {scenario:'instant_breath', category:'stress'});
-  };
-
   // Breathe Now choice — goes through normal pre-mood flow
   const startBreatheNowChoice = (opt) => {
-    const segs = [{ type:'breathing', technique: opt.technique, duration: opt.duration }];
+    const params = TECHNIQUES[opt.technique]?.defaults || {};
+    const segs = [{ type:'breathing', technique: opt.technique, duration: opt.duration, params }];
     startSession(segs, {scenario:'breathe_now', category:'breathe_now'});
   };
 
@@ -3685,9 +3661,11 @@ function App() {
         color:'rgba(220,225,235,0.7)', display:'flex', alignItems:'center', justifyContent:'center', gap:8,
         fontSize:14, fontWeight:400,
       }} onClick={() => {
-        ph('sos_used', { preMood: currentMood.pre });
+        setCurrentMood({pre: null, post: null});
+        setMoodDelta(null);
+        ph('sos_used', {});
         const segs = [{ type:'breathing', technique:'physiological_sigh', duration:90, params:{inhale1:2,inhale2:1,exhale:7} }];
-        actuallyStartSession(segs, {scenario:'stress_sos_quick', category:'stress'});
+        actuallyStartSession(segs, {scenario:'stress_sos', category:'stress', isSOSSession:true});
       }}>
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
         ⚡ Stressed? Breathe.
@@ -4136,17 +4114,18 @@ function App() {
         <p style={{fontSize:'20px',fontWeight:300,color:'rgba(220,225,235,0.7)',marginBottom:'32px'}}>What do you need?</p>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px',width:'100%',maxWidth:'320px'}}>
           {[
-            {label:'Calm down', technique:'physiological_sigh', duration:180},
-            {label:'Get focused', technique:'box', duration:180},
-            {label:'Energy boost', technique:'segmented', duration:180},
-            {label:'Just breathe', technique:'diaphragmatic', duration:180},
+            {label:'Calm down', sub:'Cyclic sigh \u00b7 3 min', technique:'physiological_sigh', duration:180},
+            {label:'Get focused', sub:'Box breathing \u00b7 3 min', technique:'box', duration:180},
+            {label:'Energy boost', sub:'Segmented \u00b7 3 min', technique:'segmented', duration:180},
+            {label:'Just breathe', sub:'Extended exhale \u00b7 3 min', technique:'diaphragmatic', duration:180},
           ].map(opt => (
-            <button key={opt.label} onClick={() => { setScreen('home'); startBreatheNowChoice(opt); }} style={{padding:'20px 16px',borderRadius:'14px',background:'rgba(255,255,255,0.025)',border:'1px solid rgba(255,255,255,0.06)',fontSize:'15px',fontWeight:400,color:'rgba(220,225,235,0.8)',cursor:'pointer'}}>
-              {opt.label}
+            <button key={opt.label} onClick={() => { setScreen('home'); startBreatheNowChoice(opt); }} style={{padding:'20px 16px',borderRadius:'14px',background:'rgba(255,255,255,0.025)',border:'1px solid rgba(255,255,255,0.06)',cursor:'pointer',textAlign:'left'}}>
+              <div style={{fontSize:'15px',fontWeight:400,color:'rgba(220,225,235,0.8)'}}>{opt.label}</div>
+              <div style={{fontSize:'11px',fontWeight:300,color:'rgba(220,225,235,0.35)',marginTop:4}}>{opt.sub}</div>
             </button>
           ))}
         </div>
-        <button onClick={() => setScreen('home')} style={{marginTop:32,fontSize:13,color:'var(--text-3)',background:'none',border:'none',cursor:'pointer'}}>Back</button>
+        <button onClick={() => setScreen('home')} style={{marginTop:32,fontSize:13,color:'rgba(220,225,235,0.3)',background:'none',border:'none',cursor:'pointer'}}>Cancel</button>
       </div>
     );
 
@@ -4202,11 +4181,13 @@ function App() {
                 style={{fontWeight:500, background:`rgba(${accentRgb},0.12)`, border:`1px solid rgba(${accentRgb},0.25)`, color:palette.accent}}
                 onClick={() => {
                   setShowSurfaceBreath(false);
-                  // Launch 60s cyclic sigh (6 cycles x 10s)
+                  setCurrentMood({pre: null, post: null});
+                  setMoodDelta(null);
+                  // Launch 60s cyclic sigh (6 cycles x 10s) — no pre-mood
                   const surfaceSegs = [
                     { type:'breathing', technique:'physiological_sigh', duration:60, params:{ inhale1:2, inhale2:1, exhale:7 } }
                   ];
-                  startSession(surfaceSegs, {scenario:'surface_breath', category:'recovery'});
+                  actuallyStartSession(surfaceSegs, {scenario:'surface_breath', category:'recovery'});
                   // Preserve streak + 1
                   setStats(s => {
                     const newStreak = s.streak + 1;
@@ -4255,53 +4236,7 @@ function App() {
         </div>
       )}
 
-      {/* Stress SOS overlay — mood first, then choice */}
-      {showStressChoice && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{background:'rgba(0,0,0,0.8)', backdropFilter:'blur(16px)'}}>
-          <div className="screen-transition text-center z-10 px-6 w-full" style={{maxWidth:360}}>
-            {sosStep === 'mood' ? (
-              <MoodScale label={t.howStressed || 'How stressed are you?'} lowLabel={t.moodLow || 'calm'} highLabel={t.moodHigh || 'stressed'} onSelect={(n) => {
-                setCurrentMood(m => ({...m, pre: n}));
-                setSosStep('choice');
-              }} />
-            ) : (
-              <div className="flex flex-col gap-3">
-                <button className="glass p-5 w-full text-left" style={{borderRadius:14}}
-                  onClick={() => {
-                    const sosPre = currentMood.pre;
-                    setShowStressChoice(false); setSosStep('mood');
-                    startSession(STRESS_SOS_SESSIONS.quickReset, {scenario:'stress_sos_quick', category:'stress'}, {skipPreMood:true, preMood:sosPre});
-                  }}>
-                  <div className="font-body" style={{fontSize:16, fontWeight:400, color:'rgba(226,232,240,0.92)'}}>Quick reset</div>
-                  <div className="font-body mt-1" style={{fontSize:13, fontWeight:300, color:'var(--text-2)'}}>90 sec · Cyclic Sigh</div>
-                </button>
-                <button className="glass p-5 w-full text-left" style={{borderRadius:14}}
-                  onClick={() => {
-                    const sosPre = currentMood.pre;
-                    setShowStressChoice(false); setSosStep('mood');
-                    startSession(STRESS_SOS_SESSIONS.calmNow, {scenario:'stress_sos_calm', category:'stress'}, {skipPreMood:true, preMood:sosPre});
-                  }}>
-                  <div className="font-body" style={{fontSize:16, fontWeight:400, color:'rgba(226,232,240,0.92)'}}>Calm down</div>
-                  <div className="font-body mt-1" style={{fontSize:13, fontWeight:300, color:'var(--text-2)'}}>3 min · Cyclic Sigh</div>
-                </button>
-                <button className="glass p-5 w-full text-left" style={{borderRadius:14}}
-                  onClick={() => {
-                    const sosPre = currentMood.pre;
-                    setShowStressChoice(false); setSosStep('mood');
-                    startSession(STRESS_SOS_SESSIONS.prepareStress, {scenario:'stress_sos_prepare', category:'stress'}, {skipPreMood:true, preMood:sosPre});
-                  }}>
-                  <div className="font-body" style={{fontSize:16, fontWeight:400, color:'rgba(226,232,240,0.92)'}}>Prepare for something</div>
-                  <div className="font-body mt-1" style={{fontSize:13, fontWeight:300, color:'var(--text-2)'}}>5 min · Box Breathing</div>
-                </button>
-              </div>
-            )}
-            <button className="font-body mt-6" style={{fontSize:13, color:'var(--text-3)', background:'none', border:'none', cursor:'pointer'}}
-              onClick={() => { setShowStressChoice(false); setSosStep('mood'); }}>
-              {t.close}
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Stress SOS overlay removed — SOS is now instant from home button */}
 
       {showPaywall && <PaywallModal />}
 
