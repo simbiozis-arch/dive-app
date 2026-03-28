@@ -2847,7 +2847,7 @@ function MoodScale({ label, onSelect, lowLabel, highLabel }) {
 }
 
 // ===== ANIMATED NUMBER COMPONENT =====
-function AnimatedNumber({ value, duration = 1200 }) {
+function AnimatedNumber({ value, suffix = '', duration = 1200 }) {
   const [display, setDisplay] = useState(0);
   useEffect(() => {
     if (!value) { setDisplay(0); return; }
@@ -2857,13 +2857,13 @@ function AnimatedNumber({ value, duration = 1200 }) {
       const elapsed = performance.now() - startTime;
       const progress = Math.min(elapsed / duration, 1);
       const eased = 1 - Math.pow(1 - progress, 3);
-      setDisplay(Math.round(value * eased));
+      setDisplay(value * eased);
       if (progress < 1) raf = requestAnimationFrame(tick);
     }
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
   }, [value]);
-  return display;
+  return (typeof value === 'number' && value >= 10) ? Math.round(display) + suffix : display.toFixed(1) + suffix;
 }
 
 function formatDepth(meters) {
@@ -3967,115 +3967,176 @@ function App() {
   );
 
   const renderProfile = () => {
-    const earned = BADGES.filter(b => b.condition(stats));
+    // Mood chart data: sessions with preMood + postMood
+    const moodSessions = (stats.history || []).filter(h => h.preMood != null && h.postMood != null).slice(-7);
+    const hasMoodChart = moodSessions.length >= 3;
+    // Stress relief rate: sessions where postMood > preMood
+    const ratedSessions = (stats.history || []).filter(h => h.preMood != null && h.postMood != null);
+    const relievedCount = ratedSessions.filter(h => h.postMood > h.preMood).length;
+    const stressReliefRate = ratedSessions.length >= 3 ? Math.round((relievedCount / ratedSessions.length) * 100) : null;
+    // Mood avg delta
+    const moodAvgDelta = hasMoodChart ? (moodSessions.reduce((s,h) => s + (h.postMood - h.preMood), 0) / moodSessions.length).toFixed(1) : null;
+
     return (
       <div className="screen-transition overflow-y-auto h-full no-scrollbar" style={{padding:'env(safe-area-inset-top, 48px) 24px 100px 24px'}}>
-        <div className="font-body mb-4" style={{fontSize:24, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.1em'}}>{t.profile}</div>
 
-        {/* Total depth — hero number with animated number */}
-        <div className="text-center mb-6">
-          <div className="font-mono" style={{fontSize:48, fontWeight:200, color:palette.accent}}>{formatDepth(stats.totalDepth)}</div>
-          <div className="font-body" style={{fontSize:12, fontWeight:400, color:'var(--text-3)', letterSpacing:'0.05em', marginTop:2}}>{t.totalDepth} ({WORLDS[world].depthUnit})</div>
-        </div>
-
-        {/* Other stats with animated numbers */}
-        <div className="grid grid-cols-2 gap-3 mb-8">
-          {[
-            [stats.streak, t.dayStreak],
-            [stats.totalSessions, t.sessions],
-          ].map(([val, label], i) => (
-            <div key={i} className="glass p-4 text-center">
-              <div className="font-mono" style={{fontSize:22, fontWeight:300, color:palette.accent}}><AnimatedNumber value={val} /></div>
-              <div className="font-body mt-2" style={{fontSize:11, fontWeight:400, color:'var(--text-3)', letterSpacing:'0.05em'}}>{label}</div>
-            </div>
-          ))}
-        </div>
-
-
-        {/* Badges */}
-        <div className="mb-8" style={{borderTop:'1px solid rgba(255,255,255,0.03)', paddingTop:20}}>
-          <div className="font-body mb-4" style={{fontSize:11, fontWeight:600, color:'rgba(220,225,235,0.28)', letterSpacing:'0.12em', textTransform:'uppercase'}}>{t.badges} ({earned.length}/{BADGES.length})</div>
-          <div className="grid grid-cols-4 gap-2">
-            {BADGES.map(b => {
-              const has = b.condition(stats);
-              return (
-                <div key={b.id} className="glass p-3 text-center" style={{opacity: has ? 1 : 0.25}}>
-                  <div style={{color: has ? palette.accent : 'var(--text-3)', opacity: has ? 0.8 : 0.4}}><Icon name="check" size={20}/></div>
-                  <div className="font-body mt-1" style={{fontSize:10, fontWeight:400, color:'rgba(226,232,240,0.6)'}}>{BADGE_NAMES[b.id]}</div>
-                </div>
-              );
-            })}
+        {/* 1. HERO: Big animated depth */}
+        <div className="text-center" style={{marginBottom:28}}>
+          <div className="font-mono" style={{fontSize:48, fontWeight:200, color:'rgba(94,170,168,0.85)'}}>
+            <AnimatedNumber value={stats.totalDepth} suffix="" />
+          </div>
+          <div className="font-body" style={{fontSize:12, fontWeight:400, color:'var(--text-3)', letterSpacing:'0.08em', marginTop:2}}>depth ({WORLDS[world].depthUnit})</div>
+          <div style={{display:'flex', justifyContent:'center', gap:32, marginTop:16}}>
+            {[
+              [stats.streak || 0, 'streak'],
+              [stats.totalSessions || 0, 'dives'],
+              [stats.totalMinutes || 0, 'minutes'],
+            ].map(([val, label]) => (
+              <div key={label} style={{textAlign:'center'}}>
+                <div className="font-mono" style={{fontSize:18, fontWeight:300, color:palette.accent}}><AnimatedNumber value={val} /></div>
+                <div className="font-body" style={{fontSize:10, fontWeight:400, color:'var(--text-3)', letterSpacing:'0.05em', marginTop:2}}>{label}</div>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Techniques mastery */}
-        <div className="mb-8" style={{borderTop:'1px solid rgba(255,255,255,0.03)', paddingTop:20}}>
-          <div className="font-body mb-4" style={{fontSize:11, fontWeight:600, color:'rgba(220,225,235,0.28)', letterSpacing:'0.12em', textTransform:'uppercase'}}>{t.techniques || 'Techniques'}</div>
+        {/* 2. STRESS RELIEF RATE */}
+        {stressReliefRate !== null && (
+          <div style={{textAlign:'center', marginBottom:24}}>
+            <span className="font-mono" style={{fontSize:22, fontWeight:300, color:palette.accent}}>{stressReliefRate}%</span>
+            <span className="font-body" style={{fontSize:13, fontWeight:300, color:'var(--text-2)', marginLeft:8}}>of sessions reduce your stress</span>
+          </div>
+        )}
+
+        {/* 3. THIS WEEK MOOD CHART */}
+        {hasMoodChart && (() => {
+          const chartW = 280, chartH = 100, padX = 10, padY = 10;
+          const n = moodSessions.length;
+          const xStep = n > 1 ? (chartW - padX * 2) / (n - 1) : 0;
+          const yScale = (v) => padY + (chartH - padY * 2) * (1 - (v - 1) / 4); // mood 1-5
+          const preLine = moodSessions.map((h,i) => `${padX + i * xStep},${yScale(h.preMood)}`).join(' ');
+          const postLine = moodSessions.map((h,i) => `${padX + i * xStep},${yScale(h.postMood)}`).join(' ');
+          return (
+            <div style={{marginBottom:24, borderTop:'1px solid rgba(255,255,255,0.03)', paddingTop:20}}>
+              <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12}}>
+                <div className="font-body" style={{fontSize:11, fontWeight:600, color:'rgba(220,225,235,0.28)', letterSpacing:'0.12em', textTransform:'uppercase'}}>This week</div>
+                {moodAvgDelta && <span className="font-mono" style={{fontSize:11, color: parseFloat(moodAvgDelta) >= 0 ? 'rgba(94,170,168,0.7)' : 'rgba(252,129,129,0.6)'}}>avg {parseFloat(moodAvgDelta) >= 0 ? '+' : ''}{moodAvgDelta}</span>}
+              </div>
+              <svg viewBox={`0 0 ${chartW} ${chartH}`} style={{width:'100%', height:100}}>
+                <polyline points={preLine} fill="none" stroke="rgba(220,225,235,0.2)" strokeWidth="1.5" strokeDasharray="4 3" />
+                <polyline points={postLine} fill="none" stroke="rgba(94,170,168,0.7)" strokeWidth="2" />
+                {moodSessions.map((h,i) => (
+                  <React.Fragment key={i}>
+                    <circle cx={padX + i * xStep} cy={yScale(h.preMood)} r="3" fill="rgba(220,225,235,0.15)" />
+                    <circle cx={padX + i * xStep} cy={yScale(h.postMood)} r="3.5" fill="rgba(94,170,168,0.8)" />
+                  </React.Fragment>
+                ))}
+              </svg>
+              <div style={{display:'flex', justifyContent:'center', gap:20, marginTop:6}}>
+                <span style={{fontSize:10, color:'var(--text-3)'}}>— — before</span>
+                <span style={{fontSize:10, color:'rgba(94,170,168,0.6)'}}>—— after</span>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* 4. TECHNIQUES mastery */}
+        <div style={{marginBottom:24, borderTop:'1px solid rgba(255,255,255,0.03)', paddingTop:20}}>
+          <div className="font-body mb-4" style={{fontSize:11, fontWeight:600, color:'rgba(220,225,235,0.28)', letterSpacing:'0.12em', textTransform:'uppercase'}}>Techniques</div>
           <div className="space-y-3">
-            {[['tidal','tidal'],['diaphragmatic','diaphragmatic'],['box','boxBreathing'],['segmented','segmented'],['ujjayi','ujjayi'],['recovery','recoveryBreath'],['physiological_sigh','physiologicalSigh']].map(([techKey, langKey]) => {
+            {[
+              ['physiological_sigh','Cyclic Sigh'],
+              ['box','Box Breathing'],
+              ['diaphragmatic','Diaphragmatic'],
+              ['ujjayi','Ocean Breath'],
+              ['segmented','Segmented'],
+              ['tidal','Tidal'],
+              ['recovery','Recovery'],
+            ].map(([techKey, displayName]) => {
               const count = (stats.techniqueStats || {})[techKey] || 0;
-              const masteryLabel = count === 0 ? (t.masteryNone || '\u2014') : count <= 5 ? (t.masteryLearning || 'Learning') : count <= 15 ? (t.masteryComfortable || 'Comfortable') : (t.masteryMastered || 'Mastered');
+              const masteryLabel = count === 0 ? '\u2014' : count <= 5 ? 'Learning' : count <= 15 ? 'Comfortable' : 'Mastered';
               const progress = Math.min(count / 16, 1);
               return (
                 <div key={techKey} className="flex items-center gap-3">
-                  <div className="font-body" style={{fontSize:13, fontWeight:400, color:'rgba(226,232,240,0.7)', minWidth:100, flex:'0 0 auto'}}>{t[langKey] || techKey}</div>
+                  <div className="font-body" style={{fontSize:13, fontWeight:400, color:'rgba(226,232,240,0.7)', minWidth:110, flex:'0 0 110px'}}>{displayName}</div>
                   <div style={{flex:1, height:4, borderRadius:2, background:'rgba(255,255,255,0.04)', overflow:'hidden'}}>
                     <div style={{width:(progress*100)+'%', height:'100%', borderRadius:2, background:palette.accent, transition:'width 600ms ease'}} />
                   </div>
-                  <div className="font-body" style={{fontSize:11, fontWeight:300, color:'var(--text-3)', minWidth:80, textAlign:'right', flex:'0 0 auto'}}>
-                    <span className="font-mono" style={{fontSize:12, color:palette.accent, marginRight:4}}>{count}</span>{masteryLabel}
-                  </div>
+                  <div className="font-mono" style={{fontSize:12, color:palette.accent, minWidth:16, textAlign:'right'}}>{count}</div>
+                  <div className="font-body" style={{fontSize:10, fontWeight:300, color:'var(--text-3)', minWidth:68, textAlign:'right'}}>{masteryLabel}</div>
                 </div>
               );
             })}
           </div>
         </div>
 
-        {/* Depth Level card */}
-        <div style={{background:'rgba(255,255,255,0.025)',border:'1px solid rgba(255,255,255,0.06)',borderRadius:14,padding:16,marginBottom:12}}>
-          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
-            <span style={{fontSize:13,color:'rgba(220,225,235,0.5)',fontFamily:"'DM Sans',sans-serif"}}>Depth level</span>
-            <span style={{fontSize:12,color:'rgba(94,170,168,0.7)',fontFamily:"'DM Sans',sans-serif"}}>
-              {stats.lastRetestDate ? ('Tested ' + Math.floor((Date.now()-new Date(stats.lastRetestDate).getTime())/86400000) + 'd ago') : 'Not tested yet'}
-            </span>
+        {/* 5. DEPTH PROGRESS — breath tests */}
+        {(stats.breathTests || []).length > 0 && (
+          <div style={{marginBottom:24, borderTop:'1px solid rgba(255,255,255,0.03)', paddingTop:20}}>
+            <div className="font-body mb-4" style={{fontSize:11, fontWeight:600, color:'rgba(220,225,235,0.28)', letterSpacing:'0.12em', textTransform:'uppercase'}}>Depth progress</div>
+            <div className="space-y-2">
+              {(stats.breathTests || []).slice(-6).map((bt, i) => {
+                const maxDepth = Math.max(...(stats.breathTests || []).map(b => b.depth || 0), 1);
+                const pct = ((bt.depth || 0) / maxDepth) * 100;
+                return (
+                  <div key={i} className="flex items-center gap-3">
+                    <div className="font-body" style={{fontSize:10, color:'var(--text-3)', minWidth:50}}>{new Date(bt.date).toLocaleDateString('en', {month:'short', day:'numeric'})}</div>
+                    <div style={{flex:1, height:6, borderRadius:3, background:'rgba(255,255,255,0.04)', overflow:'hidden'}}>
+                      <div style={{width:pct+'%', height:'100%', borderRadius:3, background:`rgba(${accentRgb},0.5)`, transition:'width 600ms ease'}} />
+                    </div>
+                    <div className="font-mono" style={{fontSize:11, color:palette.accent, minWidth:36, textAlign:'right'}}>{formatDepth(bt.depth)}{WORLDS[world].depthUnit}</div>
+                  </div>
+                );
+              })}
+            </div>
+            <button onClick={() => startBreathTest()} style={{
+              width:'100%', padding:'11px', marginTop:12,
+              borderRadius:12, border:'1px solid rgba(94,170,168,0.2)',
+              background:'rgba(94,170,168,0.06)',
+              color:'rgba(94,170,168,0.8)', fontSize:14, cursor:'pointer', fontFamily:"'DM Sans',sans-serif",
+            }}>
+              {stats.lastRetestDate ? 'Retest breath hold' : 'Take breath hold test'}
+            </button>
           </div>
-          {/* 5-segment progress bar */}
-          <div style={{display:'flex',gap:4,marginBottom:8}}>
-            {DIFFICULTY_LEVELS.map((l,i) => {
-              const currentIdx = DIFFICULTY_LEVELS.findIndex(x => x.id === (stats.difficultyLevel || 'beginner'));
-              return <div key={l.id} style={{
-                flex:1, height:4, borderRadius:2,
-                background: i < currentIdx ? 'rgba(94,170,168,0.8)'
-                          : i === currentIdx ? 'rgba(94,170,168,0.4)'
-                          : 'rgba(255,255,255,0.08)',
-              }} />;
-            })}
-          </div>
-          {/* Level labels */}
-          <div style={{display:'flex',justifyContent:'space-between',marginBottom:14}}>
-            {DIFFICULTY_LEVELS.map((l,i) => {
-              const currentIdx = DIFFICULTY_LEVELS.findIndex(x => x.id === (stats.difficultyLevel || 'beginner'));
-              return <span key={l.id} style={{
-                fontSize:9, letterSpacing:'0.05em', textTransform:'uppercase',
-                color: i === currentIdx ? 'rgba(94,170,168,0.9)' : 'rgba(220,225,235,0.2)',
-                fontWeight: i === currentIdx ? 700 : 400,
-                flex:1, textAlign:'center', fontFamily:"'DM Sans',sans-serif",
-              }}>{l.label.slice(0,3)}</span>;
-            })}
-          </div>
-          {/* Retest button */}
-          <button onClick={() => startBreathTest()} style={{
-            width:'100%', padding:'11px',
-            borderRadius:12, border:'1px solid rgba(94,170,168,0.2)',
-            background:'rgba(94,170,168,0.06)',
-            color:'rgba(94,170,168,0.8)', fontSize:14, cursor:'pointer', fontFamily:"'DM Sans',sans-serif",
-          }}>
-            {stats.lastRetestDate ? 'Retest breath hold' : 'Take breath hold test'}
-          </button>
-        </div>
+        )}
 
-        {/* Settings */}
-        <div className="mb-8" style={{borderTop:'1px solid rgba(255,255,255,0.03)', paddingTop:20}}>
+        {/* No breath tests yet — show CTA */}
+        {(stats.breathTests || []).length === 0 && (
+          <div style={{marginBottom:24, borderTop:'1px solid rgba(255,255,255,0.03)', paddingTop:20}}>
+            <div className="font-body mb-4" style={{fontSize:11, fontWeight:600, color:'rgba(220,225,235,0.28)', letterSpacing:'0.12em', textTransform:'uppercase'}}>Depth progress</div>
+            <button onClick={() => startBreathTest()} style={{
+              width:'100%', padding:'11px',
+              borderRadius:12, border:'1px solid rgba(94,170,168,0.2)',
+              background:'rgba(94,170,168,0.06)',
+              color:'rgba(94,170,168,0.8)', fontSize:14, cursor:'pointer', fontFamily:"'DM Sans',sans-serif",
+            }}>
+              Take breath hold test
+            </button>
+          </div>
+        )}
+
+        {/* 6. RECENT DIVES */}
+        {stats.history.length > 0 && (
+          <div style={{marginBottom:24, borderTop:'1px solid rgba(255,255,255,0.03)', paddingTop:20}}>
+            <div className="font-body mb-4" style={{fontSize:11, fontWeight:600, color:'rgba(220,225,235,0.28)', letterSpacing:'0.12em', textTransform:'uppercase'}}>Recent dives</div>
+            <div className="space-y-2">
+              {stats.history.slice(-10).reverse().map((h, i) => (
+                <div key={i} style={{display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 0', borderBottom:'1px solid rgba(255,255,255,0.02)'}}>
+                  <div>
+                    <div className="font-body" style={{fontSize:14, fontWeight:400, color:'rgba(226,232,240,0.8)'}}>{getScenarioDisplayName(h.scenario)}</div>
+                    <div className="font-body" style={{fontSize:11, fontWeight:400, color:'var(--text-3)', marginTop:2}}>{new Date(h.date).toLocaleDateString('en', {month:'short', day:'numeric'})}</div>
+                  </div>
+                  <div className="font-mono" style={{fontSize:12, fontWeight:300, color:'var(--text-3)'}}>
+                    {Math.round((h.duration || 0)/60)}min
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 7. SETTINGS */}
+        <div style={{marginBottom:24, borderTop:'1px solid rgba(255,255,255,0.03)', paddingTop:20}}>
           <div className="font-body mb-4" style={{fontSize:11, fontWeight:600, color:'rgba(220,225,235,0.28)', letterSpacing:'0.12em', textTransform:'uppercase'}}>{t.settings}</div>
           <div className="glass p-5 space-y-4">
             {[
@@ -4098,58 +4159,33 @@ function App() {
                 <div className="absolute rounded-full transition-all" style={{top:3, width:16, height:16, background: stats.voiceEnabled ? palette.accent : 'rgba(255,255,255,0.3)', left: stats.voiceEnabled ? 'calc(100% - 20px)' : '4px'}} />
               </button>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="font-body" style={{fontSize:14, fontWeight:400, color:'rgba(226,232,240,0.75)'}}>{t.premium}</span>
-              <span className="font-body" style={{fontSize:13, fontWeight:500, color: stats.isPremium ? palette.accent : 'var(--text-3)'}}>{stats.isPremium ? t.active : t.free}</span>
-            </div>
           </div>
-        </div>
 
-        {/* History */}
-        {stats.history.length > 0 && (
-          <div className="mb-8" style={{borderTop:'1px solid rgba(255,255,255,0.03)', paddingTop:20}}>
-            <div className="font-body mb-4" style={{fontSize:11, fontWeight:600, color:'rgba(220,225,235,0.28)', letterSpacing:'0.12em', textTransform:'uppercase'}}>{t.history}</div>
-            <div className="space-y-2">
-              {stats.history.slice(-5).reverse().map((h, i) => (
-                <div key={i} className="glass p-4 flex items-center gap-3">
-                  <span style={{color:palette.accent,opacity:0.4}}><Icon name={SCENARIOS[h.scenario]?.svgIcon || 'check'} size={16}/></span>
-                  <div className="flex-1">
-                    <div className="font-body" style={{fontSize:14, fontWeight:500, color:'rgba(226,232,240,0.85)'}}>{getScenarioDisplayName(h.scenario)}</div>
-                    <div className="font-body" style={{fontSize:11, fontWeight:400, color:'var(--text-3)', marginTop:2}}>{new Date(h.date).toLocaleDateString('en')}</div>
-                  </div>
-                  <div className="font-mono" style={{fontSize:12, fontWeight:300, color:palette.accent}}>{Math.round(h.duration/60)}{t.min}</div>
+          {/* Replay intro + Reset */}
+          <button className="w-full py-3 font-body rounded-full mb-3" style={{fontSize:13, fontWeight:400, color:'var(--text-2)', border:'1px solid rgba(255,255,255,0.07)', marginTop:16}}
+            onClick={() => { setIsReplayIntro(true); setScreen('first_breath'); }}>
+            Replay intro
+          </button>
+          <button className="w-full py-3 font-body rounded-full" style={{fontSize:13, fontWeight:400, color:'rgba(252,129,129,0.6)', border:'1px solid rgba(252,129,129,0.15)'}}
+            onClick={() => setShowResetConfirm(true)}>
+            {t.resetProgress}
+          </button>
+          {showResetConfirm && (
+            <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:100,padding:'24px'}}>
+              <div style={{background:'rgba(12,22,40,0.98)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:'16px',padding:'24px',maxWidth:'320px',width:'100%'}}>
+                <p style={{fontSize:'16px',fontWeight:400,color:'rgba(220,225,235,0.88)',marginBottom:'8px'}}>Reset all progress?</p>
+                <p style={{fontSize:'13px',color:'rgba(220,225,235,0.45)',marginBottom:'24px',lineHeight:1.5}}>Depth, streak, sessions, and settings will be permanently deleted.</p>
+                <div style={{display:'flex',gap:'12px'}}>
+                  <button onClick={() => setShowResetConfirm(false)} style={{flex:1,padding:'10px',borderRadius:'10px',background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',color:'rgba(220,225,235,0.7)',fontSize:'14px',cursor:'pointer'}}>Cancel</button>
+                  <button onClick={() => { setShowResetConfirm(false); setStats(defaultStats()); setScreen('first_breath'); }} style={{flex:1,padding:'10px',borderRadius:'10px',background:'rgba(180,60,60,0.12)',border:'1px solid rgba(180,60,60,0.25)',color:'rgba(220,130,130,0.85)',fontSize:'14px',cursor:'pointer'}}>Delete everything</button>
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* FIX2: Replay intro */}
-        <button className="w-full py-3 font-body rounded-full mb-3" style={{fontSize:13, fontWeight:400, color:'var(--text-2)', border:'1px solid rgba(255,255,255,0.07)'}}
-          onClick={() => { setIsReplayIntro(true); setScreen('first_breath'); }}>
-          Replay intro
-        </button>
-
-        {/* Reset */}
-        <button className="w-full py-3 font-body rounded-full" style={{fontSize:13, fontWeight:400, color:'rgba(252,129,129,0.6)', border:'1px solid rgba(252,129,129,0.15)'}}
-          onClick={() => setShowResetConfirm(true)}>
-          {t.resetProgress}
-        </button>
-        {showResetConfirm && (
-          <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:100,padding:'24px'}}>
-            <div style={{background:'rgba(12,22,40,0.98)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:'16px',padding:'24px',maxWidth:'320px',width:'100%'}}>
-              <p style={{fontSize:'16px',fontWeight:400,color:'rgba(220,225,235,0.88)',marginBottom:'8px'}}>Reset all progress?</p>
-              <p style={{fontSize:'13px',color:'rgba(220,225,235,0.45)',marginBottom:'24px',lineHeight:1.5}}>Depth, streak, sessions, and settings will be permanently deleted.</p>
-              <div style={{display:'flex',gap:'12px'}}>
-                <button onClick={() => setShowResetConfirm(false)} style={{flex:1,padding:'10px',borderRadius:'10px',background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',color:'rgba(220,225,235,0.7)',fontSize:'14px',cursor:'pointer'}}>Cancel</button>
-                <button onClick={() => { setShowResetConfirm(false); setStats(defaultStats()); setScreen('first_breath'); }} style={{flex:1,padding:'10px',borderRadius:'10px',background:'rgba(180,60,60,0.12)',border:'1px solid rgba(180,60,60,0.25)',color:'rgba(220,130,130,0.85)',fontSize:'14px',cursor:'pointer'}}>Delete everything</button>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
-        {/* FIX8: Medical disclaimer */}
-        <div style={{marginTop:24, paddingTop:16, borderTop:'1px solid rgba(255,255,255,0.03)', fontSize:11, color:'rgba(220,225,235,0.25)', lineHeight:1.6}}>
+        {/* Medical disclaimer */}
+        <div style={{marginTop:8, paddingTop:16, borderTop:'1px solid rgba(255,255,255,0.03)', fontSize:11, color:'rgba(220,225,235,0.20)', lineHeight:1.6}}>
           DIVE is a breathing exercise tool, not a medical device. Consult your doctor before starting any breathing practice, especially if you have cardiovascular or respiratory conditions. Based on peer-reviewed research including Balban et al. (Stanford, 2023).
         </div>
       </div>
