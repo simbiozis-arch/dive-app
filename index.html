@@ -66,6 +66,7 @@ html,body,#root { width:100%; height:100%; overflow:hidden; font-family:'DM Sans
 @keyframes bubbleRise { 0%{transform:translateY(0) scale(1);opacity:0} 10%{opacity:0.6} 90%{opacity:0.4} 100%{transform:translateY(-100vh) scale(0.6);opacity:0} }
 @keyframes slowRotate { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
 @keyframes surfaceUp { 0%{transform:translateY(0);opacity:0.9} 60%{opacity:1} 100%{transform:translateY(-40px);opacity:0} }
+@keyframes pulse { 0%,100%{opacity:0.15;transform:scale(1)} 50%{opacity:0.4;transform:scale(1.5)} }
 @keyframes surfaceBgLighten { 0%{background:linear-gradient(180deg,#070c15 0%,#0c1322 100%)} 100%{background:linear-gradient(180deg,#1a3a5c 0%,#0e2840 100%)} }
 
 .font-display { font-family:'DM Sans',sans-serif; }
@@ -106,6 +107,9 @@ html,body,#root { width:100%; height:100%; overflow:hidden; font-family:'DM Sans
 
 .no-scrollbar::-webkit-scrollbar { display:none; }
 .no-scrollbar { -ms-overflow-style:none; scrollbar-width:none; }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:18px; height:18px; border-radius:50%; background:#5eaaa8; cursor:pointer; margin-top:-7px; }
+input[type=range]::-moz-range-thumb { width:18px; height:18px; border-radius:50%; background:#5eaaa8; cursor:pointer; border:none; }
+input[type=range] { -webkit-appearance:none; height:4px; border-radius:2px; outline:none; }
 
 button, [role="button"] { transition: transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1); }
 button:active, [role="button"]:active { transform: scale(0.97); transition: transform 80ms ease-out; }
@@ -397,6 +401,25 @@ const TECHNIQUES = {
   recovery:           { phases:['inhale','holdIn','exhale'],          defaults:{inhale:3,holdIn:1,exhale:2},                  multiplier:1.0 },
   physiological_sigh: { phases:['inhale1','inhale2','exhale'],        defaults:{inhale1:2,inhale2:1,exhale:7},                multiplier:1.8 },
 };
+
+// ===== DIFFICULTY LEVELS =====
+const DIFFICULTY_LEVELS = [
+  { id: 'beginner',     label: 'Beginner',     minDepth: 0,  maxDepth: 10,  holdSec: 15,  levelMult: 0.8,
+    timings: { box:{i:3,hIn:3,e:3,hOut:3}, sigh:{i1:2,i2:1,e:5}, exhale:{i:3,e:6} } },
+  { id: 'basic',        label: 'Basic',         minDepth: 10, maxDepth: 25,  holdSec: 35,  levelMult: 1.0,
+    timings: { box:{i:4,hIn:4,e:4,hOut:4}, sigh:{i1:2,i2:1,e:7}, exhale:{i:4,e:8} } },
+  { id: 'intermediate', label: 'Intermediate',  minDepth: 25, maxDepth: 40,  holdSec: 55,  levelMult: 1.2,
+    timings: { box:{i:5,hIn:5,e:5,hOut:5}, sigh:{i1:3,i2:1,e:9}, exhale:{i:4,e:10} } },
+  { id: 'advanced',     label: 'Advanced',      minDepth: 40, maxDepth: 60,  holdSec: 80,  levelMult: 1.5,
+    timings: { box:{i:6,hIn:6,e:6,hOut:6}, sigh:{i1:3,i2:2,e:10}, exhale:{i:5,e:12} } },
+  { id: 'expert',       label: 'Expert',        minDepth: 60, maxDepth: 999, holdSec: 999, levelMult: 2.0,
+    timings: { box:{i:8,hIn:8,e:8,hOut:8}, sigh:{i1:4,i2:2,e:14}, exhale:{i:5,e:15} } },
+];
+
+function getDifficultyLevel(initialHoldDepth) {
+  const d = initialHoldDepth || 0;
+  return DIFFICULTY_LEVELS.find(l => d >= l.minDepth && d < l.maxDepth) || DIFFICULTY_LEVELS[0];
+}
 
 // ===== SCENARIOS =====
 const SCENARIOS = {
@@ -964,6 +987,9 @@ const defaultStats = () => ({
   techniqueStats:{},
   breathTests:[],
   safetyFlag:null,
+  difficultyLevel: 'beginner',
+  lastRetestDate: null,
+  bestHoldDepth: 0,
   introSeen:false,      // FIX2: skip cinematic on return visits
   depthExplained:false, // FIX6: one-time depth tooltip
 });
@@ -1678,6 +1704,8 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [hapticOn, setHapticOn] = useState(true);
   const hapticEnabledRef = useRef(true);
+  const [eyesClosedMode, setEyesClosedMode] = useState(false);
+  const ecPhaseRef = useRef(null);
   const [voiceOn, setVoiceOn] = useState(voiceEnabled);
   const [bodyScanIdx, setBodyScanIdx] = useState(0);
   const lastPhaseRef = useRef('');
@@ -1689,6 +1717,7 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
   const palette = w.palette;
   const accentRgb = palette.accentRgb;
   const seg = currentSeg;
+  const wakeLockRef = useRef(null);
 
   // Body scan sentences
   const bodyScanSentences = useMemo(() => {
@@ -1799,6 +1828,10 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
       if (phaseLabelRef.current && s.phase) {
         phaseLabelRef.current.textContent = PHASE_DISPLAY_LABEL[s.phase] || s.phase.toUpperCase();
       }
+      // Eyes-closed phase label
+      if (ecPhaseRef.current && s.phase) {
+        ecPhaseRef.current.textContent = PHASE_DISPLAY_LABEL[s.phase] || s.phase.toUpperCase();
+      }
       // Bubble inner countdown (large, inside bubble)
       if (bubbleTimerRef.current) {
         bubbleTimerRef.current.textContent = s.phaseDuration > 0 ? Math.ceil(Math.max(0, s.phaseDuration - s.phaseElapsed)) : '';
@@ -1885,9 +1918,15 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
 
     engine.start();
 
+    // WakeLock: keep screen on during session
+    if ('wakeLock' in navigator) {
+      navigator.wakeLock.request('screen').then(lock => { wakeLockRef.current = lock; }).catch(() => {});
+    }
+
     return () => {
       engine.destroy();
       voicePlayer.stop();
+      if (wakeLockRef.current) { wakeLockRef.current.release().catch(() => {}); wakeLockRef.current = null; }
     };
   }, [segments, world, currentLang, voiceEnabled]);
 
@@ -1958,6 +1997,15 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
                 fontSize:15, fontWeight:300, color:'rgba(220,225,235,0.40)',
                 lineHeight:1.5, maxWidth:260, margin:'0 auto', minHeight:44,
               }}>
+              </div>
+              <div style={{pointerEvents:'auto', marginTop:8}}>
+                <button onClick={() => setEyesClosedMode(true)} style={{
+                  background:'none', border:'none',
+                  fontSize:12, color:'rgba(220,225,235,0.18)',
+                  letterSpacing:'0.1em', cursor:'pointer', fontFamily:"'DM Sans',sans-serif",
+                }}>
+                  Close your eyes
+                </button>
               </div>
             </div>
           </div>
@@ -2051,6 +2099,13 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
             0:00 / {Math.floor(totalDuration / 60)}:{String(Math.floor(totalDuration % 60)).padStart(2,'0')}
           </div>
           <div className="flex items-center gap-2">
+            <button onClick={() => setHapticOn(h => !h)} className="flex items-center justify-center rounded-full" style={{
+              width:36, height:36, borderRadius:'50%',
+              border: hapticOn ? '1px solid rgba(94,170,168,0.6)' : '1px solid rgba(255,255,255,0.06)',
+              background: hapticOn ? 'rgba(94,170,168,0.12)' : 'rgba(255,255,255,0.04)',
+              color: hapticOn ? 'rgba(94,170,168,0.9)' : 'rgba(255,255,255,0.3)',
+              fontSize:16, cursor:'pointer',
+            }}>〜</button>
             <button onClick={() => setPaused(!paused)} className="flex items-center justify-center rounded-full" style={{width:36,height:36,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.06)'}}>
               <Icon name={paused ? 'play' : 'pause'} size={14}/>
             </button>
@@ -2093,6 +2148,35 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
           </div>
         )}
       </div>
+
+      {/* Eyes-closed overlay */}
+      {eyesClosedMode && (
+        <div onClick={() => setEyesClosedMode(false)} style={{
+          position:'fixed', inset:0,
+          background:'#04090E',
+          zIndex:100,
+          display:'flex', alignItems:'center', justifyContent:'center',
+          flexDirection:'column',
+        }}>
+          <div style={{
+            width:6, height:6, borderRadius:'50%',
+            background:'rgba(94,170,168,0.2)',
+            boxShadow:'0 0 12px rgba(94,170,168,0.2)',
+            animation:'pulse 4s ease-in-out infinite',
+          }} />
+          <div ref={ecPhaseRef} style={{
+            position:'absolute', bottom:100,
+            fontSize:11, color:'rgba(94,170,168,0.25)',
+            letterSpacing:'0.15em', textTransform:'uppercase',
+            fontFamily:"'DM Sans',sans-serif",
+          }} />
+          <div style={{
+            position:'absolute', bottom:50,
+            fontSize:10, color:'rgba(255,255,255,0.1)',
+            letterSpacing:'0.1em', fontFamily:"'DM Sans',sans-serif",
+          }}>tap to return</div>
+        </div>
+      )}
     </div>
   );
 }
@@ -2563,6 +2647,130 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
   );
 }
 
+// ===== CUSTOM PATTERN SCREEN =====
+function CustomPatternScreen({ onBack, onStart, onSave }) {
+  const [cp, setCp] = useState({
+    inhale: 4, holdIn: 0, exhale: 7, holdOut: 0,
+    extraSip: false, sessionMode: 'cycles', sessionLength: 5, name: '',
+  });
+  const presets = [
+    {label:'Relax', values:{inhale:4,holdIn:0,exhale:8,holdOut:0}},
+    {label:'Focus', values:{inhale:4,holdIn:4,exhale:4,holdOut:4}},
+    {label:'Energy', values:{inhale:4,holdIn:0,exhale:2,holdOut:0}},
+    {label:'Sleep', values:{inhale:4,holdIn:0,exhale:8,holdOut:4}},
+    {label:'Freediver', values:{inhale:4,holdIn:8,exhale:4,holdOut:4}},
+  ];
+  const phaseTotalSec = (cp.inhale||0)+(cp.extraSip?1:0)+(cp.holdIn||0)+(cp.exhale||0)+(cp.holdOut||0) || 1;
+  const barPhases = [
+    {key:'inhale', sec:cp.inhale||0, color:'rgba(94,170,168,0.8)'},
+    {key:'sip', sec:cp.extraSip?1:0, color:'rgba(94,170,168,0.5)'},
+    {key:'holdIn', sec:cp.holdIn||0, color:'rgba(94,170,168,0.35)'},
+    {key:'exhale', sec:cp.exhale||0, color:'rgba(94,120,150,0.7)'},
+    {key:'holdOut', sec:cp.holdOut||0, color:'rgba(94,120,150,0.35)'},
+  ].filter(p => p.sec > 0);
+
+  return (
+    <div className="screen-transition overflow-y-auto h-full no-scrollbar" style={{padding:'env(safe-area-inset-top, 48px) 24px 100px 24px'}}>
+      <div className="flex items-center gap-3 mb-6">
+        <button onClick={onBack} style={{color:'var(--text-3)', background:'none', border:'none', cursor:'pointer', padding:0}}>
+          <Icon name="back" size={20}/>
+        </button>
+        <div className="font-body" style={{fontSize:18, fontWeight:300, color:'rgba(226,232,240,0.95)', flex:1}}>Create Pattern</div>
+      </div>
+
+      {/* Timeline Preview Bar */}
+      <div style={{marginBottom:20}}>
+        <div style={{display:'flex', height:8, borderRadius:4, overflow:'hidden', marginBottom:8}}>
+          {barPhases.map(p => (
+            <div key={p.key} style={{flex:p.sec/phaseTotalSec, background:p.color, transition:'flex 200ms ease'}} />
+          ))}
+        </div>
+        <div style={{fontSize:11, color:'rgba(220,225,235,0.4)', fontFamily:"'JetBrains Mono',monospace"}}>
+          Inhale {cp.inhale}s{cp.extraSip?' · Sip 1s':''}{cp.holdIn>0?' · Hold '+cp.holdIn+'s':''} · Exhale {cp.exhale}s{cp.holdOut>0?' · Pause '+cp.holdOut+'s':''}
+        </div>
+      </div>
+
+      {/* Presets */}
+      <div style={{display:'flex', gap:8, overflowX:'auto', marginBottom:20, paddingBottom:4}} className="no-scrollbar">
+        {presets.map(p => (
+          <button key={p.label} onClick={() => setCp(c => ({...c, ...p.values}))}
+            style={{flexShrink:0, padding:'6px 14px', borderRadius:20, fontSize:12,
+              background:'rgba(94,170,168,0.06)', border:'1px solid rgba(94,170,168,0.15)',
+              color:'rgba(94,170,168,0.75)', cursor:'pointer', fontFamily:"'DM Sans',sans-serif"}}>
+            {p.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Timing sliders */}
+      <div className="glass" style={{padding:20, marginBottom:12}}>
+        <div style={{fontSize:11, fontWeight:600, color:'rgba(220,225,235,0.30)', letterSpacing:'0.12em', textTransform:'uppercase', marginBottom:16}}>Timing</div>
+        {[
+          {label:'Inhale', key:'inhale', min:1, max:15},
+          {label:'Hold in', key:'holdIn', min:0, max:15},
+          {label:'Exhale', key:'exhale', min:1, max:15},
+          {label:'Hold out', key:'holdOut', min:0, max:15},
+        ].map(({label, key, min, max}) => (
+          <div key={key} style={{marginBottom:16}}>
+            <div style={{display:'flex', justifyContent:'space-between', marginBottom:8}}>
+              <span style={{fontSize:13, color:'rgba(220,225,235,0.7)', fontFamily:"'DM Sans',sans-serif"}}>{label}</span>
+              <span style={{fontSize:13, color:'rgba(94,170,168,0.85)', fontFamily:"'JetBrains Mono',monospace"}}>
+                {cp[key] === 0 ? 'off' : cp[key] + 's'}
+              </span>
+            </div>
+            <input type="range" min={min} max={max} value={cp[key]}
+              onChange={e => setCp(c => ({...c, [key]: Number(e.target.value)}))} />
+          </div>
+        ))}
+        {/* Extra sip toggle */}
+        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', paddingTop:4}}>
+          <span style={{fontSize:13, color:'rgba(220,225,235,0.7)', fontFamily:"'DM Sans',sans-serif"}}>Extra inhale sip</span>
+          <button onClick={() => setCp(c => ({...c, extraSip:!c.extraSip}))}
+            style={{width:44, height:24, borderRadius:12, background: cp.extraSip ? 'rgba(94,170,168,0.25)' : 'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.06)', position:'relative', cursor:'pointer', transition:'all 200ms'}}>
+            <div style={{position:'absolute', top:3, width:16, height:16, borderRadius:'50%', background: cp.extraSip ? '#5eaaa8' : 'rgba(255,255,255,0.3)', left: cp.extraSip ? 'calc(100% - 20px)' : '4px', transition:'all 200ms'}} />
+          </button>
+        </div>
+      </div>
+
+      {/* Safety warning */}
+      {cp.holdIn > 8 && (
+        <div style={{padding:'12px 16px', marginBottom:12, borderRadius:10, background:'rgba(255,180,0,0.07)', border:'1px solid rgba(255,180,0,0.18)', fontSize:12, color:'rgba(255,200,80,0.8)', lineHeight:1.6, fontFamily:"'DM Sans',sans-serif"}}>
+          Hold &gt;8 sec may cause light-headedness. Start shorter if new to breathwork.
+        </div>
+      )}
+
+      {/* Session length */}
+      <div className="glass" style={{padding:16, marginBottom:12}}>
+        <div style={{fontSize:11, fontWeight:600, color:'rgba(220,225,235,0.30)', letterSpacing:'0.12em', textTransform:'uppercase', marginBottom:12}}>Session Length</div>
+        <div style={{display:'flex', gap:8}}>
+          {[{mode:'cycles',len:5,label:'5 Cycles'},{mode:'minutes',len:3,label:'3 Min'},{mode:'cycles',len:10,label:'10 Cycles'},{mode:'minutes',len:5,label:'5 Min'}].map(opt => (
+            <button key={opt.label} onClick={() => setCp(c => ({...c, sessionMode:opt.mode, sessionLength:opt.len}))}
+              style={{flex:1, padding:'8px 4px', borderRadius:10, fontSize:12, cursor:'pointer', fontFamily:"'DM Sans',sans-serif",
+                background: cp.sessionMode===opt.mode && cp.sessionLength===opt.len ? 'rgba(94,170,168,0.12)' : 'rgba(255,255,255,0.025)',
+                border: cp.sessionMode===opt.mode && cp.sessionLength===opt.len ? '1px solid rgba(94,170,168,0.3)' : '1px solid rgba(255,255,255,0.06)',
+                color: cp.sessionMode===opt.mode && cp.sessionLength===opt.len ? 'rgba(94,170,168,0.9)' : 'rgba(220,225,235,0.5)'}}>
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Pattern name */}
+      <div style={{marginBottom:20}}>
+        <input type="text" placeholder="Name your pattern..." value={cp.name}
+          onChange={e => setCp(c => ({...c, name:e.target.value}))}
+          style={{width:'100%', padding:'12px 16px', borderRadius:12, background:'rgba(255,255,255,0.025)', border:'1px solid rgba(255,255,255,0.07)', color:'rgba(220,225,235,0.85)', fontSize:14, fontFamily:"'DM Sans',sans-serif", outline:'none'}} />
+      </div>
+
+      {/* Save & Start */}
+      <button onClick={() => { onSave(cp); onStart(cp); }}
+        style={{width:'100%', padding:'14px', borderRadius:14, background:'rgba(94,170,168,0.12)', border:'1px solid rgba(94,170,168,0.25)', color:'rgba(94,170,168,0.9)', fontSize:15, fontWeight:500, cursor:'pointer', fontFamily:"'DM Sans',sans-serif"}}>
+        Save & Start
+      </button>
+    </div>
+  );
+}
+
 // ===== MAIN APP =====
 // ===== MOOD SCALE COMPONENT =====
 function MoodScale({ label, onSelect, lowLabel, highLabel }) {
@@ -2714,6 +2922,11 @@ function App() {
   const [sosStep, setSosStep] = useState('mood'); // 'mood' | 'choice'
   const [exploreCat, setExploreCat] = useState('focus');
   const [isReplayIntro, setIsReplayIntro] = useState(false);
+  const [customPatterns, setCustomPatterns] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('dive_custom_patterns') || '[]'); } catch { return []; }
+  });
+  const [editingPattern, setEditingPattern] = useState(null);
+  const [levelUpMessage, setLevelUpMessage] = useState(null);
   const ambientRef = useRef(new AmbientEngine());
   const world = 'ocean'; // ocean only — space world removed
   const w = WORLDS[world];
@@ -2950,6 +3163,60 @@ function App() {
 
   const bg = getDepthBackground(stats.totalDepth);
 
+  // ===== CUSTOM PATTERN HELPERS =====
+  function saveCustomPattern(pattern) {
+    const newPattern = {
+      id: Date.now().toString(),
+      name: pattern.name || ('Custom ' + (customPatterns.length + 1)),
+      inhale: pattern.inhale,
+      holdIn: pattern.holdIn,
+      exhale: pattern.exhale,
+      holdOut: pattern.holdOut,
+      extraSip: pattern.extraSip,
+      sessionMode: pattern.sessionMode,
+      sessionLength: pattern.sessionLength,
+      createdAt: new Date().toISOString(),
+    };
+    const updated = [...customPatterns, newPattern];
+    setCustomPatterns(updated);
+    localStorage.setItem('dive_custom_patterns', JSON.stringify(updated));
+    return newPattern;
+  }
+
+  function customPatternToSegments(pattern) {
+    const params = {};
+    if (pattern.inhale > 0) params.inhale = pattern.inhale;
+    if (pattern.extraSip) params.inhale2 = 1;
+    if (pattern.holdIn > 0) params.holdIn = pattern.holdIn;
+    if (pattern.exhale > 0) params.exhale = pattern.exhale;
+    if (pattern.holdOut > 0) params.holdOut = pattern.holdOut;
+    let duration;
+    if (pattern.sessionMode === 'cycles') {
+      const cycleLen = (pattern.inhale||0) + (pattern.extraSip?1:0) + (pattern.holdIn||0) + (pattern.exhale||0) + (pattern.holdOut||0);
+      duration = cycleLen * (pattern.sessionLength || 5);
+    } else {
+      duration = (pattern.sessionLength || 3) * 60;
+    }
+    return [{ type: 'breathing', technique: 'custom', duration, params }];
+  }
+
+  function startBreathTest() {
+    setShowRetestPrompt(false);
+    setScreen('first_breath');
+  }
+
+  function getAdaptedParams(technique, baseParams) {
+    const level = getDifficultyLevel(stats?.bestHoldDepth || 0);
+    if (!level) return baseParams;
+    const t2 = level.timings;
+    switch(technique) {
+      case 'box': return { inhale: t2.box.i, holdIn: t2.box.hIn, exhale: t2.box.e, holdOut: t2.box.hOut };
+      case 'physiological_sigh': return { inhale1: t2.sigh.i1, inhale2: t2.sigh.i2, exhale: t2.sigh.e };
+      case 'diaphragmatic': return { inhale: t2.exhale.i, exhale: t2.exhale.e };
+      default: return baseParams;
+    }
+  }
+
 
 
   // ===== FIRST BREATH SCREEN =====
@@ -2962,6 +3229,17 @@ function App() {
             const newState = {...s, firstFeeling: goal, userGoal: goal, onboarded:true, introSeen:true, world:'ocean', initialHoldTime: holdTimeResult ? Math.round(holdTimeResult*10)/10 : null, initialDepth: hDepth, totalDepth: hDepth ? Math.round((s.totalDepth + hDepth) * 10) / 10 : s.totalDepth};
             if (holdTimeResult && holdTimeResult > 0) {
               newState.breathTests = [...(s.breathTests || []), { date: new Date().toISOString(), holdTime: Math.round(holdTimeResult*10)/10, depth: hDepth }];
+              // Update difficulty level (only upgrade)
+              const newBestDepth = Math.max(s.bestHoldDepth || 0, hDepth || 0);
+              const newLevel = getDifficultyLevel(newBestDepth);
+              const currentLevelIdx = DIFFICULTY_LEVELS.findIndex(l => l.id === (s.difficultyLevel || 'beginner'));
+              const newLevelIdx = DIFFICULTY_LEVELS.findIndex(l => l.id === newLevel.id);
+              newState.bestHoldDepth = newBestDepth;
+              newState.difficultyLevel = newLevelIdx > currentLevelIdx ? newLevel.id : (s.difficultyLevel || 'beginner');
+              newState.lastRetestDate = new Date().toISOString();
+              if (newLevelIdx > currentLevelIdx) {
+                setLevelUpMessage('Level up! You are now ' + newLevel.label);
+              }
             }
             return newState;
           });
@@ -3348,13 +3626,22 @@ function App() {
       </button>
 
       {/* Streak + depth below card */}
-      <div className="flex gap-4 mb-6 justify-center">
+      <div className="flex gap-4 mb-6 justify-center items-center flex-wrap">
         <div className="font-body" style={{fontSize:12, fontWeight:400, color:'var(--text-3)'}}>
           {stats.streak > 0 ? <><span className="font-mono">{stats.streak}</span> {t.dayStreak}</> : t.streakStart}
         </div>
         <div className="font-body" style={{fontSize:12, fontWeight:400, color:'var(--text-3)'}}>
           <span className="font-mono">{formatDepth(stats.totalDepth)}</span> {WORLDS[world].depthUnit} {t.depth}
         </div>
+        <span style={{
+          display:'inline-flex', alignItems:'center', gap:4,
+          background:'rgba(94,170,168,0.1)', border:'1px solid rgba(94,170,168,0.3)',
+          borderRadius:20, padding:'3px 10px',
+          fontSize:11, fontFamily:"'DM Sans',sans-serif", fontWeight:500,
+          color:'rgba(94,170,168,0.8)',
+        }}>
+          {getDifficultyLevel(stats.bestHoldDepth)?.label || 'Beginner'}
+        </span>
       </div>
 
       {/* Depth progress bar to next milestone */}
@@ -3454,6 +3741,17 @@ function App() {
               {!checkAccess(sc) && <span style={{color:'var(--text-3)', opacity:0.4}}><Icon name="lock" size={12}/></span>}
             </button>
           ))}
+          {/* Custom pattern card */}
+          <button className="glass w-full text-left flex items-center gap-3 px-4 py-3"
+            onClick={() => setScreen('custom-pattern')}>
+            <span style={{color:'rgba(94,170,168,0.5)'}}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            </span>
+            <div className="flex-1">
+              <div className="font-body" style={{fontWeight:500, fontSize:13, color:'rgba(255,255,255,0.85)'}}>Custom</div>
+              <div className="font-mono mt-1" style={{fontSize:11, fontWeight:300, color:'rgba(255,255,255,0.35)'}}>Build your own pattern</div>
+            </div>
+          </button>
         </div>
       </div>
     </div>
@@ -3688,6 +3986,49 @@ function App() {
           </div>
         </div>
 
+        {/* Depth Level card */}
+        <div style={{background:'rgba(255,255,255,0.02)',border:'1px solid rgba(255,255,255,0.06)',borderRadius:16,padding:16,marginBottom:12}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
+            <span style={{fontSize:13,color:'rgba(220,225,235,0.5)',fontFamily:"'DM Sans',sans-serif"}}>Depth level</span>
+            <span style={{fontSize:12,color:'rgba(94,170,168,0.7)',fontFamily:"'DM Sans',sans-serif"}}>
+              {stats.lastRetestDate ? ('Tested ' + Math.floor((Date.now()-new Date(stats.lastRetestDate).getTime())/86400000) + 'd ago') : 'Not tested yet'}
+            </span>
+          </div>
+          {/* 5-segment progress bar */}
+          <div style={{display:'flex',gap:4,marginBottom:8}}>
+            {DIFFICULTY_LEVELS.map((l,i) => {
+              const currentIdx = DIFFICULTY_LEVELS.findIndex(x => x.id === (stats.difficultyLevel || 'beginner'));
+              return <div key={l.id} style={{
+                flex:1, height:4, borderRadius:2,
+                background: i < currentIdx ? 'rgba(94,170,168,0.8)'
+                          : i === currentIdx ? 'rgba(94,170,168,0.4)'
+                          : 'rgba(255,255,255,0.08)',
+              }} />;
+            })}
+          </div>
+          {/* Level labels */}
+          <div style={{display:'flex',justifyContent:'space-between',marginBottom:14}}>
+            {DIFFICULTY_LEVELS.map((l,i) => {
+              const currentIdx = DIFFICULTY_LEVELS.findIndex(x => x.id === (stats.difficultyLevel || 'beginner'));
+              return <span key={l.id} style={{
+                fontSize:9, letterSpacing:'0.05em', textTransform:'uppercase',
+                color: i === currentIdx ? 'rgba(94,170,168,0.9)' : 'rgba(220,225,235,0.2)',
+                fontWeight: i === currentIdx ? 700 : 400,
+                flex:1, textAlign:'center', fontFamily:"'DM Sans',sans-serif",
+              }}>{l.label.slice(0,3)}</span>;
+            })}
+          </div>
+          {/* Retest button */}
+          <button onClick={() => startBreathTest()} style={{
+            width:'100%', padding:'11px',
+            borderRadius:12, border:'1px solid rgba(94,170,168,0.2)',
+            background:'rgba(94,170,168,0.06)',
+            color:'rgba(94,170,168,0.8)', fontSize:14, cursor:'pointer', fontFamily:"'DM Sans',sans-serif",
+          }}>
+            {stats.lastRetestDate ? 'Retest breath hold' : 'Take breath hold test'}
+          </button>
+        </div>
+
         {/* Settings */}
         <div className="mb-8" style={{borderTop:'1px solid rgba(255,255,255,0.03)', paddingTop:20}}>
           <div className="font-body mb-4" style={{fontSize:11, fontWeight:600, color:'rgba(220,225,235,0.30)', letterSpacing:'0.12em', textTransform:'uppercase'}}>{t.settings}</div>
@@ -3770,7 +4111,19 @@ function App() {
     );
   };
 
+
   const renderScreen = () => {
+    if (screen === 'custom-pattern') return (
+      <CustomPatternScreen
+        onBack={() => setScreen('home')}
+        onSave={(cp) => saveCustomPattern(cp)}
+        onStart={(cp) => {
+          const segs = customPatternToSegments(cp);
+          setScreen('home');
+          actuallyStartSession(segs, {scenario:'custom', category:'custom'});
+        }}
+      />
+    );
     if (screen === 'category') return renderCategory();
 
     if (screen === 'breathe-choice') return (
@@ -3800,7 +4153,7 @@ function App() {
     }
   };
 
-  const showTabs = !['category','program_view','breathe-choice'].includes(screen);
+  const showTabs = !['category','program_view','breathe-choice','custom-pattern'].includes(screen);
 
   return (
     <div className="fixed inset-0" style={{background:bg}}>
