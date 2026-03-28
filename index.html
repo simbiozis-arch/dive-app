@@ -1019,11 +1019,14 @@ function depthContext(m) {
 }
 
 // ===== SAFETY CHECK HELPER =====
+// Only show safety check for recovery technique OR box with long holdIn > 5s
 const isIntensiveSession = (segments) => {
-  const intensiveTime = (segments || [])
-    .filter(s => s.type === 'breathing' && ['recovery','physiological_sigh'].includes(s.technique))
-    .reduce((sum, s) => sum + s.duration, 0);
-  return intensiveTime > 120; // > 2 minutes
+  return (segments || []).some(s =>
+    s.type === 'breathing' && (
+      s.technique === 'recovery' ||
+      (s.technique === 'box' && s.params?.holdIn > 5)
+    )
+  );
 };
 
 // ===== SCENARIO DISPLAY NAME =====
@@ -1891,8 +1894,15 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
   // Pause/resume sync
   useEffect(() => {
     if (!engineRef.current) return;
-    if (paused) engineRef.current.pause();
-    else engineRef.current.resume();
+    if (paused) {
+      engineRef.current.pause();
+      ambientRef.current?.ctx?.suspend();
+      if (voicePlayer.current) voicePlayer.current.pause();
+    } else {
+      engineRef.current.resume();
+      ambientRef.current?.ctx?.resume();
+      if (voicePlayer.current && voicePlayer.current.paused) voicePlayer.current.play().catch(()=>{});
+    }
   }, [paused]);
 
   // Dive darkening background
@@ -3010,10 +3020,10 @@ function App() {
   // Surfacing transition
   if (showSurfacing) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center" style={{animation:'surfaceBgLighten 2.2s ease-out forwards', background:'linear-gradient(180deg,#070c15 0%,#0c1322 100%)'}}>
+      <div className="fixed inset-0 flex items-center justify-center" style={{background:'linear-gradient(180deg, #0e3d5c 0%, #082a42 100%)'}}>
         <Particles world={world} />
         <div className="z-10 text-center">
-          <div className="font-body" style={{fontSize:28, fontWeight:200, color:'rgba(220,225,235,0.85)', letterSpacing:'0.15em', animation:'surfaceUp 2.2s ease-out forwards'}}>Surfacing</div>
+          <div className="font-body" style={{fontSize:18, fontWeight:200, color:'rgba(220,225,235,1)', opacity:0.25, letterSpacing:'0.15em', animation:'surfaceUp 2.2s ease-out forwards'}}>Surfacing</div>
         </div>
       </div>
     );
@@ -3164,14 +3174,6 @@ function App() {
           {completionStep === 'done' && (
             <div className="flex gap-3 justify-center screen-transition">
               <button className="px-8 py-3 rounded-full font-body"
-                style={{fontWeight:500, background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.08)', color:'rgba(226,232,240,0.7)'}}
-                onClick={() => {
-                  closeCompletion();
-                  if (completionData._lastScenario) launchScenario(completionData._lastScenario);
-                }}>
-                {t.repeat}
-              </button>
-              <button className="px-8 py-3 rounded-full font-body"
                 style={{fontWeight:500, background:`rgba(${accentRgb},0.12)`, border:`1px solid rgba(${accentRgb},0.25)`, color:palette.accent}}
                 onClick={closeCompletion}>
                 {t.newDive}
@@ -3231,10 +3233,16 @@ function App() {
   };
 
   // ===== HOME =====
-  // FIX1: instant breathe — no intro, no pre-mood, straight to bubble
+  // Instant breathe — no intro, no pre-mood, straight to bubble
   const startInstantSession = () => {
     const segs = [{ type:'breathing', technique:'physiological_sigh', duration:180, params:{inhale1:2,inhale2:1,exhale:7} }];
     actuallyStartSession(segs, {scenario:'instant_breath', category:'stress'});
+  };
+
+  // Breathe Now choice — goes through normal pre-mood flow
+  const startBreatheNowChoice = (opt) => {
+    const segs = [{ type:'breathing', technique: opt.technique, duration: opt.duration }];
+    startSession(segs, {scenario:'breathe_now', category:'breathe_now'});
   };
 
   const launchScenario = (id, dur) => {
@@ -3312,9 +3320,9 @@ function App() {
       {/* Time-based greeting */}
       <div className="font-body mb-4" style={{fontSize:14, fontWeight:300, color:'var(--text-3)', textAlign:'left'}}>{getGreeting(t)}</div>
 
-      {/* FIX1: Breathe Now — instant CTA for returning users */}
+      {/* Breathe Now — shows choice screen */}
       {stats.totalSessions > 0 && (
-        <button className="breathe-now-btn" onClick={startInstantSession}>
+        <button className="breathe-now-btn" onClick={() => setScreen('breathe-choice')}>
           Breathe now
         </button>
       )}
@@ -3379,14 +3387,18 @@ function App() {
         </div>
       )}
 
-      {/* Stress SOS button */}
+      {/* Stress SOS button — instant, no questions */}
       <button className="w-full mb-6" style={{
         height:44, borderRadius:14, background:`rgba(${accentRgb},0.06)`, border:`1px solid rgba(${accentRgb},0.12)`,
         color:'rgba(220,225,235,0.7)', display:'flex', alignItems:'center', justifyContent:'center', gap:8,
         fontSize:14, fontWeight:400,
-      }} onClick={() => { ph('sos_used', { preMood: currentMood.pre }); setShowStressChoice(true); }}>
+      }} onClick={() => {
+        ph('sos_used', { preMood: currentMood.pre });
+        const segs = [{ type:'breathing', technique:'physiological_sigh', duration:90, params:{inhale1:2,inhale2:1,exhale:7} }];
+        actuallyStartSession(segs, {scenario:'stress_sos_quick', category:'stress'});
+      }}>
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-        {t.stressedNow || 'Stressed right now?'}
+        ⚡ Stressed? Breathe.
       </button>
 
       {/* Programs — horizontal scroll */}
@@ -3761,6 +3773,25 @@ function App() {
   const renderScreen = () => {
     if (screen === 'category') return renderCategory();
 
+    if (screen === 'breathe-choice') return (
+      <div style={{position:'fixed',inset:0,background:'linear-gradient(180deg,#0e3d5c 0%,#020a10 100%)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',zIndex:50,padding:'24px'}}>
+        <p style={{fontSize:'20px',fontWeight:300,color:'rgba(220,225,235,0.7)',marginBottom:'32px'}}>What do you need?</p>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px',width:'100%',maxWidth:'320px'}}>
+          {[
+            {label:'Calm down', technique:'physiological_sigh', duration:180},
+            {label:'Get focused', technique:'box', duration:180},
+            {label:'Energy boost', technique:'segmented', duration:180},
+            {label:'Just breathe', technique:'diaphragmatic', duration:180},
+          ].map(opt => (
+            <button key={opt.label} onClick={() => { setScreen('home'); startBreatheNowChoice(opt); }} style={{padding:'20px 16px',borderRadius:'14px',background:'rgba(255,255,255,0.025)',border:'1px solid rgba(255,255,255,0.06)',fontSize:'15px',fontWeight:400,color:'rgba(220,225,235,0.8)',cursor:'pointer'}}>
+              {opt.label}
+            </button>
+          ))}
+        </div>
+        <button onClick={() => setScreen('home')} style={{marginTop:32,fontSize:13,color:'var(--text-3)',background:'none',border:'none',cursor:'pointer'}}>Back</button>
+      </div>
+    );
+
     if (screen === 'program_view') return renderProgramView();
     switch (tab) {
       case 'home': return renderHome();
@@ -3769,7 +3800,7 @@ function App() {
     }
   };
 
-  const showTabs = !['category','program_view'].includes(screen);
+  const showTabs = !['category','program_view','breathe-choice'].includes(screen);
 
   return (
     <div className="fixed inset-0" style={{background:bg}}>
