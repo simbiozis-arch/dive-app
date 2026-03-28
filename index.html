@@ -1066,7 +1066,7 @@ function getSessionInsight(stats, completionData, lang) {
 
 // ===== BADGES =====
 const BADGES = [
-  { id:'first_dive', nameKey:'firstDive', condition: s => s.totalSessions >= 1 },
+  { id:'first_dive', nameKey:'firstDive', condition: s => s.totalSessions === 1 },
   { id:'week_streak', nameKey:'badges', condition: s => s.streak >= 7 },
   { id:'month_streak', nameKey:'badges', condition: s => s.streak >= 30 },
   { id:'all_techniques', nameKey:'badges', condition: s => (s.techniquesUsed||[]).length >= 7 },
@@ -1193,8 +1193,17 @@ function getScenarioDisplayName(key) {
     'quick_reset': t.quickReset, 'post_workout': t.afterWorkout, 'anxious_wake': t.anxiousMorning,
     'between': t.betweenMeetings, 'just_relax': t.justRelax, 'deep_dive': t.deepDive,
     'surface_breath': 'Surface Breath',
+    'stress_sos': 'Stress SOS',
+    'stress_sos_quick': 'Stress SOS',
+    'instant_breath': 'Quick Breathe',
+    'breathe_now': 'Quick Breathe',
+    'custom': 'Custom Pattern',
   };
-  return map[key] || (SCENARIO_LANG_KEY[key] ? t[SCENARIO_LANG_KEY[key]] : key);
+  if (map[key]) return map[key];
+  if (SCENARIO_LANG_KEY[key] && t[SCENARIO_LANG_KEY[key]]) return t[SCENARIO_LANG_KEY[key]];
+  // Fallback: convert snake_case to Title Case
+  if (typeof key === 'string' && key.includes('_')) return key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  return key;
 }
 
 // ===== SMART DAILY RECOMMENDATION =====
@@ -2156,7 +2165,7 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
             {/* Breathing object wrapper — NO transition, scaled directly by ref */}
             <div ref={wrapperRef} style={{
               position: 'fixed', top: '42%', left: '50%',
-              width: 'min(76vw, 300px)', aspectRatio: '1',
+              width: 'min(75vw, 300px)', aspectRatio: '1',
               margin: 0,
               willChange: 'transform',
               transition: 'none',
@@ -2814,7 +2823,7 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
           {/* BUG1: positioned absolutely so translate(-50%,-50%) anchor works like session player */}
           <div ref={cinematicBubbleRef} style={{
             position:'absolute', top:'42%', left:'50%',
-            width:'min(70vw, 280px)', aspectRatio:'1',
+            width:'min(75vw, 300px)', aspectRatio:'1',
             willChange:'transform', transition:'none',
             transform:'translate(-50%, -50%) scale(1)',
             display:'flex', alignItems:'center', justifyContent:'center',
@@ -3011,6 +3020,7 @@ function AnimatedNumber({ value, suffix = '', duration = 1200 }) {
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
   }, [value]);
+  if (typeof value === 'number' && Number.isInteger(value)) return Math.round(display) + suffix;
   return (typeof value === 'number' && value >= 10) ? Math.round(display) + suffix : display.toFixed(1) + suffix;
 }
 
@@ -3548,10 +3558,10 @@ function App() {
           <div style={{marginBottom:20, color:palette.accent, opacity:0.4}}><Icon name="check" size={32}/></div>
           <div className="font-body mb-3" style={{fontSize:28, fontWeight:300, color:'rgba(226,232,240,0.95)'}}>{t.diveComplete}</div>
           <div style={{borderTop:'1px solid rgba(255,255,255,0.04)', borderBottom:'1px solid rgba(255,255,255,0.04)', padding:'20px 0', margin:'24px 0'}}>
-            <div className="flex justify-center" style={{gap:0}}>
+            <div style={{display:'flex', justifyContent:'center', gap:24, padding:'0 16px', boxSizing:'border-box'}}>
               {[[Math.round(completionData.duration / 60), t.duration || t.min],[completionData.breathCycles || Math.round(completionData.duration / 16), t.breathCycles || 'Breaths'],[formatDepth(completionData.depth), WORLDS[world].depthUnit]].map(([val,label],i) => (
-                <div key={i} className="text-center flex-1" style={{animation:`count-up 600ms ${i*150}ms ease-out both`}}>
-                  <div className="font-mono" style={{fontSize:28, fontWeight:300, color:palette.accent}}>{val}</div>
+                <div key={i} style={{textAlign:'center', minWidth:0, flexShrink:1, animation:`count-up 600ms ${i*150}ms ease-out both`}}>
+                  <div className="font-mono" style={{fontSize:20, fontWeight:300, color:palette.accent}}>{val}</div>
                   <div className="font-body" style={{fontSize:11, fontWeight:300, color:'var(--text-3)', marginTop:4, letterSpacing:'0.05em', textTransform:'lowercase'}}>{label}</div>
                 </div>
               ))}
@@ -3598,7 +3608,6 @@ function App() {
                 setTimeout(() => {
                   // Check if intensive session -> show safety question
                   if (completionData && isIntensiveSession(completionData.segments)) setCompletionStep('safety');
-                  else if (stats.totalSessions <= 1 && !stats.reminderTime) setCompletionStep('reminder');
                   else setCompletionStep('done');
                 }, pre !== null ? 2000 : 600);
               }} />
@@ -3630,8 +3639,7 @@ function App() {
                 <button className="glass px-6 py-2.5 font-body"
                   style={{fontSize:14, fontWeight:500, color:palette.accent, border:`1px solid rgba(${accentRgb},0.25)`}}
                   onClick={() => {
-                    if (stats.totalSessions <= 1 && !stats.reminderTime) setCompletionStep('reminder');
-                    else setCompletionStep('done');
+                    setCompletionStep('done');
                   }}>
                   {t.safetyNo}
                 </button>
@@ -3708,12 +3716,12 @@ function App() {
             </div>
           ))}
         </div>
-        <div className="flex gap-3 mb-4">
-          <div className="flex-1 glass p-4 text-center cursor-pointer" style={{border:'1px solid rgba(255,255,255,0.06)'}}>
+        <div style={{display:'flex', gap:12, marginBottom:16, padding:'0 2px', boxSizing:'border-box'}}>
+          <div className="flex-1 glass p-4 text-center cursor-pointer" style={{border:'1px solid rgba(255,255,255,0.06)', minWidth:0}}>
             <div className="font-body" style={{fontWeight:500, fontSize:13, color:'rgba(226,232,240,0.7)', whiteSpace:'nowrap'}}>{monthlyPrice}</div>
           </div>
-          <div className="flex-1 glass p-5 text-center cursor-pointer" style={{border:`2px solid rgba(${accentRgb},0.4)`, boxShadow:`0 0 20px rgba(${accentRgb},0.12)`, transform:'scale(1.03)'}}>
-            <div className="font-body" style={{fontWeight:500, fontSize:15, color:palette.accent, whiteSpace:'nowrap'}}>{yearlyPrice}</div>
+          <div className="flex-1 glass p-5 text-center cursor-pointer" style={{border:`2px solid rgba(${accentRgb},0.4)`, boxShadow:`0 0 20px rgba(${accentRgb},0.12)`, transform:'scale(1.03)', minWidth:0}}>
+            <div className="font-body" style={{fontWeight:500, fontSize:16, color:palette.accent, whiteSpace:'nowrap'}}>{yearlyPrice}</div>
             <div className="font-body" style={{fontSize:11, fontWeight:500, color:palette.accent, opacity:0.8, marginTop:3, whiteSpace:'nowrap'}}>{yearlySave}</div>
           </div>
         </div>
@@ -3818,13 +3826,6 @@ function App() {
       {/* Time-based greeting */}
       <div className="font-body mb-4" style={{fontSize:14, fontWeight:300, color:'var(--text-3)', textAlign:'left'}}>{getGreeting(t)}</div>
 
-      {/* Breathe Now — shows choice screen */}
-      {stats.totalSessions > 0 && (
-        <button className="breathe-now-btn" onClick={() => setScreen('breathe-choice')}>
-          Breathe now
-        </button>
-      )}
-
       {/* Daily recommendation card */}
       <button className="w-full text-left mb-6" style={{
         minHeight:'max(180px, 42vh)', borderRadius:14, padding:'32px 24px', position:'relative', overflow:'hidden',
@@ -3894,6 +3895,25 @@ function App() {
         </div>
       )}
 
+      {/* Habit reminder prompt — show on home after 3+ sessions if no reminder set */}
+      {stats.totalSessions >= 3 && !stats.reminderTime && (
+        <div style={{padding:'14px 16px', marginBottom:16, borderRadius:10, background:'rgba(94,170,168,0.05)', border:'1px solid rgba(94,170,168,0.10)', fontSize:13, color:'rgba(220,225,235,0.6)', lineHeight:1.6}}>
+          {t.buildHabit || 'Build a daily habit?'}
+          <div style={{display:'flex', gap:8, marginTop:10}}>
+            {[[t.habitMorning || 'Morning 8:00','morning'],[t.habitEvening || 'Evening 21:00','evening']].map(([label,val]) => (
+              <button key={val} onClick={() => setStats(s => ({...s, reminderTime: val}))}
+                style={{padding:'6px 14px', borderRadius:8, background:`rgba(${accentRgb},0.08)`, border:`1px solid rgba(${accentRgb},0.18)`, fontSize:12, fontWeight:500, color:palette.accent, cursor:'pointer'}}>
+                {label}
+              </button>
+            ))}
+            <button onClick={() => setStats(s => ({...s, reminderTime: 'dismissed'}))}
+              style={{padding:'6px 14px', borderRadius:8, background:'none', border:'1px solid rgba(255,255,255,0.06)', fontSize:12, color:'rgba(220,225,235,0.35)', cursor:'pointer'}}>
+              {t.habitNotNow || 'Not now'}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Stress SOS button — instant, no questions */}
       <button className="w-full mb-6" style={{
         height:44, borderRadius:14, background:`rgba(${accentRgb},0.06)`, border:`1px solid rgba(${accentRgb},0.12)`,
@@ -3908,6 +3928,11 @@ function App() {
       }}>
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
         Stressed? Breathe.
+      </button>
+
+      {/* Breathe Now — always visible */}
+      <button className="breathe-now-btn" onClick={() => setScreen('breathe-choice')}>
+        Breathe now
       </button>
 
       {/* Programs — horizontal scroll */}
@@ -4222,7 +4247,7 @@ function App() {
               ['physiological_sigh','Cyclic Sigh'],
               ['box','Box Breathing'],
               ['diaphragmatic','Diaphragmatic'],
-              ['ujjayi','Ocean Breath'],
+              ['ujjayi','Ujjayi (Ocean Breath)'],
               ['segmented','Segmented'],
               ['tidal','Tidal'],
               ['recovery','Recovery'],
@@ -4378,7 +4403,7 @@ function App() {
         onStart={(cp) => {
           const segs = customPatternToSegments(cp);
           setScreen('home');
-          actuallyStartSession(segs, {scenario:'custom', category:'custom'});
+          startSession(segs, {scenario:'custom', category:'custom'});
         }}
       />
     );
