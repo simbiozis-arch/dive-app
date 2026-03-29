@@ -3152,11 +3152,11 @@ function CustomPatternScreen({ onBack, onStart, onSave }) {
     extraSip: false, sessionMode: 'cycles', sessionLength: 5, name: '',
   });
   const presets = [
-    {label:'Relax', values:{inhale:4,holdIn:0,exhale:8,holdOut:0}},
-    {label:'Focus', values:{inhale:4,holdIn:4,exhale:4,holdOut:4}},
-    {label:'Energy', values:{inhale:4,holdIn:0,exhale:2,holdOut:0}},
-    {label:'Sleep', values:{inhale:4,holdIn:0,exhale:8,holdOut:4}},
-    {label:'Freediver', values:{inhale:4,holdIn:8,exhale:4,holdOut:4}},
+    {label:'Relax', values:{inhale:4,holdIn:0,exhale:8,holdOut:0}, techId:'diaphragmatic'},
+    {label:'Focus', values:{inhale:4,holdIn:4,exhale:4,holdOut:4}, techId:'box'},
+    {label:'Energy', values:{inhale:4,holdIn:0,exhale:2,holdOut:0}, techId:'segmented'},
+    {label:'Sleep', values:{inhale:4,holdIn:0,exhale:8,holdOut:4}, techId:'tidal'},
+    {label:'Freediver', values:{inhale:4,holdIn:8,exhale:4,holdOut:4}, techId:'ujjayi'},
   ];
   const phaseTotalSec = (cp.inhale||0)+(cp.extraSip?1:0)+(cp.holdIn||0)+(cp.exhale||0)+(cp.holdOut||0) || 1;
   const barPhases = [
@@ -3189,14 +3189,17 @@ function CustomPatternScreen({ onBack, onStart, onSave }) {
       </div>
 
       {/* Presets */}
-      <div style={{display:'flex', gap:8, overflowX:'auto', marginBottom:20, paddingBottom:4}} className="no-scrollbar">
+      <div style={{display:'flex', gap:8, overflowX:'auto', marginBottom:20, paddingBottom:4, alignItems:'center'}} className="no-scrollbar">
         {presets.map(p => (
-          <button key={p.label} onClick={() => setCp(c => ({...c, ...p.values}))}
-            style={{flexShrink:0, padding:'6px 14px', borderRadius:20, fontSize:12,
-              background:'rgba(94,170,168,0.06)', border:'1px solid rgba(94,170,168,0.15)',
-              color:'rgba(94,170,168,0.75)', cursor:'pointer', fontFamily:"'DM Sans',sans-serif"}}>
-            {p.label}
-          </button>
+          <div key={p.label} style={{display:'flex', alignItems:'center', flexShrink:0}}>
+            <button onClick={() => setCp(c => ({...c, ...p.values}))}
+              style={{padding:'6px 14px', borderRadius:20, fontSize:12,
+                background:'rgba(94,170,168,0.06)', border:'1px solid rgba(94,170,168,0.15)',
+                color:'rgba(94,170,168,0.75)', cursor:'pointer', fontFamily:"'DM Sans',sans-serif"}}>
+              {p.label}
+            </button>
+            <InfoButton techniqueId={p.techId} />
+          </div>
         ))}
       </div>
 
@@ -3440,7 +3443,8 @@ function AuthScreen({ onDemo }) {
       <button onClick={handleEmailLogin} disabled={loading || !email} style={{width:'100%',maxWidth:'300px',padding:'14px 20px',borderRadius:'12px',background:'rgba(94,170,168,0.10)',border:'1px solid rgba(94,170,168,0.22)',color:'rgba(94,170,168,0.9)',fontFamily:"'DM Sans',sans-serif",fontSize:'17px',fontWeight:400,cursor:'pointer',opacity:loading||!email?0.4:1}}>
         {loading ? 'Sending...' : 'Continue with email'}
       </button>
-      <button onClick={onDemo} style={{marginTop:'24px',background:'none',border:'none',fontFamily:"'DM Sans',sans-serif",fontSize:'15px',color:'rgba(220,225,235,0.25)',cursor:'pointer'}}>Try without account</button>
+      <button onClick={onDemo} style={{marginTop:'24px',padding:'12px 24px',borderRadius:'12px',background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.08)',fontFamily:"'DM Sans',sans-serif",fontSize:'16px',fontWeight:400,color:'rgba(220,225,235,0.55)',cursor:'pointer'}}>Start breathing</button>
+      <p style={{fontSize:'12px',color:'rgba(220,225,235,0.2)',marginTop:'8px'}}>No account needed</p>
       <p style={{fontSize:'13px',color:'rgba(220,225,235,0.15)',marginTop:'32px',textAlign:'center',maxWidth:'260px',lineHeight:'1.5'}}>By continuing, you agree to our Terms of Service and Privacy Policy</p>
     </div>
   );
@@ -3450,12 +3454,23 @@ function App() {
   const currentLang = 'en';
 
   // ===== AUTH STATE =====
-  const [authUser, setAuthUser] = useState(null);
-  const [authLoading, setAuthLoading] = useState(true);
+  const [authUser, setAuthUser] = useState(() => {
+    // Check if user previously entered as anonymous/demo
+    if (localStorage.getItem('dive-anonymous-user') === 'true') {
+      return { id: 'demo', isDemo: true };
+    }
+    return null;
+  });
+  const [authLoading, setAuthLoading] = useState(() => {
+    // Skip loading if already have anonymous user
+    return localStorage.getItem('dive-anonymous-user') !== 'true';
+  });
 
   useEffect(() => {
+    // Already resolved from localStorage
+    if (authUser && !authLoading) return;
+
     if (!supabaseClient) {
-      // No Supabase available — local-only mode
       setAuthUser({ id: 'local', isLocal: true });
       setAuthLoading(false);
       return;
@@ -3472,9 +3487,13 @@ function App() {
     // Listen for auth state changes (catches redirects, magic links)
     const { data: { subscription } } = supabaseClient.auth.onAuthStateChange(
       (event, session) => {
+        if (event === 'SIGNED_OUT') {
+          // Don't redirect anonymous users to login
+          const isAnon = localStorage.getItem('dive-anonymous-user') === 'true';
+          if (isAnon) return;
+        }
         setAuthUser(session?.user ?? null);
         setAuthLoading(false);
-        // Clean URL after auth redirect
         if (event === 'SIGNED_IN' && (window.location.hash || window.location.search.includes('code='))) {
           window.history.replaceState(null, '', window.location.pathname);
         }
@@ -3545,7 +3564,7 @@ function App() {
     return true;
   }, [stats.onboarded, stats.lastWeeklySummary, stats.history]);
   const [showWeekly, setShowWeekly] = useState(false);
-  useEffect(() => { if (shouldShowWeekly && screen === 'home') setShowWeekly(true); }, [shouldShowWeekly, screen]);
+  useEffect(() => { if (shouldShowWeekly && screen === 'home' && !showCompletion && !activeSession) setShowWeekly(true); }, [shouldShowWeekly, screen, showCompletion, activeSession]);
 
 
   useEffect(() => {
@@ -3865,7 +3884,10 @@ function App() {
     </div>);
   }
   if (!authUser) {
-    return <AuthScreen onDemo={() => setAuthUser({ id: 'demo', isDemo: true })} />;
+    return <AuthScreen onDemo={() => {
+      localStorage.setItem('dive-anonymous-user', 'true');
+      setAuthUser({ id: 'demo', isDemo: true });
+    }} />;
   }
 
   // ===== FIRST BREATH SCREEN =====
@@ -4886,7 +4908,7 @@ function App() {
                 <p style={{fontSize:'15px',color:'rgba(220,225,235,0.45)',marginBottom:'24px',lineHeight:1.5}}>Depth, streak, sessions, and settings will be permanently deleted.</p>
                 <div style={{display:'flex',gap:'12px'}}>
                   <button onClick={() => setShowResetConfirm(false)} style={{flex:1,padding:'10px',borderRadius:'10px',background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',color:'rgba(220,225,235,0.7)',fontSize:'14px',cursor:'pointer'}}>Cancel</button>
-                  <button onClick={() => { setShowResetConfirm(false); clearDiveData(); setStats(defaultStats()); setScreen('first_breath'); }} style={{flex:1,padding:'10px',borderRadius:'10px',background:'rgba(180,60,60,0.12)',border:'1px solid rgba(180,60,60,0.25)',color:'rgba(220,130,130,0.85)',fontSize:'14px',cursor:'pointer'}}>Delete everything</button>
+                  <button onClick={() => { setShowResetConfirm(false); clearDiveData(); setStats(defaultStats()); setAuthUser(null); setScreen('first_breath'); }} style={{flex:1,padding:'10px',borderRadius:'10px',background:'rgba(180,60,60,0.12)',border:'1px solid rgba(180,60,60,0.25)',color:'rgba(220,130,130,0.85)',fontSize:'14px',cursor:'pointer'}}>Delete everything</button>
                 </div>
               </div>
             </div>
