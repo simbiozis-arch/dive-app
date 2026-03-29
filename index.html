@@ -1398,12 +1398,12 @@ function getDailyRecommendation(stats, t) {
   const sessions = stats.totalSessions || 0;
   const safetyRecent = stats.safetyFlag && ((Date.now() - new Date(stats.safetyFlag.date).getTime()) < 7 * 86400000);
 
-  // First session — always cyclic sigh intro
-  if (sessions === 0) return { scenario:'_first_session', duration:5, title: t.firstDiveLabel || 'Your first dive', sub:'5 ' + t.min + ' \u00b7 ' + t.physiologicalSigh, isFirstSession:true };
+  // First session — cyclic sigh + diaphragmatic intro
+  if (sessions === 0) return { scenario:'_first_session', duration:5, title: t.firstDiveLabel || 'Your first dive', sub:'5 ' + t.min + ' \u00b7 Cyclic sigh + Diaphragmatic', isFirstSession:true };
 
   // Days 1-7: fixed progression
   const dayProgression = [
-    { scenario:'_first_session', duration:5, title: t.firstDiveLabel, sub:'5 ' + t.min + ' \u00b7 ' + t.physiologicalSigh, isFirstSession:true },
+    { scenario:'_first_session', duration:5, title: t.firstDiveLabel, sub:'5 ' + t.min + ' \u00b7 Cyclic sigh + Diaphragmatic', isFirstSession:true },
     { scenario:'meeting', duration:5, title: 'Box breathing basics', sub:'5 ' + t.min + ' \u00b7 ' + t.boxBreathing },
     { scenario:'hard_day', duration:5, title: 'Ocean breath', sub:'5 ' + t.min + ' \u00b7 ' + t.ujjayi },
     { scenario:'cant_focus', duration:5, title: 'Segmented breathing', sub:'5 ' + t.min + ' \u00b7 ' + t.segmented },
