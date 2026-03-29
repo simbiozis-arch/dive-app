@@ -1509,54 +1509,81 @@ class AmbientEngine {
 
 // ===== AUDIO MAP =====
 const AUDIO_MAP = {
-  // Ambient
+  // Protected: ambient + splash
   intro_ambient: '/audio/dive_intro_ambient.mp3',
   dive_intro_ambient: '/audio/dive_intro_ambient.mp3',
   dive_splash: '/audio/dive_underwater.mp3',
   dive_underwater: '/audio/dive_underwater.mp3',
-  // Session text segments
-  intro_sit: '/audio/intro_sit.mp3',
-  intro_hands: '/audio/intro_hands.mp3',
-  bodyscan_head: '/audio/bodyscan_short.mp3',
-  bodyscan_full: '/audio/bodyscan_full.mp3',
-  bodyscan_hands: '/audio/bodyscan_short.mp3',
-  session_end: '/audio/session_end.mp3',
-  session_end_short: '/audio/session_end.mp3',
-  session_end_sleep: '/audio/session_end_sleep.mp3',
+  // P0 Phase cues (generic, used by all techniques)
+  cue_breathe_in: '/audio/cue_breathe_in.mp3',
+  cue_little_more: '/audio/cue_little_more.mp3',
+  cue_breathe_out: '/audio/cue_breathe_out.mp3',
+  cue_hold: '/audio/cue_hold.mp3',
+  cue_pause: '/audio/cue_pause.mp3',
+  // P0 Eyes-closed whisper cues
+  ec_breathe_in: '/audio/ec_breathe_in.mp3',
+  ec_breathe_out: '/audio/ec_breathe_out.mp3',
+  ec_hold: '/audio/ec_hold.mp3',
+  ec_more: '/audio/ec_more.mp3',
+  // P1 Technique intros
+  intro_diaphragmatic: '/audio/intro_diaphragmatic.mp3',
+  intro_cyclic_sigh: '/audio/intro_cyclic_sigh.mp3',
+  intro_box: '/audio/intro_box.mp3',
+  intro_extended_exhale: '/audio/intro_extended_exhale.mp3',
+  intro_segmented: '/audio/intro_segmented.mp3',
+  intro_ujjayi: '/audio/intro_ujjayi.mp3',
+  intro_tidal: '/audio/intro_tidal.mp3',
+  // P1 Bookends
+  bookend_sit: '/audio/bookend_sit.mp3',
+  bookend_ready: '/audio/bookend_ready.mp3',
+  bookend_sleep: '/audio/bookend_sleep.mp3',
+  bookend_done: '/audio/bookend_done.mp3',
+  // P1 Body scan
+  scan_short: '/audio/scan_short.mp3',
+  scan_full: '/audio/scan_full.mp3',
+  scan_sleep: '/audio/scan_sleep.mp3',
+  // P2 Visualizations
   vis_ocean_calm: '/audio/vis_ocean_calm.mp3',
   vis_ocean_focus: '/audio/vis_ocean_focus.mp3',
-  vis_ocean_energy: '/audio/vis_ocean_calm.mp3',
-  // Box breathing phase cues
-  box_cue_inhale: '/audio/box_cue_inhale.mp3',
-  box_cue_hold: '/audio/box_cue_hold.mp3',
-  box_cue_exhale: '/audio/box_cue_exhale.mp3',
-  box_cue_pause: '/audio/box_cue_pause.mp3',
-  // Technique intros
-  box_intro: '/audio/box_intro.mp3',
-  diaphragmatic_intro: '/audio/diaphragmatic_cue.mp3',
-  segmented_intro: '/audio/segmented_intro.mp3',
-  ujjayi_intro: '/audio/ujjayi_intro.mp3',
-  recovery_intro: '/audio/recovery_intro.mp3',
-  sigh_intro: '/audio/sigh_intro.mp3',
-  tidal_intro: '/audio/tidal_intro.mp3',
-  // Technique phase cues
-  diaphragmatic_cue: '/audio/diaphragmatic_cue.mp3',
-  diaphragmatic_exhale: '/audio/diaphragmatic_exhale.mp3',
-  segmented_belly: '/audio/segmented_belly.mp3',
-  segmented_ribs: '/audio/segmented_ribs.mp3',
-  segmented_chest: '/audio/segmented_chest.mp3',
-  segmented_exhale: '/audio/segmented_exhale.mp3',
-  ujjayi_cue: '/audio/ujjayi_cue.mp3',
-  ujjayi_exhale: '/audio/ujjayi_exhale.mp3',
-  recovery_cue: '/audio/recovery_cue.mp3',
-  recovery_exhale: '/audio/recovery_exhale.mp3',
-  sigh_cue: '/audio/sigh_cue.mp3',
-  sigh_exhale: '/audio/sigh_exhale.mp3',
-  tidal_cue: '/audio/tidal_cue.mp3',
-  tidal_exhale: '/audio/tidal_exhale.mp3',
-  // Legacy keys
-  bodyscan_short: '/audio/bodyscan_short.mp3',
-  bodyscan_sleep: '/audio/bodyscan_sleep.mp3',
+  vis_ocean_energy: '/audio/vis_ocean_calm.mp3', // fallback until recorded
+  // Legacy aliases (map old keys → new files for backward compat)
+  intro_sit: '/audio/bookend_sit.mp3',
+  intro_hands: '/audio/bookend_sit.mp3',
+  session_end: '/audio/bookend_done.mp3',
+  session_end_short: '/audio/bookend_done.mp3',
+  session_end_sleep: '/audio/bookend_sleep.mp3',
+  bodyscan_head: '/audio/scan_short.mp3',
+  bodyscan_full: '/audio/scan_full.mp3',
+  bodyscan_hands: '/audio/scan_short.mp3',
+  bodyscan_short: '/audio/scan_short.mp3',
+  bodyscan_sleep: '/audio/scan_sleep.mp3',
+  // Legacy technique intro aliases
+  box_intro: '/audio/intro_box.mp3',
+  diaphragmatic_intro: '/audio/intro_diaphragmatic.mp3',
+  segmented_intro: '/audio/intro_segmented.mp3',
+  ujjayi_intro: '/audio/intro_ujjayi.mp3',
+  recovery_intro: '/audio/intro_diaphragmatic.mp3', // fallback
+  sigh_intro: '/audio/intro_cyclic_sigh.mp3',
+  tidal_intro: '/audio/intro_tidal.mp3',
+  // Legacy technique phase cue aliases → generic cues
+  box_cue_inhale: '/audio/cue_breathe_in.mp3',
+  box_cue_hold: '/audio/cue_hold.mp3',
+  box_cue_exhale: '/audio/cue_breathe_out.mp3',
+  box_cue_pause: '/audio/cue_pause.mp3',
+  diaphragmatic_cue: '/audio/cue_breathe_in.mp3',
+  diaphragmatic_exhale: '/audio/cue_breathe_out.mp3',
+  segmented_belly: '/audio/cue_breathe_in.mp3',
+  segmented_ribs: '/audio/cue_little_more.mp3',
+  segmented_chest: '/audio/cue_little_more.mp3',
+  segmented_exhale: '/audio/cue_breathe_out.mp3',
+  ujjayi_cue: '/audio/cue_breathe_in.mp3',
+  ujjayi_exhale: '/audio/cue_breathe_out.mp3',
+  recovery_cue: '/audio/cue_breathe_in.mp3',
+  recovery_exhale: '/audio/cue_breathe_out.mp3',
+  sigh_cue: '/audio/cue_breathe_in.mp3',
+  sigh_exhale: '/audio/cue_breathe_out.mp3',
+  tidal_cue: '/audio/cue_breathe_in.mp3',
+  tidal_exhale: '/audio/cue_breathe_out.mp3',
 };
 
 // ===== VOICE PLAYER =====
@@ -3345,10 +3372,10 @@ async function audioDebug() {
   const files = [
     '/audio/dive_intro_ambient.mp3',
     '/audio/dive_underwater.mp3',
-    '/audio/intro_sit.mp3',
-    '/audio/box_intro.mp3',
-    '/audio/bodyscan_full.mp3',
-    '/audio/session_end.mp3',
+    '/audio/cue_breathe_in.mp3',
+    '/audio/intro_box.mp3',
+    '/audio/scan_full.mp3',
+    '/audio/bookend_done.mp3',
   ];
   console.log('=== AUDIO DEBUG ===');
   for (const f of files) {
