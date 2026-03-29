@@ -1623,39 +1623,65 @@ class VoicePlayer {
 }
 const voicePlayer = new VoicePlayer();
 
-function playPhaseCue(technique, phase, isFirstCycle) {
+// ===== DURATION-AWARE PHASE CUE SYSTEM =====
+// Generic cue mapping: all techniques use the same phase cues now
+const PHASE_CUE_MAP = {
+  inhale: 'cue_breathe_in', inhale1: 'cue_breathe_in', inhale2: 'cue_little_more',
+  exhale: 'cue_breathe_out', holdIn: 'cue_hold', hold: 'cue_hold',
+  holdOut: 'cue_pause', pause: 'cue_pause',
+  belly: 'cue_breathe_in', ribs: 'cue_little_more', chest: 'cue_little_more',
+};
+// Whisper (eyes-closed) fallback cues — shorter
+const EC_CUE_MAP = {
+  inhale: 'ec_breathe_in', inhale1: 'ec_breathe_in', inhale2: 'ec_more',
+  exhale: 'ec_breathe_out', holdIn: 'ec_hold', hold: 'ec_hold',
+  holdOut: 'ec_hold', pause: 'ec_hold',
+  belly: 'ec_breathe_in', ribs: 'ec_more', chest: 'ec_more',
+};
+// Technique intro mapping
+const TECHNIQUE_INTRO_MAP = {
+  physiological_sigh: 'intro_cyclic_sigh', sigh: 'intro_cyclic_sigh',
+  box: 'intro_box', diaphragmatic: 'intro_diaphragmatic',
+  segmented: 'intro_segmented', ujjayi: 'intro_ujjayi',
+  tidal: 'intro_tidal', recovery: 'intro_diaphragmatic',
+};
+
+function playPhaseCue(technique, phase, isFirstCycle, phaseDuration) {
   if (!voicePlayer.enabled) return;
   const tech = technique === 'physiological_sigh' ? 'sigh' : technique;
 
   // Play technique intro only on first cycle, first inhale phase
   if (isFirstCycle && (phase === 'inhale' || phase === 'inhale1' || phase === 'belly')) {
-    const introKey = `${tech}_intro`;
-    if (AUDIO_MAP[introKey]) { voicePlayer.play(introKey); return; }
+    const introKey = TECHNIQUE_INTRO_MAP[tech] || TECHNIQUE_INTRO_MAP[technique];
+    if (introKey && AUDIO_MAP[introKey]) { voicePlayer.play(introKey); return; }
   }
 
-  // Box breathing: specific per-phase cues
-  if (tech === 'box') {
-    const boxMap = { inhale: 'box_cue_inhale', holdIn: 'box_cue_hold', exhale: 'box_cue_exhale', holdOut: 'box_cue_pause' };
-    if (boxMap[phase] && AUDIO_MAP[boxMap[phase]]) voicePlayer.play(boxMap[phase]);
+  // Generic phase cues — duration-aware
+  const cueKey = PHASE_CUE_MAP[phase];
+  if (!cueKey || !AUDIO_MAP[cueKey]) return;
+
+  // For short phases (< 3s like inhale2=1s), use whisper cue or skip
+  if (phaseDuration && phaseDuration < 3) {
+    const ecKey = EC_CUE_MAP[phase];
+    if (ecKey && AUDIO_MAP[ecKey]) {
+      voicePlayer.play(ecKey, 0.45);
+    }
     return;
   }
 
-  // Segmented breathing: belly/ribs/chest cues
-  if (tech === 'segmented') {
-    const segMap = { belly: 'segmented_belly', ribs: 'segmented_ribs', chest: 'segmented_chest', exhale: 'segmented_exhale' };
-    if (segMap[phase] && AUDIO_MAP[segMap[phase]]) voicePlayer.play(segMap[phase]);
-    return;
-  }
+  voicePlayer.play(cueKey);
+}
 
-  // Other techniques: _cue on inhale phases, _exhale on exhale
-  if (['ujjayi','recovery','sigh','tidal','diaphragmatic'].includes(tech)) {
-    if (phase === 'inhale' || phase === 'inhale1') {
-      const k = `${tech}_cue`; if (AUDIO_MAP[k]) voicePlayer.play(k);
-    }
-    if (phase === 'exhale') {
-      const k = `${tech}_exhale`; if (AUDIO_MAP[k]) voicePlayer.play(k);
-    }
-  }
+// ===== SPLASH WITH VARIATION =====
+function playSplashWithVariation() {
+  try {
+    const splash = new Audio('/audio/dive_underwater.mp3');
+    splash.playbackRate = 0.92 + Math.random() * 0.16; // 0.92-1.08
+    splash.volume = 0.4 + Math.random() * 0.2; // 0.4-0.6
+    const delay = Math.floor(Math.random() * 150);
+    setTimeout(() => splash.play().catch(() => {}), delay);
+    return splash;
+  } catch(e) { return null; }
 }
 
 const TEXT_VOICE_MAP = {
@@ -2018,7 +2044,7 @@ class SessionEngine {
     }
     this.phaseElapsed = 0;
     this.phaseDuration = segment.params[this.currentPhase] || 4;
-    if (this.onPhaseChange) this.onPhaseChange(this.currentPhase, this.cycleCount);
+    if (this.onPhaseChange) this.onPhaseChange(this.currentPhase, this.cycleCount, this.phaseDuration);
   }
   _nextSegment() {
     this.currentSegmentIndex++;
@@ -2330,8 +2356,8 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
     };
 
     // PHASE CHANGE: voice disabled during breathing — only haptic feedback
-    engine.onPhaseChange = (phase, cycleCount) => {
-      // Voice cues removed — only haptic feedback on phase change
+    engine.onPhaseChange = (phase, cycleCount, phaseDuration) => {
+      // 1. Haptic FIRST (synchronous, fires immediately)
       if (hapticEnabledRef.current) {
         if (phase === 'inhale' || phase === 'inhale1' || phase === 'belly') {
           HAPTIC.inhaleCue();
@@ -2341,6 +2367,13 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
           HAPTIC.holdCue();
         } else {
           HAPTIC.phaseChange();
+        }
+      }
+      // 2. Voice cue (duration-aware — skips or uses whisper for short phases)
+      if (voiceOn) {
+        const seg = segments[engine.currentSegmentIndex];
+        if (seg && seg.type === 'breathing') {
+          playPhaseCue(seg.technique, phase, cycleCount === 0, phaseDuration);
         }
       }
     };
@@ -2724,6 +2757,11 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
           try {
             const a = new Audio('audio/dive_intro_ambient.mp3');
             a.loop = true; a.volume = 0;
+            // Randomize: start position + subtle pitch variation per session
+            a.playbackRate = 0.97 + Math.random() * 0.06; // 0.97-1.03
+            a.addEventListener('loadedmetadata', () => {
+              if (a.duration > 5) a.currentTime = Math.random() * a.duration * 0.8;
+            }, {once:true});
             introAmbientRef.current = a;
             a.play().catch(() => { introAmbientRef.current = null; });
           } catch(e) { introAmbientRef.current = null; }
@@ -3759,7 +3797,11 @@ function App() {
     const mergedSegs = mergeConsecutiveTexts(segments);
     ph('session_start', { scenario: meta?.scenario, technique: segments.find(s=>s.type==='breathing')?.technique, duration: segments.reduce((a,s)=>a+(s.duration||0),0), level: userLevel });
     setActiveSession({ segments: mergedSegs, meta });
-    if (stats.soundEnabled) { ambientRef.current.init(WORLDS[world].ambient); ambientRef.current.fadeIn(); }
+    if (stats.soundEnabled) {
+      ambientRef.current.init(WORLDS[world].ambient);
+      ambientRef.current.fadeIn();
+      playSplashWithVariation(); // splash on dive start
+    }
     // P1.2: MediaSession metadata so lock screen shows session info
     if ('mediaSession' in navigator) {
       try {
