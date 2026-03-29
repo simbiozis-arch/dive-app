@@ -4228,13 +4228,14 @@ function App() {
         display:'flex', gap:8,
         marginBottom:12,
       }}>
-        <button className="breathe-now-btn" style={{flex:1, margin:0}} onClick={() => {
+        <button className="breathe-now-btn" style={{flex:1, margin:0, background:'rgba(94,170,168,0.18)', border:'1px solid rgba(94,170,168,0.35)', display:'flex', alignItems:'center', justifyContent:'center', gap:6}} onClick={() => {
           setCurrentMood({pre: null, post: null});
           setMoodDelta(null);
           ph('sos_used', {});
           const segs = [{ type:'breathing', technique:'physiological_sigh', duration:90, params:{inhale1:2,inhale2:1,exhale:7} }];
           actuallyStartSession(segs, {scenario:'stress_sos', category:'stress', isSOSSession:true});
         }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
           Stressed?
         </button>
         <button className="breathe-now-btn" style={{flex:1, margin:0}} onClick={() => setScreen('breathe-choice')}>
