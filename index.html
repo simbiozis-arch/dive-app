@@ -407,9 +407,14 @@ function InfoButton({ techniqueId }) {
       React.createElement('div', {
         onClick: (e) => e.stopPropagation(),
         style: { width:'100%', maxWidth:400, background:'rgba(14,61,92,0.95)', backdropFilter:'blur(24px)',
-          borderRadius:'16px 16px 0 0', padding:'24px 20px calc(20px + env(safe-area-inset-bottom, 0px))' }
+          borderRadius:'16px 16px 0 0', padding:'24px 20px calc(20px + env(safe-area-inset-bottom, 0px))', position:'relative' }
       },
         React.createElement('div', { style:{ width:32, height:3, borderRadius:2, background:'rgba(220,225,235,0.15)', margin:'0 auto 16px' }}),
+        React.createElement('button', {
+          onClick: () => setOpen(false),
+          style:{ position:'absolute', top:12, right:16, background:'none', border:'none',
+            color:'rgba(220,225,235,0.4)', fontSize:18, cursor:'pointer', padding:'4px 8px', lineHeight:1 }
+        }, '\u00D7'),
         React.createElement('p', { style:{ fontFamily:"'DM Sans',sans-serif", fontWeight:600, fontSize:15, color:'rgba(220,225,235,0.8)', marginBottom:4 }}, info.name),
         React.createElement('p', { style:{ fontFamily:"'DM Sans',sans-serif", fontSize:11, color:'rgba(94,170,168,0.7)', marginBottom:12, letterSpacing:'0.05em' }}, info.method),
         React.createElement('p', { style:{ fontFamily:"'DM Sans',sans-serif", fontWeight:300, fontSize:14, lineHeight:'1.6', color:'rgba(220,225,235,0.55)', marginBottom:12 }}, info.annotation),
@@ -3993,7 +3998,7 @@ function App() {
   // Completion — inline overlay (no page change)
   if (showCompletion && completionData) {
     const earnedBadges = BADGES.filter(b => b.condition(stats));
-    const scienceFact = SCIENCE_FACTS[Math.floor((stats.totalSessions || 0) % SCIENCE_FACTS.length)];
+    const scienceFact = SCIENCE_FACTS[Math.floor(((stats.totalSessions || 0) * 7 + Date.now() % 10000) % SCIENCE_FACTS.length)];
     const isSOS = lastSessionWasSOS;
     const closeCompletion = () => {
       setShowCompletion(false); setCompletionData(null); setCompletionStep('stats');
