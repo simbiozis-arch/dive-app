@@ -82,6 +82,8 @@ html,body,#root { width:100%; height:100%; overflow:hidden; font-family:'DM Sans
 .font-body { font-family:inherit; }
 
 .screen-transition { animation: fade-in 400ms ease-out; }
+.screen-crossfade { animation: screenCrossfade 350ms ease-out; }
+@keyframes screenCrossfade { from { opacity:0; } to { opacity:1; } }
 .text-deblur { animation: deblur 600ms ease-out forwards; }
 
 .glass {
@@ -385,6 +387,38 @@ const Icon = ({name, size=24, style={}}) => {
   return fn ? React.createElement('span', {style:{display:'inline-flex',color:'currentColor',...style}}, fn(size)) : null;
 };
 
+// ===== INFO BUTTON (technique science annotation) =====
+function InfoButton({ techniqueId }) {
+  const [open, setOpen] = useState(false);
+  const info = TECHNIQUE_INFO[techniqueId];
+  if (!info) return null;
+  return React.createElement(React.Fragment, null,
+    React.createElement('button', {
+      onClick: (e) => { e.stopPropagation(); setOpen(true); },
+      style: { width:20, height:20, borderRadius:10, border:'1px solid rgba(220,225,235,0.15)', background:'none',
+        color:'rgba(220,225,235,0.3)', fontFamily:"'DM Sans',sans-serif", fontSize:11, fontStyle:'italic',
+        display:'inline-flex', alignItems:'center', justifyContent:'center', marginLeft:6, cursor:'pointer',
+        verticalAlign:'middle', padding:0, lineHeight:1 }
+    }, 'i'),
+    open && React.createElement('div', {
+      onClick: () => setOpen(false),
+      style: { position:'fixed', inset:0, zIndex:200, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'flex-end', justifyContent:'center' }
+    },
+      React.createElement('div', {
+        onClick: (e) => e.stopPropagation(),
+        style: { width:'100%', maxWidth:400, background:'rgba(14,61,92,0.95)', backdropFilter:'blur(24px)',
+          borderRadius:'16px 16px 0 0', padding:'24px 20px calc(20px + env(safe-area-inset-bottom, 0px))' }
+      },
+        React.createElement('div', { style:{ width:32, height:3, borderRadius:2, background:'rgba(220,225,235,0.15)', margin:'0 auto 16px' }}),
+        React.createElement('p', { style:{ fontFamily:"'DM Sans',sans-serif", fontWeight:600, fontSize:15, color:'rgba(220,225,235,0.8)', marginBottom:4 }}, info.name),
+        React.createElement('p', { style:{ fontFamily:"'DM Sans',sans-serif", fontSize:11, color:'rgba(94,170,168,0.7)', marginBottom:12, letterSpacing:'0.05em' }}, info.method),
+        React.createElement('p', { style:{ fontFamily:"'DM Sans',sans-serif", fontWeight:300, fontSize:14, lineHeight:'1.6', color:'rgba(220,225,235,0.55)', marginBottom:12 }}, info.annotation),
+        React.createElement('p', { style:{ fontFamily:"'JetBrains Mono',monospace", fontSize:10, color:'rgba(220,225,235,0.25)' }}, info.source)
+      )
+    )
+  );
+}
+
 // ===== WORLDS =====
 const WORLDS = {
   ocean: {
@@ -411,6 +445,45 @@ const SCIENCE_FACTS = [
   "Coherence breathing at 5.5 breaths/min maximizes heart rate variability.",
   "A single cyclic sigh can shift your nervous system in under 60 seconds.",
 ];
+
+// ===== TECHNIQUE INFO (science annotations) =====
+const TECHNIQUE_INFO = {
+  physiological_sigh: {
+    name: 'Cyclic Sigh', method: 'Stanford Protocol',
+    annotation: 'Two inhales through the nose + one long exhale. Stanford researchers found this is the single most effective breathwork technique for improving mood, outperforming mindfulness meditation in a controlled trial with 108 participants over one month.',
+    source: 'Balban et al., Cell Reports Medicine, 2023',
+  },
+  box: {
+    name: 'Box Breathing', method: 'Military Performance',
+    annotation: 'Equal-ratio breathing: inhale, hold, exhale, hold, all the same duration. Used by US Navy SEALs and first responders for pre-performance calm. Creates neural rhythm that quiets the amygdala.',
+    source: 'US Navy / SEAL training protocols',
+  },
+  diaphragmatic: {
+    name: 'Diaphragmatic Breathing', method: 'Vagal Stimulation',
+    annotation: 'Making your exhale 2x longer than inhale directly activates the parasympathetic nervous system via the vagus nerve. HRV begins improving within 90 seconds of slow breathing.',
+    source: 'Magnon et al., 2021; multiple PMC studies',
+  },
+  segmented: {
+    name: 'Segmented Breathing', method: 'Pranayama / Energizing',
+    annotation: 'Progressive filling: belly, ribs, chest. Maximizes lung capacity and oxygen uptake. Creates an energizing effect without the risks of hyperventilation.',
+    source: 'Yogic breathing research',
+  },
+  ujjayi: {
+    name: 'Ocean Breath', method: 'Freediving / Yoga',
+    annotation: 'Slight throat constriction creates audible ocean sound. Increases vagal tone, warms airways, and provides an auditory anchor for focus. Foundational in both yoga and freediving preparation.',
+    source: 'Telles et al., multiple studies',
+  },
+  tidal: {
+    name: 'Natural Rhythm', method: 'Conscious Breathing',
+    annotation: 'No counting, no pattern. A 2023 RCT with 400 participants found that even breathing at your natural pace, when done consciously, significantly reduces stress and anxiety.',
+    source: 'Fincham et al., 2023 (n=400 RCT)',
+  },
+  recovery: {
+    name: 'Recovery Breath', method: 'Post-exertion',
+    annotation: 'Gentle, short cycles to bring the body back to baseline after physical or mental exertion. Activates the parasympathetic system without deep holds.',
+    source: 'Sports physiology protocols',
+  },
+};
 
 // ===== TECHNIQUES =====
 const TECHNIQUES = {
@@ -1958,6 +2031,7 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
   const wrapperRef = useRef(null);
   const glowTargetRef = useRef(null);
   const phaseLabelRef = useRef(null);
+  const lastPhaseForCrossfadeRef = useRef(null);
   const phaseSubRef = useRef(null);
   const progressFillRef = useRef(null);
   const timeDisplayRef = useRef(null);
@@ -2106,21 +2180,32 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
         const gi = s.glowIntensity;
         glowTargetRef.current.style.boxShadow = `0 0 ${60+gi*200}px rgba(94,170,168,${gi}), 0 0 ${120+gi*300}px rgba(94,170,168,${gi*0.5}), inset 0 0 60px rgba(94,170,168,0.06)`;
       }
-      // Phase label (Zone 3)
-      if (phaseLabelRef.current && s.phase) {
-        phaseLabelRef.current.textContent = PHASE_DISPLAY_LABEL[s.phase] || s.phase.toUpperCase();
+      // Phase label + sub (Zone 3) — crossfade on phase change
+      if (s.phase && s.phase !== lastPhaseForCrossfadeRef.current) {
+        lastPhaseForCrossfadeRef.current = s.phase;
+        const fadeMs = s.phaseDuration < 2 ? 120 : 200;
+        // Fade out
+        if (phaseLabelRef.current) phaseLabelRef.current.style.opacity = '0';
+        if (phaseSubRef.current) phaseSubRef.current.style.opacity = '0';
+        // Swap text after fade out, then fade in
+        setTimeout(() => {
+          if (phaseLabelRef.current) {
+            phaseLabelRef.current.textContent = PHASE_DISPLAY_LABEL[s.phase] || s.phase.toUpperCase();
+            phaseLabelRef.current.style.opacity = '1';
+          }
+          if (phaseSubRef.current) {
+            phaseSubRef.current.textContent = PHASE_INSTRUCTIONS[s.phase] || '';
+            phaseSubRef.current.style.opacity = '1';
+          }
+        }, fadeMs);
       }
-      // Eyes-closed phase label
+      // Eyes-closed phase label (no crossfade needed — user's eyes are closed)
       if (ecPhaseRef.current && s.phase) {
         ecPhaseRef.current.textContent = PHASE_DISPLAY_LABEL[s.phase] || s.phase.toUpperCase();
       }
       // Bubble inner countdown (large, inside bubble)
       if (bubbleTimerRef.current) {
         bubbleTimerRef.current.textContent = s.phaseDuration > 0 ? Math.ceil(Math.max(0, s.phaseDuration - s.phaseElapsed)) : '';
-      }
-      // Phase instruction (Zone 3)
-      if (phaseSubRef.current) {
-        phaseSubRef.current.textContent = PHASE_INSTRUCTIONS[s.phase] || '';
       }
       // Time display
       if (timeDisplayRef.current) {
@@ -2307,13 +2392,15 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
             {/* Zone 3: phase info — fixed bottom, clean */}
             <div style={{position:'fixed', bottom:'calc(80px + env(safe-area-inset-bottom, 24px))', left:0, right:0, textAlign:'center', zIndex:10, padding:'0 24px', pointerEvents:'none'}}>
               <div ref={phaseLabelRef} className="font-body" style={{
-                fontWeight:500, fontSize:22, letterSpacing:'0.15em', textTransform:'uppercase',
-                color:'rgba(220,225,235,0.55)', marginBottom:12, minHeight:18,
+                fontWeight:600, fontSize:13, letterSpacing:'0.2em', textTransform:'uppercase',
+                color:'rgba(220,225,235,0.55)', marginBottom:8, minHeight:18,
+                transition:'opacity 0.2s ease',
               }}>
               </div>
               <div ref={phaseSubRef} className="font-body" style={{
-                fontSize:17, fontWeight:300, color:'rgba(220,225,235,0.40)',
+                fontSize:15, fontWeight:300, color:'rgba(220,225,235,0.35)',
                 lineHeight:1.5, maxWidth:260, margin:'0 auto', minHeight:44,
+                transition:'opacity 0.2s ease',
               }}>
               </div>
               <div style={{pointerEvents:'auto', marginTop:8}}>
@@ -2339,17 +2426,26 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
       case 'video': {
         const hasVideoSrc = seg.src && seg.src.length > 0;
         if (hasVideoSrc) {
+          const smoothVideoEnd = () => {
+            // Cinematic transition: video shrinks → fades → pause → skip to breathing
+            const videoEl = document.querySelector('.dima-video');
+            if (videoEl) {
+              videoEl.style.transition = 'transform 500ms ease, opacity 300ms ease 500ms';
+              videoEl.style.transform = 'translate(-50%,-50%) scale(0.3)';
+              videoEl.style.opacity = '0';
+              setTimeout(() => { if (engineRef.current) engineRef.current.skip(); }, 1200);
+            } else {
+              if (engineRef.current) engineRef.current.skip();
+            }
+          };
           return (
             <div className="flex-1 flex flex-col items-center justify-center">
-              <div className="dima-video">
+              <div className="dima-video" style={{transition:'transform 500ms ease, opacity 300ms ease'}}>
                 <video
                   autoPlay
                   playsInline
-                  onEnded={() => { if (engineRef.current) engineRef.current.skip(); }}
-                  onError={() => {
-                    // Fallback to placeholder on error
-                    if (engineRef.current) engineRef.current.skip();
-                  }}
+                  onEnded={smoothVideoEnd}
+                  onError={() => { if (engineRef.current) engineRef.current.skip(); }}
                 >
                   <source src={seg.src} type="video/mp4" />
                 </video>
@@ -4811,14 +4907,18 @@ function App() {
         <p style={{fontSize:'20px',fontWeight:300,color:'rgba(220,225,235,0.7)',marginBottom:'32px'}}>What do you need?</p>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px',width:'100%',maxWidth:'320px'}}>
           {[
-            {label:'Calm down', sub:'Cyclic sigh \u00b7 3 min', technique:'physiological_sigh', duration:180},
-            {label:'Get focused', sub:'Box breathing \u00b7 3 min', technique:'box', duration:180},
-            {label:'Energy boost', sub:'Segmented \u00b7 3 min', technique:'segmented', duration:180},
-            {label:'Just breathe', sub:'Extended exhale \u00b7 3 min', technique:'diaphragmatic', duration:180},
+            {label:'Calm down', sub:'Cyclic sigh \u00b7 3 min', technique:'physiological_sigh', duration:180, methodLabel:'Stanford protocol'},
+            {label:'Get focused', sub:'Box breathing \u00b7 3 min', technique:'box', duration:180, methodLabel:'Military performance'},
+            {label:'Energy boost', sub:'Segmented \u00b7 3 min', technique:'segmented', duration:180, methodLabel:'Pranayama'},
+            {label:'Just breathe', sub:'Extended exhale \u00b7 3 min', technique:'diaphragmatic', duration:180, methodLabel:'Vagal stimulation'},
           ].map(opt => (
             <button key={opt.label} onClick={() => { setScreen('home'); startBreatheNowChoice(opt); }} style={{padding:'20px 16px',borderRadius:'14px',background:'rgba(255,255,255,0.025)',border:'1px solid rgba(255,255,255,0.06)',cursor:'pointer',textAlign:'left'}}>
               <div style={{fontSize:'17px',fontWeight:400,color:'rgba(220,225,235,0.8)'}}>{opt.label}</div>
               <div style={{fontSize:'13px',fontWeight:300,color:'rgba(220,225,235,0.35)',marginTop:4}}>{opt.sub}</div>
+              <div style={{display:'flex',alignItems:'center',marginTop:6}}>
+                <span style={{fontFamily:"'DM Sans',sans-serif",fontSize:10,fontWeight:400,color:'rgba(94,170,168,0.5)',letterSpacing:'0.03em'}}>{opt.methodLabel}</span>
+                <InfoButton techniqueId={opt.technique} />
+              </div>
             </button>
           ))}
         </div>
@@ -4840,7 +4940,7 @@ function App() {
     <div className="fixed inset-0" style={{background:bg}}>
       <div className="ocean-caustics" />
       <Particles world={world} />
-      <div className="relative z-10 h-full">
+      <div className="relative z-10 h-full screen-crossfade" key={screen + '-' + tab}>
         {renderScreen()}
       </div>
 
@@ -4947,10 +5047,25 @@ function App() {
       {showPaywall && <PaywallModal />}
 
       {/* Duration picker bottom sheet */}
-      {durationPickerScenario && (
+      {durationPickerScenario && (() => {
+        // Find primary technique for this scenario
+        const scContent = getSessionContent(t, world)[durationPickerScenario.id];
+        const firstDur = scContent ? Object.keys(scContent)[0] : null;
+        const firstSegs = firstDur ? scContent[firstDur] : null;
+        const firstBreath = firstSegs ? firstSegs.find(s => s.type === 'breathing') : null;
+        const techId = firstBreath?.technique;
+        const techInfo = techId ? TECHNIQUE_INFO[techId] : null;
+        return (
         <div onClick={() => setDurationPickerScenario(null)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'flex-end',zIndex:50}}>
           <div onClick={e => e.stopPropagation()} style={{width:'100%',padding:'24px',paddingBottom:'calc(24px + env(safe-area-inset-bottom, 16px))',background:'rgba(12,19,34,0.98)',borderRadius:'20px 20px 0 0',borderTop:'1px solid rgba(255,255,255,0.06)'}}>
-            <p style={{fontSize:'16px',fontWeight:400,color:'rgba(220,225,235,0.88)',marginBottom:'16px'}}>{t[SCENARIO_LANG_KEY[durationPickerScenario.id]] || durationPickerScenario.id}</p>
+            <p style={{fontSize:'16px',fontWeight:400,color:'rgba(220,225,235,0.88)',marginBottom:4}}>{t[SCENARIO_LANG_KEY[durationPickerScenario.id]] || durationPickerScenario.id}</p>
+            {techInfo && (
+              <div style={{display:'flex',alignItems:'center',marginBottom:16}}>
+                <span style={{fontFamily:"'DM Sans',sans-serif",fontSize:11,color:'rgba(94,170,168,0.6)',letterSpacing:'0.03em'}}>{techInfo.name} · {techInfo.method}</span>
+                <InfoButton techniqueId={techId} />
+              </div>
+            )}
+            {!techInfo && <div style={{marginBottom:16}} />}
             <div style={{display:'flex',gap:'12px'}}>
               {(durationPickerScenario.durations || []).map(d => (
                 <button key={d} onClick={() => { launchScenario(durationPickerScenario.id, d); setDurationPickerScenario(null); }} style={{flex:1,padding:'14px',borderRadius:'12px',background:'rgba(255,255,255,0.025)',border:'1px solid rgba(255,255,255,0.06)',fontSize:'17px',color:'rgba(220,225,235,0.88)',cursor:'pointer'}}>
@@ -4960,7 +5075,8 @@ function App() {
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* Weekly summary overlay */}
       {showWeekly && (() => {
