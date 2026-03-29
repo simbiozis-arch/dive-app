@@ -1651,25 +1651,26 @@ function playPhaseCue(technique, phase, isFirstCycle, phaseDuration) {
   const tech = technique === 'physiological_sigh' ? 'sigh' : technique;
 
   // Play technique intro only on first cycle, first inhale phase
+  // Intro plays in full — engine.extendCurrentSegment handles timing
   if (isFirstCycle && (phase === 'inhale' || phase === 'inhale1' || phase === 'belly')) {
     const introKey = TECHNIQUE_INTRO_MAP[tech] || TECHNIQUE_INTRO_MAP[technique];
     if (introKey && AUDIO_MAP[introKey]) { voicePlayer.play(introKey); return; }
   }
 
-  // Generic phase cues — duration-aware
+  // Duration-aware phase cue selection
   const cueKey = PHASE_CUE_MAP[phase];
   if (!cueKey || !AUDIO_MAP[cueKey]) return;
+  const cueDur = CLIP_DURATIONS[cueKey] || 4;
+  const ecKey = EC_CUE_MAP[phase];
+  const ecDur = ecKey ? (CLIP_DURATIONS[ecKey] || 4) : 99;
 
-  // For short phases (< 3s like inhale2=1s), use whisper cue or skip
-  if (phaseDuration && phaseDuration < 3) {
-    const ecKey = EC_CUE_MAP[phase];
-    if (ecKey && AUDIO_MAP[ecKey]) {
-      voicePlayer.play(ecKey, 0.45);
-    }
-    return;
+  // Select: normal if fits in 75% of phase, whisper if fits, else skip (haptic only)
+  if (phaseDuration && cueDur <= phaseDuration * 0.75) {
+    voicePlayer.play(cueKey, 0.55);
+  } else if (phaseDuration && ecKey && AUDIO_MAP[ecKey] && ecDur <= phaseDuration * 0.75) {
+    voicePlayer.play(ecKey, 0.4);
   }
-
-  voicePlayer.play(cueKey);
+  // else: haptic + visual only (cue too long for phase)
 }
 
 // ===== SPLASH WITH VARIATION =====
@@ -1698,6 +1699,17 @@ const TEXT_VOICE_MAP = {
   visOceanCalm: 'vis_ocean_calm',
   visOceanFocus: 'vis_ocean_focus',
   visOceanEnergy: 'vis_ocean_calm',
+};
+
+// Measured audio clip durations (seconds, estimated from file size @ 128kbps)
+const CLIP_DURATIONS = {
+  bookend_done:3.6, bookend_ready:3.9, bookend_sit:7.3, bookend_sleep:5.4,
+  cue_breathe_in:3.4, cue_breathe_out:3.4, cue_hold:4.2, cue_little_more:3.5, cue_pause:3.3,
+  ec_breathe_in:3.9, ec_breathe_out:4.8, ec_hold:3.9, ec_more:3.6,
+  intro_box:15.1, intro_cyclic_sigh:13.7, intro_diaphragmatic:13.5,
+  intro_extended_exhale:13.4, intro_segmented:12.0, intro_tidal:10.9, intro_ujjayi:10.1,
+  scan_full:26.0, scan_short:13.9, scan_sleep:25.3,
+  vis_ocean_calm:23.1, vis_ocean_focus:21.7,
 };
 
 function mapTextToAudio(textKey) {
@@ -2621,6 +2633,21 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
         </div>
 
         {renderSegment()}
+
+        {/* Skip button for non-breathing segments (text, bodyscan, visualization) */}
+        {segType && ['text','bodyscan','visualization'].includes(segType) && (
+          <button onClick={() => {
+            voicePlayer.stop();
+            if (engineRef.current) engineRef.current.skip();
+          }} style={{
+            position:'fixed', bottom:'calc(80px + env(safe-area-inset-bottom, 0px))',
+            left:'50%', transform:'translateX(-50%)',
+            background:'none', border:'none',
+            fontFamily:"'DM Sans',sans-serif", fontSize:13,
+            color:'rgba(220,225,235,0.2)', cursor:'pointer',
+            padding:'8px 20px', zIndex:30,
+          }}>Skip</button>
+        )}
 
         {/* Exit confirm */}
         {showExitConfirm && (
