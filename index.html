@@ -4684,14 +4684,15 @@ function App() {
             <AnimatedNumber value={stats.totalDepth} suffix="" />
           </div>
           <div className="font-body" style={{fontSize:12, fontWeight:400, color:'var(--text-3)', letterSpacing:'0.08em', marginTop:2}}>depth ({WORLDS[world].depthUnit})</div>
-          <div style={{display:'flex', justifyContent:'center', gap:32, marginTop:16}}>
+          <div style={{display:'flex', justifyContent:'center', gap:24, marginTop:16}}>
             {[
               [stats.streak || 0, 'streak'],
               [stats.totalSessions || 0, 'dives'],
               [stats.totalMinutes || 0, 'minutes'],
+              [stressReliefRate !== null ? stressReliefRate : '\u2014', 'relief %'],
             ].map(([val, label]) => (
               <div key={label} style={{textAlign:'center'}}>
-                <div className="font-mono" style={{fontSize:18, fontWeight:300, color:palette.accent}}><AnimatedNumber value={val} /></div>
+                <div className="font-mono" style={{fontSize:18, fontWeight:300, color:palette.accent}}>{typeof val === 'number' ? React.createElement(AnimatedNumber, {value:val}) : val}</div>
                 <div className="font-body" style={{fontSize:12, fontWeight:400, color:'var(--text-3)', letterSpacing:'0.05em', marginTop:2}}>{label}</div>
               </div>
             ))}
@@ -4777,7 +4778,40 @@ function App() {
           </div>
         </div>
 
-        {/* 5. DEPTH PROGRESS — breath tests */}
+        {/* 5. PROGRAM PROGRESS — rings */}
+        <div style={{marginBottom:24, borderTop:'1px solid rgba(255,255,255,0.03)', paddingTop:20}}>
+          <div className="font-body mb-4" style={{fontSize:13, fontWeight:500, color:'rgba(220,225,235,0.28)', letterSpacing:'0.12em', textTransform:'uppercase'}}>Programs</div>
+          <div className="space-y-3">
+            {Object.entries(PROGRAMS).map(([key, prog]) => {
+              const completed = (stats.programProgress?.[key] || []).length;
+              const total = prog.days;
+              const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+              const circumference = 2 * Math.PI * 15;
+              const offset = circumference - (pct / 100) * circumference;
+              const progNames = {first_dive:'First Dive', stress_shield:'Stress Shield', deep_focus:'Deep Focus'};
+              return (
+                <div key={key} className="flex items-center gap-3" style={{padding:'8px 0'}}>
+                  <svg width="36" height="36" viewBox="0 0 36 36" style={{flexShrink:0}}>
+                    <circle cx="18" cy="18" r="15" fill="none" stroke="rgba(220,225,235,0.08)" strokeWidth="2" />
+                    <circle cx="18" cy="18" r="15" fill="none" stroke={`rgba(${accentRgb},0.6)`} strokeWidth="2"
+                      strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round" transform="rotate(-90 18 18)" />
+                    <text x="18" y="18" textAnchor="middle" dominantBaseline="central"
+                      style={{fontFamily:"'JetBrains Mono',monospace", fontSize:9, fill:'rgba(220,225,235,0.5)'}}>{pct}%</text>
+                  </svg>
+                  <div style={{flex:1}}>
+                    <div className="font-body" style={{fontSize:15, fontWeight:400, color:'rgba(226,232,240,0.75)'}}>{progNames[key] || key}</div>
+                    <div className="font-mono" style={{fontSize:12, fontWeight:300, color:'var(--text-3)', marginTop:2}}>Day {completed} of {total}</div>
+                  </div>
+                  {completed >= total && (
+                    <span className="font-body" style={{fontSize:11, color:palette.accent, opacity:0.7}}>Complete</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 6. DEPTH PROGRESS — breath tests */}
         {(stats.breathTests || []).length > 0 && (
           <div style={{marginBottom:24, borderTop:'1px solid rgba(255,255,255,0.03)', paddingTop:20}}>
             <div className="font-body mb-4" style={{fontSize:13, fontWeight:500, color:'rgba(220,225,235,0.28)', letterSpacing:'0.12em', textTransform:'uppercase'}}>Depth progress</div>
@@ -4834,10 +4868,19 @@ function App() {
                     <div className="font-body" style={{fontSize:13, fontWeight:400, color:'var(--text-3)', marginTop:2}}>{new Date(h.date).toLocaleDateString('en', {month:'short', day:'numeric'})}</div>
                   </div>
                   <div style={{textAlign:'right'}}>
-                    <div className="font-mono" style={{fontSize:12, fontWeight:300, color:'var(--text-3)'}}>
-                      {Math.round((h.duration || 0)/60)}min
+                    {typeof h.preMood === 'number' && typeof h.postMood === 'number' && (
+                      <div className="font-mono" style={{fontSize:13, fontWeight:300, color: h.postMood < h.preMood ? 'rgba(94,170,168,0.7)' : 'rgba(220,225,235,0.35)'}}>
+                        {h.preMood} {'\u2192'} {h.postMood}
+                      </div>
+                    )}
+                    {h.sosOutcome && (
+                      <div className="font-body" style={{fontSize:12, fontWeight:400, color: h.sosOutcome === 'better' ? 'rgba(94,170,168,0.7)' : 'rgba(220,225,235,0.35)'}}>
+                        {h.sosOutcome === 'better' ? 'Better' : 'Cascaded'}
+                      </div>
+                    )}
+                    <div className="font-mono" style={{fontSize:11, fontWeight:300, color:'var(--text-3)'}}>
+                      {Math.round((h.duration || 0)/60)}min{h.depth > 0 ? ` · ${formatDepth(h.depth)}m` : ''}
                     </div>
-                    {h.depth > 0 && <div className="font-mono" style={{fontSize:12, fontWeight:300, color:palette.accent, opacity:0.5}}>{formatDepth(h.depth)}m</div>}
                   </div>
                 </div>
               ))}
