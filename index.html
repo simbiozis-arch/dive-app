@@ -2520,8 +2520,7 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
 // ===== FIRST BREATH SCREEN =====
 function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
   const [breathPhase, setBreathPhase] = useState('text_sequence'); // 'text_sequence' | 'cinematic' | 'done' | 'feeling' | 'holdTest' | 'goal'
-  const [elapsed, setElapsed] = useState(0);
-  const [currentPhase, setCurrentPhase] = useState(null);
+  const [currentPhase, setCurrentPhase] = useState(null); // only used for non-cinematic phases
   const cinematicBubbleRef = useRef(null); // BUG1: ref-based scale to avoid transition jumps
   const [introTextIdx, setIntroTextIdx] = useState(-1);
   const [introTextOpacity, setIntroTextOpacity] = useState(0);
@@ -2623,17 +2622,33 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
     } catch {}
   };
 
-  // Cinematic timeline — event-driven with 7 voice clips + 4 breathing cycles
+  // Refs for intro phase label + sub (avoid React re-renders)
+  const introLabelRef = useRef(null);
+  const introSubRef = useRef(null);
+  const introCycleRef = useRef(null);
+  const introBgRef = useRef(null);
+  const introElapsedRef = useRef(0);
+  const introSmallTextRef = useRef(null);
+
+  // Sub-instructions for cinematic intro
+  const INTRO_SUBS = {
+    inhale1: 'Deep breath through your nose',
+    inhale2: 'One more sip of air',
+    exhale: 'Slow exhale through your mouth',
+  };
+
+  // Cinematic timeline — event-driven with voice clips + 5 breathing cycles
+  // ALL visual updates via refs — NO setState in RAF loop
   useEffect(() => {
     if (breathPhase !== 'cinematic') return;
     let el = 0;
     let lastTime = performance.now();
     let running = true;
-    // Breathing state (only active during breath_start events)
     let breathing = false;
     let phaseIdx = 0;
     let phaseElapsed = 0;
     let breathCycleCount = 0;
+    let lastPhaseStr = '';
     firedEventsRef.current = new Set();
 
     const tick = () => {
@@ -2642,7 +2657,19 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
       const dt = (now - lastTime) / 1000;
       lastTime = now;
       el += dt;
-      setElapsed(el);
+      introElapsedRef.current = el;
+
+      // Background gradient via ref (no setState)
+      if (introBgRef.current) {
+        const bgP = Math.min(el / 65, 1);
+        introBgRef.current.style.background = `linear-gradient(180deg, rgb(${Math.round(bgP*14)},${Math.round(bgP*61)},${Math.round(bgP*92)}) 0%, rgb(${Math.round(bgP*8)},${Math.round(bgP*42)},${Math.round(bgP*66)}) 33%, rgb(${Math.round(bgP*4)},${Math.round(bgP*21)},${Math.round(bgP*32)}) 66%, rgb(${Math.round(bgP*2)},${Math.round(bgP*10)},${Math.round(bgP*16)}) 100%)`;
+      }
+
+      // Small text opacity via ref
+      if (introSmallTextRef.current) {
+        const stOp = el >= 4 ? Math.min((el - 4) * 0.15, 0.45) : 0;
+        introSmallTextRef.current.style.color = `rgba(220,225,235,${stOp})`;
+      }
 
       // Start ambient at 0.5s
       if (el >= 0.5 && !ambientFadeStarted.current) {
@@ -2667,8 +2694,9 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
           else if (ev.type === 'breath_start') {
             breathing = true; phaseIdx = 0; phaseElapsed = 0;
             breathCycleCount++;
-            setIntroBreathCycle(breathCycleCount);
-            setCurrentPhase('inhale1');
+            // Update cycle counter via ref
+            if (introCycleRef.current) introCycleRef.current.textContent = `${breathCycleCount} of 5`;
+            setIntroBreathCycle(breathCycleCount); // for bubbleReveal conditional only
           }
           else if (ev.type === 'end') { setBreathPhase('done'); return; }
         }
@@ -2683,31 +2711,51 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
           phaseElapsed -= dur;
           phaseIdx++;
           if (phaseIdx >= phases.length) {
-            // Cycle complete — stop breathing until next breath_start event
+            // Cycle complete — keep last phase visible (no disappear), just stop animating
             breathing = false;
-            setCurrentPhase(null);
-            // Keep breathScale at current value (don't jump to 1.0)
-          } else {
-            setCurrentPhase(phases[phaseIdx]);
+            if (cinematicTimerRef.current) cinematicTimerRef.current.textContent = '';
+            // DON'T clear labels — they stay until next cycle starts
           }
         }
         if (breathing) {
           const p = phases[phaseIdx];
           const d = phaseDurations[p];
           const prog = d > 0 ? Math.min(phaseElapsed / d, 1) : 0;
-          const eased = 0.5 - 0.5 * Math.cos(prog * Math.PI); // cosine easing
+          const eased = 0.5 - 0.5 * Math.cos(prog * Math.PI);
           let sc = 1.0;
           if (p === 'inhale1') sc = 1.0 + 0.5 * eased;
           else if (p === 'inhale2') sc = 1.5 + 0.2 * eased;
           else if (p === 'exhale') sc = 1.7 - 0.7 * eased;
-          // BUG1: direct DOM update — no React state, no CSS transition jumps
+          // Direct DOM update — no React state
           if (cinematicBubbleRef.current) cinematicBubbleRef.current.style.transform = `translate(-50%, -50%) scale(${sc})`;
-          // FIX8: update cinematic bubble timer via ref
+          // Countdown inside bubble
           if (cinematicTimerRef.current) {
             cinematicTimerRef.current.textContent = Math.ceil(Math.max(0, d - phaseElapsed));
           }
-        } else {
-          if (cinematicTimerRef.current) cinematicTimerRef.current.textContent = '';
+          // Phase label + sub instruction via refs (crossfade)
+          const phaseStr = p;
+          if (phaseStr !== lastPhaseStr) {
+            lastPhaseStr = phaseStr;
+            // Crossfade: fade out, swap text, fade in
+            if (introLabelRef.current) {
+              introLabelRef.current.style.opacity = '0';
+              setTimeout(() => {
+                if (introLabelRef.current) {
+                  introLabelRef.current.textContent = PHASE_DISPLAY_LABEL[p] || p.toUpperCase();
+                  introLabelRef.current.style.opacity = '1';
+                }
+              }, 200);
+            }
+            if (introSubRef.current) {
+              introSubRef.current.style.opacity = '0';
+              setTimeout(() => {
+                if (introSubRef.current) {
+                  introSubRef.current.textContent = INTRO_SUBS[p] || PHASE_INSTRUCTIONS[p] || '';
+                  introSubRef.current.style.opacity = '1';
+                }
+              }, 200);
+            }
+          }
         }
       }
 
@@ -2748,11 +2796,7 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
     };
   }, []);
 
-  // Background interpolation: pure black -> ocean gradient over 65s
-  const bgProgress = Math.min(elapsed / 65, 1);
-  const cinematicBg = breathPhase === 'cinematic'
-    ? `linear-gradient(180deg, rgb(${Math.round(bgProgress*14)},${Math.round(bgProgress*61)},${Math.round(bgProgress*92)}) 0%, rgb(${Math.round(bgProgress*8)},${Math.round(bgProgress*42)},${Math.round(bgProgress*66)}) 33%, rgb(${Math.round(bgProgress*4)},${Math.round(bgProgress*21)},${Math.round(bgProgress*32)}) 66%, rgb(${Math.round(bgProgress*2)},${Math.round(bgProgress*10)},${Math.round(bgProgress*16)}) 100%)`
-    : oceanBg;
+  // Background interpolation now handled via introBgRef in RAF loop
 
   // Breath hold test depth calculation — uses global holdTimeToDepth + depthContext
 
@@ -2983,36 +3027,31 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
   // CINEMATIC BREATHING PHASE
   const showBubble = bubbleReveal !== 'hidden';
   const bubbleOpacity = bubbleReveal === 'hidden' ? 0 : bubbleReveal === 'glow' ? 0.3 : bubbleReveal === 'forming' ? 0.8 : 1;
-  const bubbleScale = bubbleReveal === 'hidden' ? 0.2 : bubbleReveal === 'glow' ? 0.4 : bubbleReveal === 'forming' ? 0.85 : 1;
-  const lightSize = elapsed >= 1 ? Math.min((elapsed - 1) * 100, 320) : 0;
-  const lightOpacity = elapsed >= 1 ? Math.min((elapsed - 1) * 0.4, 1) : 0;
-  const smallTextOpacity = elapsed >= 4 ? Math.min((elapsed - 4) * 0.15, 0.45) : 0;
+  const bubbleScaleReveal = bubbleReveal === 'hidden' ? 0.2 : bubbleReveal === 'glow' ? 0.4 : bubbleReveal === 'forming' ? 0.85 : 1;
 
   return (
-    <div className="fixed inset-0 flex flex-col items-center justify-center" style={{background:cinematicBg, transition:'background 1s linear'}}>
-      {/* Teal light point emerges 1-4s */}
-      {elapsed >= 1 && bubbleReveal !== 'ready' && (
+    <div ref={introBgRef} className="fixed inset-0 flex flex-col items-center justify-center" style={{background:'#000'}}>
+      {/* Teal light point emerges during bubble reveal */}
+      {bubbleReveal !== 'hidden' && bubbleReveal !== 'ready' && (
         <div style={{
           position:'absolute', top:'50%', left:'50%', transform:'translate(-50%, -50%)',
-          width: lightSize, height: lightSize, borderRadius:'50%',
-          background:`radial-gradient(circle, rgba(94,170,168,${lightOpacity * 0.3}) 0%, rgba(94,170,168,${lightOpacity * 0.1}) 40%, transparent 70%)`,
-          transition:'width 2s ease-out, height 2s ease-out',
+          width: 320, height: 320, borderRadius:'50%',
+          background:'radial-gradient(circle, rgba(94,170,168,0.12) 0%, rgba(94,170,168,0.04) 40%, transparent 70%)',
+          opacity: bubbleReveal === 'glow' ? 0.5 : 1,
+          transition:'opacity 2s ease-out',
         }} />
       )}
-      {/* Small text: Let's take 5 breaths together */}
-      {elapsed >= 4 && (
-        <div className="font-body z-10" style={{
-          position:'absolute', top:'22%', left:'50%',
-          transform:'translate(-50%, -50%)',
-          fontSize:16, fontWeight:300, letterSpacing:'0.06em',
-          color:`rgba(220,225,235,${smallTextOpacity})`,
-          textAlign:'center', width:'80%', maxWidth:300,
-        }}>{"Let\u2019s take 5 breaths together"}</div>
-      )}
-      {/* Breathing bubble — animates during all cycles */}
+      {/* Small text: Let's take 5 breaths together — ref-driven opacity */}
+      <div ref={introSmallTextRef} className="font-body z-10" style={{
+        position:'absolute', top:'22%', left:'50%',
+        transform:'translate(-50%, -50%)',
+        fontSize:16, fontWeight:300, letterSpacing:'0.06em',
+        color:'rgba(220,225,235,0)',
+        textAlign:'center', width:'80%', maxWidth:300,
+      }}>{"Let\u2019s take 5 breaths together"}</div>
+      {/* Breathing bubble — NEVER remounted between cycles */}
       {showBubble && (
-        <div style={{opacity:bubbleOpacity, transform:`scale(${bubbleScale})`, transition:'opacity 1500ms ease-out, transform 1500ms ease-out', width:'100%', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center'}}>
-          {/* BUG1: positioned absolutely so translate(-50%,-50%) anchor works like session player */}
+        <div style={{opacity:bubbleOpacity, transform:`scale(${bubbleScaleReveal})`, transition:'opacity 1500ms ease-out, transform 1500ms ease-out', width:'100%', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center'}}>
           <div ref={cinematicBubbleRef} style={{
             position:'absolute', top:'42%', left:'50%',
             width:'min(75vw, 300px)', aspectRatio:'1',
@@ -3021,7 +3060,6 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
             display:'flex', alignItems:'center', justifyContent:'center',
           }}>
             <OceanBubble />
-            {/* FIX8: countdown inside cinematic bubble */}
             <div ref={cinematicTimerRef} style={{
               position:'absolute', top:'50%', left:'50%',
               transform:'translate(-50%,-50%)',
@@ -3031,22 +3069,26 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
               pointerEvents:'none', userSelect:'none',
             }} />
           </div>
-          {currentPhase && (
-            <div style={{position:'fixed', bottom:'calc(80px + env(safe-area-inset-bottom, 24px))', left:0, right:0, textAlign:'center', pointerEvents:'none'}}>
-              <div className="font-body" style={{fontWeight:500, fontSize:16, letterSpacing:'0.1em', textTransform:'uppercase', color:'rgba(220,225,235,0.7)', marginBottom:4}}>
-                {phaseLabels[currentPhase]}
-              </div>
-              {introBreathCycle > 0 && (
-                <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, fontWeight: 300, color: 'rgba(220,225,235,0.25)', textAlign: 'center', marginTop: 6 }}>
-                  {introBreathCycle} of 5
-                </p>
-              )}
-            </div>
-          )}
+          {/* Zone 3: phase label + sub-instruction — ALWAYS rendered, ref-driven text */}
+          <div style={{position:'fixed', bottom:'calc(24px + env(safe-area-inset-bottom, 0px))', left:0, right:0, display:'flex', flexDirection:'column', alignItems:'center', gap:8, zIndex:15, pointerEvents:'none'}}>
+            <div ref={introLabelRef} className="font-body" style={{
+              fontWeight:600, fontSize:13, letterSpacing:'0.2em', textTransform:'uppercase',
+              color:'rgba(220,225,235,0.55)', transition:'opacity 0.3s ease', textAlign:'center',
+            }} />
+            <div ref={introSubRef} className="font-body" style={{
+              fontWeight:300, fontSize:15, lineHeight:1.5,
+              color:'rgba(220,225,235,0.35)', maxWidth:260, textAlign:'center', minHeight:44,
+              transition:'opacity 0.3s ease',
+            }} />
+            <div ref={introCycleRef} style={{
+              fontFamily:"'JetBrains Mono', monospace", fontSize:13, fontWeight:300,
+              color:'rgba(220,225,235,0.25)', textAlign:'center',
+            }} />
+          </div>
         </div>
       )}
-      {/* Particles fade in after 6s */}
-      {elapsed >= 6 && <Particles world={fbWorld} />}
+      {/* Particles fade in after bubble is ready */}
+      {bubbleReveal === 'ready' && <Particles world={fbWorld} />}
     </div>
   );
 }
@@ -4542,10 +4584,10 @@ function App() {
 
   const renderProfile = () => {
     // Mood chart data: sessions with preMood + postMood
-    const moodSessions = (stats.history || []).filter(h => h.preMood != null && h.postMood != null).slice(-7);
+    const moodSessions = (stats.history || []).filter(h => typeof h.preMood === 'number' && typeof h.postMood === 'number').slice(-7);
     const hasMoodChart = moodSessions.length >= 3;
     // Stress relief rate: sessions where postMood > preMood
-    const ratedSessions = (stats.history || []).filter(h => h.preMood != null && h.postMood != null);
+    const ratedSessions = (stats.history || []).filter(h => typeof h.preMood === 'number' && typeof h.postMood === 'number');
     const relievedCount = ratedSessions.filter(h => h.postMood > h.preMood).length;
     const stressReliefRate = ratedSessions.length >= 3 ? Math.round((relievedCount / ratedSessions.length) * 100) : null;
     // Mood avg delta
