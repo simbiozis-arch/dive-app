@@ -2204,7 +2204,18 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
 
     // PHASE CHANGE: voice disabled during breathing — only haptic feedback
     engine.onPhaseChange = (phase, cycleCount) => {
-      // Voice cues removed from breathing phases — voice only plays on text segments
+      // Voice cues removed — only haptic feedback on phase change
+      if (hapticEnabledRef.current) {
+        if (phase === 'inhale' || phase === 'inhale1' || phase === 'belly') {
+          HAPTIC.inhaleCue();
+        } else if (phase === 'exhale') {
+          HAPTIC.exhaleCue();
+        } else if (phase === 'holdIn' || phase === 'hold' || phase === 'holdOut' || phase === 'pause') {
+          HAPTIC.holdCue();
+        } else {
+          HAPTIC.phaseChange();
+        }
+      }
     };
 
     // SEGMENT CHANGE: React state update (infrequent)
@@ -4113,7 +4124,7 @@ function App() {
   const renderHome = () => {
     const rec = getDailyRecommendation(stats, t);
     return (
-    <div className="screen-transition overflow-y-auto h-full no-scrollbar" style={{padding:'env(safe-area-inset-top, 48px) 24px 140px 24px'}}>
+    <div className="screen-transition overflow-y-auto h-full no-scrollbar" style={{padding:'env(safe-area-inset-top, 48px) 24px 100px 24px'}}>
       <div className="flex items-center justify-between mb-6">
         <div>
           <div className="font-body" style={{fontSize:24, fontWeight:200, color:'rgba(226,232,240,0.95)', letterSpacing:'0.25em', textTransform:'uppercase'}}>{t.appName}</div>
@@ -4126,7 +4137,7 @@ function App() {
 
       {/* Daily recommendation card */}
       <button className="w-full text-left mb-6" style={{
-        minHeight:'max(150px, 35vh)', borderRadius:14, padding:'32px 24px', position:'relative', overflow:'hidden',
+        minHeight:'max(150px, 38vh)', maxHeight:'42vh', borderRadius:14, padding:'32px 24px', position:'relative', overflow:'hidden',
         background:'rgba(255,255,255,0.024)',
         border:'1px solid rgba(255,255,255,0.05)',
         display:'flex', flexDirection:'column', justifyContent:'space-between',
@@ -4212,18 +4223,15 @@ function App() {
         </div>
       )}
 
-      {/* SOS + Breathe now — fixed action bar above tab bar */}
+      {/* SOS + Breathe now — inline, not fixed */}
       <div style={{
-        position:'fixed', bottom:64, left:0, right:0,
-        padding:'8px 20px', paddingTop:20,
         display:'flex', gap:8,
-        background:'linear-gradient(0deg, rgba(2,10,16,0.95) 0%, transparent 100%)',
-        zIndex:20, pointerEvents:'none',
+        marginBottom:12,
       }}>
         <button style={{
           flex:1, height:44, borderRadius:14, background:`rgba(${accentRgb},0.06)`, border:`1px solid rgba(${accentRgb},0.12)`,
           color:'rgba(220,225,235,0.7)', display:'flex', alignItems:'center', justifyContent:'center', gap:8,
-          fontSize:16, fontWeight:400, pointerEvents:'auto', cursor:'pointer',
+          fontSize:16, fontWeight:400, cursor:'pointer',
         }} onClick={() => {
           setCurrentMood({pre: null, post: null});
           setMoodDelta(null);
@@ -4234,7 +4242,7 @@ function App() {
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
           Stressed? Breathe.
         </button>
-        <button className="breathe-now-btn" style={{flex:1, pointerEvents:'auto'}} onClick={() => setScreen('breathe-choice')}>
+        <button className="breathe-now-btn" style={{flex:1}} onClick={() => setScreen('breathe-choice')}>
           Breathe now
         </button>
       </div>
@@ -4242,13 +4250,20 @@ function App() {
       {/* Daily insight */}
       {(() => {
         const HOME_INSIGHTS = [
-          "Navy SEALs use box breathing to perform under fire",
-          "5 minutes of cyclic sighing reduces cortisol more than meditation",
+          "Navy SEALs use box breathing to stay calm under fire",
+          "5 min of cyclic sighing reduces cortisol more than meditation",
           "Freedivers slow their heart from 80 to 30 bpm with breath alone",
           "Your diaphragm is the only skeletal muscle that works 24/7",
           "Exhaling longer than inhaling activates your vagus nerve",
           "3 physiological sighs can reset your nervous system in 90 seconds",
-          "Japanese pearl divers hold their breath for 2+ minutes",
+          "Japanese pearl divers trained 7-minute breath holds",
+          "One deep breath triggers your vagus nerve in 0.2 seconds",
+          "The average person takes 22,000 breaths per day — most shallow",
+          "Slow breathing at 6/min optimizes heart rate variability",
+          "Deep breathing increases brain oxygen by up to 30%",
+          "Humming while exhaling amplifies vagus nerve stimulation 15x",
+          "3 min of controlled breathing drops blood pressure by 10 points",
+          "The mammalian dive reflex slows your heart in cold water",
         ];
         return (
           <div style={{margin:'16px 0', padding:'14px 16px', borderRadius:12, background:'rgba(255,255,255,0.015)', border:'1px solid rgba(255,255,255,0.03)'}}>
