@@ -278,7 +278,7 @@ const LANG = {
     goodMorning:'Good morning',goodAfternoon:'Good afternoon',goodEvening:'Good evening',goodNight:'Good night',
     day1Free:'Day 1 free',premiumLabel:'Premium',
     safetyQuestion:'Did you feel dizzy or lightheaded?',safetyYes:'Yes',safetyNo:'No',safetyMessage:"That's normal when starting out. We'll suggest gentler techniques.",
-    retestTitle:'Time to check your progress',retestSub:'days since your last depth test',retestNow:'Test now \u2014 30 sec',retestLater:'Later',
+    retestTitle:'Weekly Deep Dive',retestSub:'Time to go deeper',retestNow:'Test now \u2014 30 sec',retestLater:'Later',
     trialNotice:"You won't be charged for 7 days. Cancel anytime.",
     streakAtRisk:'day streak at risk',surfaceBreath1Min:'Surface Breath \u2014 1 min',freshStartFull:'Fresh start. Every freediver surfaces eventually.',
   }
@@ -1424,6 +1424,33 @@ const MILESTONES = [
   { id:'sessions_100', condition: s => (s.totalSessions||0) >= 100, message:"100 dives. You're an Elite Diver." },
 ];
 
+// ===== PROGRAM DAY INTROS =====
+const PROGRAM_INTROS = {
+  first_dive: {
+    0: { title:'Welcome to your first dive', text:'Today: cyclic sighing, a double-inhale technique from Stanford research. One breath pattern, instant calm.' },
+    1: { title:'New technique: Box breathing', text:'Yesterday you learned cyclic sighing. Today: box breathing, used in military training. Same goal, different mechanism.' },
+    2: { title:'Going deeper: Segmented', text:'Two techniques down. Today: segmented breathing. Progressive filling maximizes lung capacity.' },
+    3: { title:'Ocean breath: Ujjayi', text:'Today: ujjayi breathing. A slight throat constriction creates an ocean sound that anchors your focus.' },
+    4: { title:'Putting it all together', text:'Final day. All techniques in one session. You now have a complete breathing toolkit.' },
+  },
+  stress_shield: {
+    0: { title:'Stress Shield: Day 1', text:'This week focuses on stress resilience. Today: cyclic sighing for acute moments.' },
+    1: { title:'Stress Shield: Day 2', text:'Today: slow breathing with body scan. Stress lives in the body. We release it there.' },
+    2: { title:'Stress Shield: Day 3', text:'Today: box breathing for high-pressure situations. Equal phases create balance.' },
+    3: { title:'Stress Shield: Day 4', text:'Today: ujjayi breathing for deep calm. The ocean sound trains your attention.' },
+    4: { title:'Stress Shield: Day 5', text:'Today: visualizing stress as a wave. You observe it, breathe through it.' },
+    5: { title:'Stress Shield: Day 6', text:'Today: combining techniques. Cyclic sigh to calm, then diaphragmatic to stabilize.' },
+    6: { title:'Stress Shield: Day 7', text:'Final day. Full practice: body scan, breathing, reflection. Your stress toolkit is complete.' },
+  },
+  deep_focus: {
+    0: { title:'Deep Focus: Day 1', text:'This week trains attention. Today: tidal breathing with breath counting.' },
+    1: { title:'Deep Focus: Day 2', text:'Today: box breathing. Equal intervals create a rhythm your mind can lock onto.' },
+    2: { title:'Deep Focus: Day 3', text:'Today: segmented breathing. Isolating attention on body zones transfers to task focus.' },
+    3: { title:'Deep Focus: Day 4', text:'Today: extended box breathing with longer holds. Training attention like a muscle.' },
+    4: { title:'Deep Focus: Day 5', text:'Final day. Choose your focus technique. Three tools, one sharp mind.' },
+  },
+};
+
 // Weekly rotation matrix: [Mon=1..Sun=0] × [morning, midday, evening, night]
 const ROTATION_MATRIX = {
   1: ['diaphragmatic','box','diaphragmatic','diaphragmatic'],          // Mon
@@ -2251,6 +2278,8 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
   const lastDiveProgressRef = useRef(0);
   const [controlOpacity, setControlOpacity] = useState(1);
   const controlFadeRef = useRef(null);
+  const [midMilestoneShown, setMidMilestoneShown] = useState(false);
+  const [showMidMilestone, setShowMidMilestone] = useState(false);
 
   const w = WORLDS[world];
   const palette = w.palette;
@@ -2429,6 +2458,12 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
       // Progress bar fill
       if (progressFillRef.current) {
         progressFillRef.current.style.width = `${s.diveProgress*100}%`;
+      // Mid-session depth milestone (5+ min sessions, at 50%)
+      if (!midMilestoneShown && s.totalDuration >= 300 && s.diveProgress >= 0.5 && s.diveProgress < 0.55) {
+        setMidMilestoneShown(true);
+        setShowMidMilestone(true);
+        setTimeout(() => setShowMidMilestone(false), 2500);
+      }
       }
       // WOW 3: Reactive ambient sound
       if (s.phase && s.segmentType === 'breathing') {
@@ -2550,14 +2585,26 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
   }, [paused]);
 
   // Dive darkening background
+  // Technique-specific background colors
+  const TECH_BG = {
+    physiological_sigh:'linear-gradient(180deg, rgba(30,58,95,0.9), rgba(13,27,42,0.95))',
+    diaphragmatic:'linear-gradient(180deg, rgba(10,42,42,0.9), rgba(26,58,58,0.95))',
+    box:'linear-gradient(180deg, rgba(26,26,46,0.9), rgba(45,45,68,0.95))',
+    segmented:'linear-gradient(180deg, rgba(46,26,26,0.9), rgba(61,32,32,0.95))',
+    ujjayi:'linear-gradient(180deg, rgba(10,42,42,0.9), rgba(26,58,58,0.95))',
+    tidal:'linear-gradient(180deg, rgba(26,26,46,0.9), rgba(45,45,68,0.95))',
+    recovery:'linear-gradient(180deg, rgba(14,61,92,0.9), rgba(2,10,16,0.95))',
+  };
   const bgStyle = useMemo(() => {
     const darken = diveProgress;
+    const mainTech = segments.find(s=>s.type==='breathing')?.technique;
+    const techBg = mainTech && TECH_BG[mainTech];
+    if (techBg) return { background: techBg };
     if (world === 'ocean') {
       return { background: `linear-gradient(180deg, rgba(14,61,92,${1-darken*0.8}) 0%, rgba(2,10,16,${0.8+darken*0.2}) 100%)` };
-    } else {
-      return { background: `rgba(13,11,26,${0.7+darken*0.3})` };
     }
-  }, [diveProgress, world]);
+    return { background: `rgba(13,11,26,${0.7+darken*0.3})` };
+  }, [diveProgress, world, segments]);
 
   // techLabel is low-frequency (only changes on segment change)
   const techLabel = seg?.type === 'breathing' ? (t[TECHNIQUE_LANG_KEY[seg.technique]] || seg.technique) : '';
@@ -2747,6 +2794,20 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
         </div>
 
         {renderSegment()}
+
+        {/* Mid-session depth milestone overlay */}
+        {showMidMilestone && (
+          <div style={{
+            position:'fixed', top:'calc(42% - min(37.5vw, 150px) - 70px)',
+            left:0, right:0, textAlign:'center', zIndex:25, pointerEvents:'none',
+            opacity: showMidMilestone ? 1 : 0,
+            animation:'fade-in 500ms ease-out',
+          }}>
+            <div className="font-body" style={{fontSize:14, fontWeight:300, color:'rgba(94,170,168,0.7)', letterSpacing:'0.04em'}}>
+              You've reached {Math.round(sessionDepth(totalDuration, segments.find(s=>s.type==='breathing')?.technique || 'diaphragmatic', 'basic') * 0.5 * 10) / 10}m — keep going
+            </div>
+          </div>
+        )}
 
         {/* Skip button for non-breathing segments (text, bodyscan, visualization) */}
         {segType && ['text','bodyscan','visualization'].includes(segType) && (
@@ -3247,15 +3308,57 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef, star
       );
     }
     if (holdTestPhase === 'result') {
+      // Comparison to previous test
+      let prevTests = [];
+      try { prevTests = JSON.parse(localStorage.getItem('dive-breath-tests') || '[]'); } catch {}
+      const prevTest = prevTests.length > 0 ? prevTests[prevTests.length - 1] : null;
+      const prevDepth = prevTest ? holdTimeToDepth(prevTest.holdTime) : null;
+      const isFirstTest = !prevTest;
+      const improvement = prevDepth ? Math.round(((holdDepth - prevDepth) / prevDepth) * 100) : 0;
+      // Projection: linear trend from last 4 tests
+      let projection = null;
+      if (prevTests.length >= 2) {
+        const recent = prevTests.slice(-4);
+        const depths = recent.map(t => holdTimeToDepth(t.holdTime));
+        const avgRate = depths.length >= 2 ? (depths[depths.length-1] - depths[0]) / (depths.length - 1) : 0;
+        if (avgRate > 0) {
+          const nextMilestones = [10,15,20,25,30].filter(m => m > holdDepth);
+          if (nextMilestones.length > 0) {
+            const testsNeeded = Math.ceil((nextMilestones[0] - holdDepth) / avgRate);
+            const futureDate = new Date(Date.now() + testsNeeded * 7 * 86400000);
+            projection = { depth: nextMilestones[0], date: futureDate.toLocaleDateString('en', {month:'long', year:'numeric'}) };
+          }
+        }
+      }
       return (
         <div className="fixed inset-0 flex flex-col items-center justify-center px-8" style={{background:oceanBg}}>
           <Particles world={fbWorld} />
           <div className="screen-transition text-center z-10">
-            <div className="font-body mb-6" style={{fontSize:16, fontWeight:300, color:'rgba(220,225,235,0.55)', letterSpacing:'0.04em'}}>Your starting depth</div>
+            <div className="font-body mb-6" style={{fontSize:16, fontWeight:300, color:'rgba(220,225,235,0.55)', letterSpacing:'0.04em'}}>{isFirstTest ? 'Your baseline' : 'Your depth'}</div>
             <div className="font-mono mb-2" style={{fontSize:48, fontWeight:300, color:palette.accent}}>{formatDepth(holdDepth)}<span style={{fontSize:24}}>m</span></div>
             <div className="font-body mb-3" style={{fontSize:17, fontWeight:300, color:'rgba(220,225,235,0.5)'}}>{depthContext(holdDepth)}</div>
             {getEqualizationFact(holdDepth) && (
               <div className="font-body mb-3" style={{fontSize:13, fontWeight:300, color:'rgba(220,225,235,0.3)', fontStyle:'italic'}}>{getEqualizationFact(holdDepth)}</div>
+            )}
+            {/* Comparison to previous */}
+            {prevDepth !== null && (
+              <div className="font-body mb-2" style={{fontSize:14, fontWeight:300, color:'rgba(220,225,235,0.45)'}}>
+                Last time: {formatDepth(prevDepth)}m
+              </div>
+            )}
+            {prevDepth !== null && (
+              <div className="font-body mb-3" style={{fontSize:14, fontWeight:400, color: improvement > 0 ? 'rgba(94,170,168,0.8)' : 'rgba(220,225,235,0.45)'}}>
+                {improvement > 0 ? `You improved by ${improvement}%` : 'Same depth \u2014 consistency is strength'}
+              </div>
+            )}
+            {isFirstTest && (
+              <div className="font-body mb-3" style={{fontSize:14, fontWeight:300, color:'rgba(220,225,235,0.4)'}}>Let's see where you go from here.</div>
+            )}
+            {/* Projection */}
+            {projection && (
+              <div className="font-body mb-3" style={{fontSize:13, fontWeight:300, color:'rgba(94,170,168,0.6)', fontStyle:'italic'}}>
+                At this rate, you'll reach {projection.depth}m by {projection.date}
+              </div>
             )}
             <div className="font-body mb-10" style={{fontSize:15, fontWeight:300, color:`rgba(${accentRgb},0.6)`, letterSpacing:'0.04em'}}>You descended {formatDepth(holdDepth)}m and surfaced safely.</div>
             <button className="px-10 py-3 rounded-full font-body"
@@ -3734,6 +3837,7 @@ function App() {
 
   const [activeSession, setActiveSession] = useState(null);
   const [selectedProgram, setSelectedProgram] = useState(null);
+  const [pendingProgramDay, setPendingProgramDay] = useState(null); // {programId, day, segs} — show intro before start
   const [tab, setTab] = useState('home');
   const [showPaywall, setShowPaywall] = useState(false);
   const [showCompletion, setShowCompletion] = useState(false);
@@ -4235,6 +4339,28 @@ function App() {
     }
   }
 
+
+  // Program day intro
+  if (pendingProgramDay) {
+    const {programId, day, segs, intro} = pendingProgramDay;
+    return (
+      <div className="fixed inset-0 flex flex-col items-center justify-center px-8 screen-transition" style={{background:WORLDS.ocean.bgGradient}}>
+        <Particles world="ocean" />
+        <div className="text-center z-10" style={{maxWidth:320}}>
+          <div className="font-body mb-3" style={{fontSize:20, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.04em'}}>{intro.title}</div>
+          <div className="font-body mb-10" style={{fontSize:15, fontWeight:300, color:'rgba(220,225,235,0.5)', lineHeight:1.7}}>{intro.text}</div>
+          <button className="px-10 py-3 rounded-full font-body" onClick={() => {
+            setPendingProgramDay(null);
+            startSession(segs, {programId, day, category:'program'});
+          }} style={{fontWeight:500, background:`rgba(${accentRgb},0.12)`, border:`1px solid rgba(${accentRgb},0.25)`, color:palette.accent}}>
+            Begin
+          </button>
+          <button className="font-body block mx-auto mt-4" onClick={() => setPendingProgramDay(null)}
+            style={{fontSize:14, color:'rgba(220,225,235,0.3)', background:'none', border:'none', cursor:'pointer'}}>Back</button>
+        </div>
+      </div>
+    );
+  }
 
   // Pre-mood overlay
   if (showPreMood && pendingSessionData) {
@@ -4979,7 +5105,15 @@ function App() {
             return (
               <button key={i} className="glass p-5 w-full text-left flex items-center gap-4"
                 style={{opacity: locked && !completed ? 0.5 : 1}}
-                onClick={() => { if (locked) { if (premiumLocked) setShowPaywall(true); return; } startSession(daySegs, {programId:selectedProgram, day:i, category:'program'}); }}>
+                onClick={() => {
+                  if (locked) { if (premiumLocked) setShowPaywall(true); return; }
+                  const intro = PROGRAM_INTROS[selectedProgram]?.[i];
+                  if (intro) {
+                    setPendingProgramDay({programId:selectedProgram, day:i, segs:daySegs, intro});
+                  } else {
+                    startSession(daySegs, {programId:selectedProgram, day:i, category:'program'});
+                  }
+                }}>
                 <div className="flex items-center justify-center rounded-full font-mono"
                   style={{width:40, height:40, fontWeight:300, fontSize:16, background: completed ? `rgba(${accentRgb},0.15)` : 'rgba(255,255,255,0.06)', border: completed ? `1px solid rgba(${accentRgb},0.3)` : '1px solid rgba(255,255,255,0.06)', color: completed ? palette.accent : 'rgba(226,232,240,0.5)'}}>
                   {completed ? <Icon name="check" size={16}/> : i + 1}
@@ -5550,7 +5684,8 @@ function App() {
         return (
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{background:'rgba(0,0,0,0.8)', backdropFilter:'blur(16px)'}}>
           <div className="screen-transition text-center z-10 px-8">
-            <div className="font-body mb-4" style={{fontSize:20, fontWeight:300, color:'rgba(226,232,240,0.95)'}}>Time to check your progress</div>
+            <div className="font-body mb-4" style={{fontSize:20, fontWeight:300, color:'rgba(226,232,240,0.95)'}}>Weekly Deep Dive</div>
+            <div className="font-body mb-2" style={{fontSize:14, fontWeight:300, color:'rgba(220,225,235,0.45)'}}>Time to go deeper</div>
             <div className="font-body mb-4" style={{fontSize:16, fontWeight:400, color:'var(--text-2)', maxWidth:280, margin:'0 auto', lineHeight:1.6}}>
               {retestDays === 999 ? '' : retestDays + ' days since your last test.'}
             </div>
