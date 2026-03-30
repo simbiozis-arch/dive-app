@@ -2477,27 +2477,29 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
                 pointerEvents:'none', userSelect:'none', zIndex:6,
               }} />
             </div>
-            {/* Zone 3: phase info — fixed bottom, clean */}
-            <div style={{position:'fixed', bottom:'calc(80px + env(safe-area-inset-bottom, 24px))', left:0, right:0, textAlign:'center', zIndex:10, padding:'0 24px', pointerEvents:'none'}}>
+            {/* Phase label — ABOVE bubble */}
+            <div style={{position:'fixed', top:'calc(42% - min(37.5vw, 150px) - 36px)', left:0, right:0, textAlign:'center', zIndex:15, pointerEvents:'none'}}>
               <div ref={phaseLabelRef} className="font-body" style={{
                 fontWeight:600, fontSize:13, letterSpacing:'0.2em', textTransform:'uppercase',
-                color:'rgba(220,225,235,0.55)', marginBottom:8, minHeight:18,
-                transition:'opacity 0.2s ease',
-              }}>
-              </div>
+                color:'rgba(220,225,235,0.55)', minHeight:18,
+                transition:'opacity 0.15s ease',
+              }} />
+            </div>
+            {/* Sub-instruction + counter — BELOW bubble */}
+            <div style={{position:'fixed', top:'calc(42% + min(37.5vw, 150px) + 20px)', left:0, right:0, textAlign:'center', zIndex:15, pointerEvents:'none', padding:'0 24px'}}>
               <div ref={phaseSubRef} className="font-body" style={{
                 fontSize:15, fontWeight:300, color:'rgba(220,225,235,0.35)',
-                lineHeight:1.5, maxWidth:260, margin:'0 auto', minHeight:44,
-                transition:'opacity 0.2s ease',
-              }}>
-              </div>
-              <div style={{pointerEvents:'auto', marginTop:8}}>
+                lineHeight:1.5, maxWidth:260, margin:'0 auto', minHeight:24,
+                transition:'opacity 0.15s ease',
+              }} />
+              <div ref={cycleCounterRef} className="font-mono" style={{fontSize:12, color:'rgba(220,225,235,0.15)', marginTop:8, fontVariantNumeric:'tabular-nums'}} />
+              <div style={{pointerEvents:'auto', marginTop:12}}>
                 <button onClick={() => setEyesClosedMode(true)} style={{
                   background:'none', border:'none',
-                  fontSize:12, color:'rgba(220,225,235,0.18)',
+                  fontSize:12, color:'rgba(220,225,235,0.14)',
                   letterSpacing:'0.1em', cursor:'pointer', fontFamily:"'DM Sans',sans-serif",
                 }}>
-                  Set your phone down. Feel each breath
+                  Set your phone down
                 </button>
               </div>
             </div>
@@ -2597,11 +2599,8 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
           <button onClick={() => setShowExitConfirm(true)} className="flex items-center justify-center rounded-full" style={{width:40,height:40,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.06)'}}>
             <Icon name="close" size={16}/>
           </button>
-          <div style={{display:'flex',alignItems:'center',gap:12}}>
-            <div ref={timeDisplayRef} className="font-mono" style={{fontSize:15, fontWeight:300, color:'rgba(226,232,240,0.35)', letterSpacing:'0.02em'}}>
-              0:00 / {Math.floor(totalDuration / 60)}:{String(Math.floor(totalDuration % 60)).padStart(2,'0')}
-            </div>
-            <div ref={cycleCounterRef} className="font-mono" style={{fontSize:12, color:'rgba(220,225,235,0.2)', fontVariantNumeric:'tabular-nums'}} />
+          <div ref={timeDisplayRef} className="font-mono" style={{fontSize:15, fontWeight:300, color:'rgba(226,232,240,0.35)', letterSpacing:'0.02em'}}>
+            0:00 / {Math.floor(totalDuration / 60)}:{String(Math.floor(totalDuration % 60)).padStart(2,'0')}
           </div>
           <div className="flex items-center gap-2">
             <button onClick={() => setPaused(!paused)} className="flex items-center justify-center rounded-full" style={{width:36,height:36,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.06)'}}>
@@ -2725,6 +2724,7 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
   const labelRef = useRef(null);
   const subRef = useRef(null);
   const zone3Ref = useRef(null);
+  const introSubZoneRef = useRef(null);
   const introAmbientRef = useRef(null);
   const rafRef = useRef(null);
   const vibratedRef = useRef({});
@@ -2871,6 +2871,7 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
 
         // Zone 3 crossfade
         if (zone3Ref.current) zone3Ref.current.style.opacity = '0.9';
+        if (introSubZoneRef.current) introSubZoneRef.current.style.opacity = '0.9';
         if (phase !== lastPhase) {
           lastPhase = phase;
           // Labels
@@ -2914,6 +2915,7 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
         const idTime = t - 38;
         // Zone 3 fades out
         if (zone3Ref.current) zone3Ref.current.style.opacity = String(Math.max(0, 1 - idTime / 0.5));
+        if (introSubZoneRef.current) introSubZoneRef.current.style.opacity = String(Math.max(0, 1 - idTime / 0.5));
         // Bubble dissolves
         if (bubbleRef.current) {
           if (idTime < 1.2) {
@@ -3221,17 +3223,23 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
         opacity:0, textAlign:'center', zIndex:10, pointerEvents:'none', whiteSpace:'nowrap',
       }} />
 
-      {/* Zone 3: phase label + sub (Beat 3) */}
+      {/* Phase label — ABOVE bubble (intro) */}
       <div ref={zone3Ref} style={{
-        position:'fixed', bottom:'calc(60px + env(safe-area-inset-bottom, 0px))',
+        position:'fixed', top:'calc(42% - min(32.5vw, 130px) - 36px)',
         left:0, right:0, textAlign:'center', opacity:0, pointerEvents:'none',
       }}>
         <div ref={labelRef} style={{
           fontFamily:"'DM Sans',sans-serif", fontWeight:600, fontSize:13,
           letterSpacing:'0.2em', textTransform:'uppercase',
-          color:'rgba(220,225,235,0.55)', marginBottom:6,
+          color:'rgba(220,225,235,0.55)',
           transition:'opacity 0.15s ease',
         }} />
+      </div>
+      {/* Sub-instruction — BELOW bubble (intro) */}
+      <div ref={introSubZoneRef} style={{
+        position:'fixed', top:'calc(42% + min(32.5vw, 130px) + 20px)',
+        left:0, right:0, textAlign:'center', opacity:0, pointerEvents:'none',
+      }}>
         <div ref={subRef} style={{
           fontFamily:"'DM Sans',sans-serif", fontWeight:300, fontSize:14,
           color:'rgba(220,225,235,0.35)', minHeight:22,
