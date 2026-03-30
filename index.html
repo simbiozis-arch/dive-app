@@ -1776,20 +1776,15 @@ const OceanBubble = React.forwardRef((props, ref) => {
   return (
     <div ref={ref} style={{
       width: '100%', height: '100%', borderRadius: '50%',
-      background: 'radial-gradient(circle at 40% 35%, rgba(94,170,168,0.10) 0%, rgba(94,170,168,0.04) 40%, transparent 70%)',
-      border: '1.5px solid rgba(255,255,255,0.12)',
-      boxShadow: '0 0 80px rgba(94,170,168,0.1), 0 0 150px rgba(94,170,168,0.05), inset 0 0 60px rgba(94,170,168,0.06)',
+      background: 'radial-gradient(circle at 45% 40%, rgba(94,170,168,0.25) 0%, rgba(94,170,168,0.12) 35%, rgba(94,170,168,0.04) 60%, transparent 75%)',
+      border: '1px solid rgba(94,170,168,0.10)',
+      boxShadow: '0 0 40px rgba(94,170,168,0.15), 0 0 80px rgba(94,170,168,0.08), inset 0 -20px 40px rgba(94,170,168,0.08)',
       position: 'relative',
     }}>
       <div style={{
         position: 'absolute', top: '15%', left: '20%',
-        width: '25%', height: '20%', borderRadius: '50%',
-        background: 'rgba(255,255,255,0.12)', filter: 'blur(8px)',
-      }} />
-      <div style={{
-        position: 'absolute', bottom: '18%', right: '22%',
-        width: '18%', height: '14%', borderRadius: '50%',
-        background: 'rgba(255,255,255,0.06)', filter: 'blur(6px)',
+        width: '22%', height: '18%', borderRadius: '50%',
+        background: 'rgba(255,255,255,0.15)', filter: 'blur(10px)',
       }} />
     </div>
   );
@@ -2734,7 +2729,7 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
   const oceanBg = fbW.bgGradient;
 
   useEffect(() => {
-    const t = setTimeout(() => setShowSkip(true), 5000);
+    const t = setTimeout(() => setShowSkip(true), 4000);
     return () => clearTimeout(t);
   }, []);
 
@@ -2829,24 +2824,24 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
           }
         }
         if (t > 7.5) vibrateOnce('bubble-form', 60);
-        // BG starts shifting
+        // BG starts shifting — stays very dark during Beat 2
         if (bgRef.current) {
-          const bgP = Math.max(0, (t - 5) / 3);
-          bgRef.current.style.background = `rgb(${Math.round(bgP*3)},${Math.round(bgP*13)},${Math.round(bgP*20)})`;
+          const bgP = Math.max(0, (t - 6) / 2); // starts at t=6, reaches 1.0 at t=8
+          bgRef.current.style.background = `rgb(${Math.round(bgP*3)},${Math.round(bgP*8)},${Math.round(bgP*14)})`;
+          // at t=8: rgb(3,8,14) — nearly black with hint of navy
         }
       }
 
-      // ── BEAT 3: BREATHE (8-38s) — 3 cycles ──
-      else if (t < 38) {
+      // ── BEAT 3: BREATHE (8-29s) — 2 cycles ──
+      else if (t < 29) {
         if (centerTextRef.current) { centerTextRef.current.style.opacity = '0'; centerTextRef.current.textContent = ''; }
         if (bubbleRef.current) { bubbleRef.current.style.filter = 'blur(0px)'; bubbleRef.current.style.opacity = '1'; }
 
         const breathTime = t - 8;
-        // Cycle timing: cycle 0 = 11s (slower), cycles 1-2 = 10s each
+        // Cycle timing: cycle 0 = 11s (slower), cycle 1 = 10s
         let cycleNum, cycleTime;
         if (breathTime < 11) { cycleNum = 0; cycleTime = breathTime; }
-        else if (breathTime < 21) { cycleNum = 1; cycleTime = breathTime - 11; }
-        else { cycleNum = 2; cycleTime = breathTime - 21; }
+        else { cycleNum = 1; cycleTime = breathTime - 11; }
 
         const inh1Dur = cycleNum === 0 ? 2.5 : 2;
         const inh2Dur = 1;
@@ -2878,13 +2873,13 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
           let lbl = '', sub = '';
           if (phase === 'inhale1') {
             lbl = 'INHALE';
-            sub = cycleNum === 0 ? 'Deep breath, through your nose' : cycleNum === 1 ? 'Through your nose' : 'Nose';
+            sub = cycleNum === 0 ? 'Deep breath, through your nose' : 'Through your nose';
           } else if (phase === 'inhale2') {
             lbl = '+ INHALE';
-            sub = cycleNum === 0 ? 'One more sip of air' : cycleNum === 1 ? 'One more sip' : 'More';
+            sub = cycleNum === 0 ? 'One more sip of air' : 'One more sip';
           } else {
             lbl = 'EXHALE';
-            sub = cycleNum === 0 ? 'Slow exhale, through your mouth' : cycleNum === 1 ? 'Slow, through mouth' : 'Let go';
+            sub = cycleNum === 0 ? 'Slow exhale, through your mouth' : 'Let go';
           }
           // Crossfade via opacity
           if (labelRef.current) {
@@ -2903,16 +2898,16 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
           const cur = introAmbientRef.current.volume;
           introAmbientRef.current.volume = cur + (target - cur) * 0.05;
         }
-        // Background slowly lightens
+        // Background slowly lightens (21s of breathing → full ocean)
         if (bgRef.current) {
-          const bp = breathTime / 30;
-          bgRef.current.style.background = `rgb(${Math.round(3 + bp * 11)},${Math.round(13 + bp * 48)},${Math.round(20 + bp * 72)})`;
+          const bp = Math.min(breathTime / 21, 1);
+          bgRef.current.style.background = `rgb(${Math.round(3 + bp * 11)},${Math.round(8 + bp * 53)},${Math.round(14 + bp * 78)})`;
         }
       }
 
-      // ── BEAT 4: IDENTITY (38-43s) ──
-      else if (t < 43) {
-        const idTime = t - 38;
+      // ── BEAT 4: IDENTITY (29-34s) ──
+      else if (t < 34) {
+        const idTime = t - 29;
         // Zone 3 fades out
         if (zone3Ref.current) zone3Ref.current.style.opacity = String(Math.max(0, 1 - idTime / 0.5));
         if (introSubZoneRef.current) introSubZoneRef.current.style.opacity = String(Math.max(0, 1 - idTime / 0.5));
@@ -3118,7 +3113,7 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
           <div style={{position:'fixed', left:'16px', top:'20%', bottom:'20%', width:'2px', background:'rgba(255,255,255,0.03)', borderRadius:'1px'}}>
             <div style={{position:'absolute', top:0, width:'2px', height:`${progress*100}%`, background:'rgba(94,170,168,0.3)', borderRadius:'1px', transition:'height 0.5s linear'}} />
             <div style={{position:'absolute', top:`${progress*100}%`, left:'8px', fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', color:'rgba(94,170,168,0.4)'}}>
-              {Math.round(holdTime * 0.8)}m
+              {holdTimeToDepth(holdTime)}m
             </div>
           </div>
           <div className="screen-transition text-center z-10" style={{width:'100%'}}>
@@ -3153,14 +3148,11 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
     }
   }
 
-  // "Better?" transition screen
+  // Done transition — show ocean bg while fading to feeling screen
   if (breathPhase === 'done') {
     return (
       <div className="fixed inset-0 flex flex-col items-center justify-center px-8" style={{background:oceanBg}}>
         <Particles world={fbWorld} />
-        <div className="screen-transition text-center z-10">
-          <div className="font-body" style={{fontSize:28, fontWeight:300, color:'rgba(226,232,240,0.90)', letterSpacing:'0.06em'}}>Better?</div>
-        </div>
       </div>
     );
   }
