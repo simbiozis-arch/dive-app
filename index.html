@@ -1288,8 +1288,10 @@ const defaultStats = () => ({
   lastRetestDate: null,
   lastRetestDismiss: null,
   bestHoldDepth: 0,
-  introSeen:false,      // FIX2: skip cinematic on return visits
-  depthExplained:false, // FIX6: one-time depth tooltip
+  introSeen:false,
+  depthExplained:false,
+  techniqueMastery:{},  // { technique_id: { sessions: N, level: 'beginner' } }
+  shownMilestones:[],   // milestone IDs that have been dismissed
 });
 
 // ===== FIRST SESSION (cyclic sigh) =====
@@ -1393,47 +1395,130 @@ function getScenarioDisplayName(key) {
 }
 
 // ===== SMART DAILY RECOMMENDATION =====
+// ===== MASTERY LEVELS =====
+const MASTERY_LEVELS = [
+  { name:'beginner', threshold:3, stars:1 },
+  { name:'practitioner', threshold:10, stars:2 },
+  { name:'master', threshold:25, stars:3 },
+  { name:'expert', threshold:50, stars:4 },
+  { name:'elite', threshold:100, stars:5 },
+];
+function getMasteryLevel(sessionCount) {
+  let level = null;
+  for (const l of MASTERY_LEVELS) {
+    if (sessionCount >= l.threshold) level = l;
+  }
+  return level;
+}
+
+// ===== MILESTONES =====
+const MILESTONES = [
+  { id:'sessions_3', condition: s => (s.totalSessions||0) >= 3, message:"3 dives in. Your body is learning to breathe differently." },
+  { id:'streak_7', condition: s => (s.streak||0) >= 7, message:"7 days straight. You're building a real practice." },
+  { id:'minutes_60', condition: s => (s.totalMinutes||0) >= 60, message:"60 minutes of active nervous system training." },
+  { id:'depth_10', condition: s => (s.totalDepth||0) >= 10, message:"10 meters deep. That's a swimming pool of breath hold capacity." },
+  { id:'sessions_30', condition: s => (s.totalSessions||0) >= 30, message:"30 dives. You're in the top 10% of DIVE users." },
+  { id:'first_mastery', condition: s => Object.values(s.techniqueMastery||{}).some(t => t.level === 'master'), message:"You've mastered a technique." },
+  { id:'sessions_50', condition: s => (s.totalSessions||0) >= 50, message:"50 dives. A freediver trains for years. You're on the path." },
+  { id:'all_7_tried', condition: s => Object.keys(s.techniqueStats||{}).length >= 7, message:"All 7 techniques tried. Your breathing toolkit is complete." },
+  { id:'sessions_100', condition: s => (s.totalSessions||0) >= 100, message:"100 dives. You're an Elite Diver." },
+];
+
+// Weekly rotation matrix: [Mon=1..Sun=0] × [morning, midday, evening, night]
+const ROTATION_MATRIX = {
+  1: ['diaphragmatic','box','diaphragmatic','diaphragmatic'],          // Mon
+  2: ['physiological_sigh','diaphragmatic','diaphragmatic','diaphragmatic'], // Tue
+  3: ['segmented','box','diaphragmatic','diaphragmatic'],               // Wed
+  4: ['diaphragmatic','physiological_sigh','diaphragmatic','diaphragmatic'], // Thu
+  5: ['physiological_sigh','box','diaphragmatic','diaphragmatic'],      // Fri
+  6: ['diaphragmatic','ujjayi','diaphragmatic','diaphragmatic'],        // Sat
+  0: ['diaphragmatic','physiological_sigh','diaphragmatic','diaphragmatic'], // Sun
+};
+const TIME_SLOT_LABELS = ['Morning calm','Afternoon focus','Evening wind-down','Sleep preparation'];
+const TECHNIQUE_DISPLAY = {
+  physiological_sigh:'Cyclic Sigh', box:'Box Breathing', diaphragmatic:'Diaphragmatic',
+  segmented:'Segmented', ujjayi:'Ocean Breath', tidal:'Tidal', recovery:'Recovery',
+};
+const CALMING_TECHNIQUES = ['physiological_sigh','diaphragmatic','tidal'];
+const ACTIVATING_TECHNIQUES = ['segmented','box','ujjayi'];
+
+function getTimeSlot(hour) {
+  if (hour >= 6 && hour < 11) return 0; // morning
+  if (hour >= 11 && hour < 17) return 1; // midday
+  if (hour >= 17 && hour < 22) return 2; // evening
+  return 3; // night
+}
+
 function getDailyRecommendation(stats, t) {
   const hour = new Date().getHours();
   const sessions = stats.totalSessions || 0;
-  const safetyRecent = stats.safetyFlag && ((Date.now() - new Date(stats.safetyFlag.date).getTime()) < 7 * 86400000);
 
-  // First session — cyclic sigh + diaphragmatic intro
+  // First session
   if (sessions === 0) return { scenario:'_first_session', duration:5, title: t.firstDiveLabel || 'Your first dive', sub:'5 ' + t.min + ' \u00b7 Cyclic sigh + Diaphragmatic', isFirstSession:true };
 
   // Days 1-7: fixed progression
   const dayProgression = [
     { scenario:'_first_session', duration:5, title: t.firstDiveLabel, sub:'5 ' + t.min + ' \u00b7 Cyclic sigh + Diaphragmatic', isFirstSession:true },
-    { scenario:'meeting', duration:5, title: 'Box breathing basics', sub:'5 ' + t.min + ' \u00b7 ' + t.boxBreathing },
-    { scenario:'hard_day', duration:5, title: 'Ocean breath', sub:'5 ' + t.min + ' \u00b7 ' + t.ujjayi },
-    { scenario:'cant_focus', duration:5, title: 'Segmented breathing', sub:'5 ' + t.min + ' \u00b7 ' + t.segmented },
-    { scenario:'morning', duration:5, title: 'Diaphragmatic mastery', sub:'5 ' + t.min + ' \u00b7 ' + t.diaphragmatic },
-    { scenario:'just_relax', duration:5, title: 'Extended box', sub:'5 ' + t.min + ' \u00b7 ' + t.boxBreathing },
-    { scenario:'deep_dive', duration:10, title: 'Combined techniques', sub:'10 ' + t.min + ' \u00b7 ' + t.deepDive },
+    { scenario:'meeting', duration:5, title: 'Box breathing basics', sub:'5 ' + t.min + ' \u00b7 ' + (t.boxBreathing||'Box Breathing') },
+    { scenario:'hard_day', duration:5, title: 'Ocean breath', sub:'5 ' + t.min + ' \u00b7 ' + (t.ujjayi||'Ujjayi') },
+    { scenario:'cant_focus', duration:5, title: 'Segmented breathing', sub:'5 ' + t.min + ' \u00b7 ' + (t.segmented||'Segmented') },
+    { scenario:'morning', duration:5, title: 'Diaphragmatic mastery', sub:'5 ' + t.min + ' \u00b7 ' + (t.diaphragmatic||'Diaphragmatic') },
+    { scenario:'just_relax', duration:5, title: 'Extended box', sub:'5 ' + t.min + ' \u00b7 ' + (t.boxBreathing||'Box Breathing') },
+    { scenario:'deep_dive', duration:10, title: 'Combined techniques', sub:'10 ' + t.min + ' \u00b7 Deep dive' },
   ];
-
   if (sessions >= 1 && sessions <= 7) {
     return dayProgression[Math.min(sessions, dayProgression.length - 1)];
   }
 
-  // Favourite detection — from last 10 sessions, 3+ uses of same scenario
+  // Favourite detection (existing — 20% chance)
   const fav = detectFavourite(stats);
   if (fav && SCENARIOS[fav] && Math.random() < 0.2) {
     const sc = SCENARIOS[fav];
-    const displayName = getScenarioDisplayName(fav);
-    return { scenario:fav, duration:sc.durations[0], title:'Your go-to', sub:displayName, isGoTo:true };
+    return { scenario:fav, duration:sc.durations[0], title:'Your go-to', sub:getScenarioDisplayName(fav), isGoTo:true };
   }
 
-  // Day 8+: time-based recommendations
-  if (safetyRecent) {
-    if (hour >= 6 && hour < 11) return { scenario:'morning', duration:5, title: t.morningStart, sub:'5 ' + t.min + ' \u00b7 ' + t.segmented };
-    if (hour >= 17 && hour < 22) return { scenario:'hard_day', duration:5, title: t.afterToughDay, sub:'5 ' + t.min + ' \u00b7 ' + t.diaphragmatic };
-    return { scenario:'just_relax', duration:5, title: t.justRelax, sub:'5 ' + t.min + ' \u00b7 ' + t.tidal };
+  // Day 8+: algorithmic Daily Dive engine
+  const hist = stats.history || [];
+  const timeSlot = getTimeSlot(hour);
+  const slotLabel = TIME_SLOT_LABELS[timeSlot];
+
+  // 1. Mood override: avg of last 3 postMoods
+  const recentMoods = hist.filter(h => typeof h.postMood === 'number').slice(-3);
+  if (recentMoods.length >= 3) {
+    const avgMood = recentMoods.reduce((s,h) => s + h.postMood, 0) / recentMoods.length;
+    if (avgMood < 2.5) {
+      return { scenario:'hard_day', duration:3, title:'Calm down', sub:'3 ' + t.min + ' \u00b7 Cyclic Sigh', technique:'physiological_sigh', isDailyDive:true };
+    }
+    if (avgMood > 4.0 && timeSlot === 0) {
+      return { scenario:'morning', duration:3, title:'Morning energy', sub:'3 ' + t.min + ' \u00b7 Segmented', technique:'segmented', isDailyDive:true };
+    }
   }
-  if (hour >= 6 && hour < 11) return { scenario:'morning', duration:5, title: t.morningStart, sub:'5 ' + t.min + ' \u00b7 ' + t.segmented };
-  if (hour >= 11 && hour < 17) return { scenario:'meeting', duration:5, title: t.beforeMeeting, sub:'5 ' + t.min + ' \u00b7 ' + t.boxBreathing };
-  if (hour >= 17 && hour < 22) return { scenario:'hard_day', duration:5, title: t.afterToughDay, sub:'5 ' + t.min + ' \u00b7 ' + t.diaphragmatic };
-  return { scenario:'insomnia', duration:10, title: t.cantSleep, sub:'10 ' + t.min + ' \u00b7 ' + t.diaphragmatic };
+
+  // 2. Recency: exclude yesterday's technique
+  const lastTech = hist.length > 0 ? hist[hist.length - 1].mainTechnique : null;
+
+  // 3. Mastery gap: underused techniques get more weight
+  const techStats = stats.techniqueStats || {};
+  const allTechs = ['physiological_sigh','box','diaphragmatic','segmented','ujjayi','tidal'];
+  const avgCount = allTechs.reduce((s,t) => s + (techStats[t]||0), 0) / allTechs.length;
+
+  // 4. Weekly rotation pick
+  const dayOfWeek = new Date().getDay();
+  let pick = (ROTATION_MATRIX[dayOfWeek] || ROTATION_MATRIX[0])[timeSlot];
+
+  // 5. Apply mastery gap: if rotation pick is overused, substitute
+  if (pick === lastTech || (techStats[pick]||0) > avgCount * 1.5) {
+    const category = CALMING_TECHNIQUES.includes(pick) ? CALMING_TECHNIQUES : ACTIVATING_TECHNIQUES;
+    const sorted = category.filter(t => t !== lastTech).sort((a,b) => (techStats[a]||0) - (techStats[b]||0));
+    if (sorted.length > 0) pick = sorted[0];
+  }
+
+  const displayName = TECHNIQUE_DISPLAY[pick] || pick;
+  // Map technique to best scenario
+  const techToScenario = { physiological_sigh:'hard_day', box:'meeting', diaphragmatic:'just_relax', segmented:'morning', ujjayi:'just_relax', tidal:'insomnia' };
+  const scenario = techToScenario[pick] || 'just_relax';
+
+  return { scenario, duration:5, title: slotLabel, sub:'5 ' + t.min + ' \u00b7 ' + displayName, technique:pick, isDailyDive:true };
 }
 
 // ===== AMBIENT ENGINE =====
@@ -2738,8 +2823,8 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
 }
 
 // ===== FIRST BREATH SCREEN =====
-function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
-  const [breathPhase, setBreathPhase] = useState('cinematic'); // 'cinematic' | 'done' | 'feeling' | 'holdTest' | 'goal'
+function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef, startAtPhase }) {
+  const [breathPhase, setBreathPhase] = useState(startAtPhase || 'cinematic'); // 'cinematic' | 'done' | 'feeling' | 'holdTest' | 'goal'
   const [holdTestPhase, setHoldTestPhase] = useState('intro');
   const [holdTime, setHoldTime] = useState(0);
   const holdStartRef = useRef(null);
@@ -2995,7 +3080,7 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
     return () => cancelAnimationFrame(rafRef.current);
   }, [breathPhase]);
 
-  // Done -> feeling transition + fade out ambient
+  // Done → signal parent to start real session (new onboarding flow)
   useEffect(() => {
     if (breathPhase === 'done') {
       if (introAmbientRef.current) {
@@ -3005,7 +3090,8 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
           else { a.pause(); a.volume = 0; clearInterval(fo); }
         }, 50);
       }
-      const t0 = setTimeout(() => setBreathPhase('feeling'), 2500);
+      // After short pause, tell parent cinematic is done → start real session
+      const t0 = setTimeout(() => onComplete('cinematic_done', null), 1500);
       return () => clearTimeout(t0);
     }
   }, [breathPhase]);
@@ -3221,7 +3307,7 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef }) {
         <button onClick={() => {
           cancelAnimationFrame(rafRef.current);
           if (introAmbientRef.current) { introAmbientRef.current.pause(); introAmbientRef.current = null; }
-          setBreathPhase('feeling');
+          setBreathPhase('done'); // triggers onComplete('cinematic_done') via useEffect
         }} style={{
           position:'fixed', top:'calc(16px + env(safe-area-inset-top, 0px))', right:16, zIndex:100,
           background:'none', border:'none', fontFamily:"'DM Sans',sans-serif", fontWeight:400, fontSize:14,
@@ -3657,8 +3743,9 @@ function App() {
   const [currentMood, setCurrentMood] = useState({pre:null, post:null});
   const [moodDelta, setMoodDelta] = useState(null);
   const [completionStep, setCompletionStep] = useState('stats'); // 'stats' | 'safety' | 'feeling' | 'reminder' | 'done'
-  const [sosCascadeLevel, setSosCascadeLevel] = useState(0); // 0 = not SOS, 1-3 = cascade level
+  const [sosCascadeLevel, setSosCascadeLevel] = useState(0);
   const [lastSessionWasSOS, setLastSessionWasSOS] = useState(false);
+  const [sosPartialMsg, setSosPartialMsg] = useState(false);
   const [showSurfaceBreath, setShowSurfaceBreath] = useState(false);
   const [surfaceBreathStreak, setSurfaceBreathStreak] = useState(0);
   const [showRetestPrompt, setShowRetestPrompt] = useState(false);
@@ -3816,6 +3903,19 @@ function App() {
       const depth = sessionDepth(sessionInfo.duration || 0, sessionInfo.mainTechnique || 'diaphragmatic', prev.level || 'basic');
       const newTechStats = {...(prev.techniqueStats || {})};
       (sessionInfo.techniques || []).forEach(tc => { newTechStats[tc] = (newTechStats[tc] || 0) + 1; });
+      // Update techniqueMastery
+      const newMastery = {...(prev.techniqueMastery || {})};
+      let masteryLevelUp = null;
+      (sessionInfo.techniques || []).forEach(tc => {
+        if (!newMastery[tc]) newMastery[tc] = { sessions:0, level:null };
+        newMastery[tc] = { ...newMastery[tc], sessions: newMastery[tc].sessions + 1 };
+        const newLevel = getMasteryLevel(newMastery[tc].sessions);
+        const oldLevel = newMastery[tc].level;
+        if (newLevel && newLevel.name !== oldLevel) {
+          newMastery[tc].level = newLevel.name;
+          masteryLevelUp = { technique: tc, newLevel: newLevel.name };
+        }
+      });
       return {
         ...prev, totalSessions: prev.totalSessions + 1, streak, longestStreak, lastSessionDate: today,
         totalDepth: Math.round((prev.totalDepth + depth) * 10) / 10,
@@ -3825,7 +3925,9 @@ function App() {
         nightSessions: prev.nightSessions + (isNight ? 1 : 0),
         morningSessions: prev.morningSessions + (isMorning ? 1 : 0),
         techniqueStats: newTechStats,
-        history: [...prev.history, { date: now.toISOString(), scenario: sessionInfo.scenario, scenarioKey: sessionInfo.scenario, duration: sessionInfo.duration, category: sessionInfo.category, depth, mainTechnique: sessionInfo.mainTechnique || 'diaphragmatic', preMood: sessionInfo.preMood != null ? sessionInfo.preMood : null }].slice(-100),
+        techniqueMastery: newMastery,
+        _masteryLevelUp: masteryLevelUp, // transient flag for UI toast
+        history: [...prev.history, { date: now.toISOString(), scenario: sessionInfo.scenario, scenarioKey: sessionInfo.scenario, duration: sessionInfo.duration, category: sessionInfo.category, depth, mainTechnique: sessionInfo.mainTechnique || 'diaphragmatic', preMood: sessionInfo.preMood != null ? sessionInfo.preMood : null, sessionType: sessionInfo.sessionType || 'regular' }].slice(-100),
       };
     });
   };
@@ -3916,7 +4018,7 @@ function App() {
       const breathSegs = segs.filter(s => s.type === 'breathing');
       const mainTech = breathSegs.length > 0 ? breathSegs.reduce((a, b) => b.duration > a.duration ? b : a).technique : 'diaphragmatic';
       const actualDur = (actualData && actualData.actualElapsed > 0) ? actualData.actualElapsed : totalDur;
-      updateStats({ duration: actualDur, techniques: techs, category: activeSession.meta?.category, scenario: activeSession.meta?.scenario, mainTechnique: mainTech, preMood: currentMood.pre });
+      updateStats({ duration: actualDur, techniques: techs, category: activeSession.meta?.category, scenario: activeSession.meta?.scenario, mainTechnique: mainTech, preMood: currentMood.pre, sessionType: activeSession.meta?.isSOSSession ? 'sos' : activeSession.meta?.isFirstSession ? 'onboarding' : 'regular' });
       if (activeSession.meta?.programId && activeSession.meta?.day !== undefined) {
         setStats(prev => {
           const pp = {...(prev.programProgress || {})};
@@ -3933,7 +4035,7 @@ function App() {
             const cycleDur = Object.values(s.params).reduce((a, b) => a + b, 0);
             return total + (cycleDur > 0 ? Math.floor(s.duration / cycleDur) : 0);
           }, 0) || Math.round(totalDur / 16));
-      const cData = { duration: actualDur, techniques: techs, depth: sessionDepth(actualDur, mainTech, stats.level || 'basic'), breathCycles, segments: segs, _lastScenario: activeSession.meta?.scenario };
+      const cData = { duration: actualDur, techniques: techs, depth: sessionDepth(actualDur, mainTech, stats.level || 'basic'), breathCycles, segments: segs, _lastScenario: activeSession.meta?.scenario, _isFirstSession: activeSession.meta?.isFirstSession || false };
       ph('session_complete', { scenario: activeSession.meta?.scenario, depth: cData.depth, preMood: currentMood.pre, postMood: currentMood.post });
       setActiveSession(null);
       setShowSurfacing(true);
@@ -3997,7 +4099,8 @@ function App() {
 
   function startBreathTest() {
     setShowRetestPrompt(false);
-    setScreen('first_breath');
+    setOnboardingPhase('cinematic'); // reset
+    setScreen('breath_test');
   }
 
   function getAdaptedParams(technique, baseParams) {
@@ -4015,12 +4118,16 @@ function App() {
 
 
   // ===== AUTH GATE =====
-  if (authLoading) {
+  // Non-onboarded users bypass auth — go straight to cinematic
+  // Auth shown as soft prompt AFTER onboarding
+  if (!stats.onboarded) {
+    // First-time: skip auth entirely, go to cinematic
+    // (authUser may be null — that's fine for first_breath)
+  } else if (authLoading) {
     return (<div style={{position:'fixed',inset:0,display:'flex',alignItems:'center',justifyContent:'center',background:'linear-gradient(180deg,#0e3d5c 0%,#020a10 100%)'}}>
       <p style={{fontFamily:"'DM Sans',sans-serif",fontWeight:200,fontSize:'24px',letterSpacing:'0.2em',color:'rgba(94,170,168,0.5)'}}>DIVE</p>
     </div>);
-  }
-  if (!authUser) {
+  } else if (!authUser) {
     return <AuthScreen onDemo={() => {
       localStorage.setItem('dive-anonymous-user', 'true');
       setAuthUser({ id: 'demo', isDemo: true });
@@ -4028,46 +4135,104 @@ function App() {
   }
 
   // ===== FIRST BREATH SCREEN =====
+  // New onboarding flow: cinematic → real session → completion (post-mood) → goal → soft auth → home
+  const [onboardingPhase, setOnboardingPhase] = useState('cinematic'); // 'cinematic' | 'session' | 'goal' | 'soft_auth'
+  const [onboardingPostMood, setOnboardingPostMood] = useState(null);
+  const [onboardingGoal, setOnboardingGoal] = useState(null);
+  const [softAuthEmail, setSoftAuthEmail] = useState('');
+  const [softAuthLoading, setSoftAuthLoading] = useState(false);
+  const [softAuthSent, setSoftAuthSent] = useState(false);
+
   if (screen === 'first_breath') {
-    return <FirstBreathScreen palette={palette} accentRgb={accentRgb} t={t} ambientRef={ambientRef}
-      onComplete={(goal, holdTimeResult) => {
-        if (!isReplayIntro) {
-          setStats(s => {
-            const hDepth = holdTimeResult ? holdTimeToDepth(holdTimeResult) : null;
-            const newState = {...s, firstFeeling: goal, userGoal: goal, onboarded:true, introSeen:true, world:'ocean', initialHoldTime: holdTimeResult ? Math.round(holdTimeResult*10)/10 : null, initialDepth: hDepth, totalDepth: hDepth ? Math.round((s.totalDepth + hDepth) * 10) / 10 : s.totalDepth};
-            if (holdTimeResult && holdTimeResult > 0) {
-              newState.breathTests = [...(s.breathTests || []), { date: new Date().toISOString(), holdTime: Math.round(holdTimeResult*10)/10, depth: hDepth }];
-              // Also save to standalone localStorage array for cross-reference
-              try {
-                const tests = JSON.parse(localStorage.getItem('dive-breath-tests') || '[]');
-                tests.push({ date: new Date().toISOString(), holdTime: Math.round(holdTimeResult*10)/10, depth: hDepth });
-                localStorage.setItem('dive-breath-tests', JSON.stringify(tests));
-              } catch(e) {}
-              // Update difficulty level (only upgrade)
-              const newBestDepth = Math.max(s.bestHoldDepth || 0, hDepth || 0);
-              const newLevel = getDifficultyLevel(newBestDepth);
-              const currentLevelIdx = DIFFICULTY_LEVELS.findIndex(l => l.id === (s.difficultyLevel || 'beginner'));
-              const newLevelIdx = DIFFICULTY_LEVELS.findIndex(l => l.id === newLevel.id);
-              newState.bestHoldDepth = newBestDepth;
-              newState.difficultyLevel = newLevelIdx > currentLevelIdx ? newLevel.id : (s.difficultyLevel || 'beginner');
-              // Update adaptive level (LEVELS system)
-              const allTests = [...(s.breathTests || []), { holdTime: Math.round(holdTimeResult*10)/10 }];
-              const newAdaptiveLevel = determineLevel(allTests);
-              if (LEVELS[newAdaptiveLevel].id > LEVELS[s.level || 'basic'].id) {
-                newState.level = newAdaptiveLevel;
-              }
-              newState.lastRetestDate = new Date().toISOString();
-              if (newLevelIdx > currentLevelIdx) {
-                setLevelUpMessage('Level up! You are now ' + newLevel.label);
-              }
-            }
-            return newState;
-          });
-          ph('onboarding_complete', { goal, holdTime: holdTimeResult });
+    // Phase 1: Cinematic intro
+    if (onboardingPhase === 'cinematic') {
+      return <FirstBreathScreen palette={palette} accentRgb={accentRgb} t={t} ambientRef={ambientRef}
+        onComplete={(signal) => {
+          if (signal === 'cinematic_done' && !isReplayIntro) {
+            // Start real 2-min cyclic sigh session
+            setOnboardingPhase('session');
+            setCurrentMood({pre: null, post: null});
+            setMoodDelta(null);
+            const segs = [{ type:'breathing', technique:'physiological_sigh', duration:120, params:{inhale1:2,inhale2:1,exhale:7} }];
+            actuallyStartSession(segs, {scenario:'first_session_real', category:'onboarding', isFirstSession:true});
+          } else {
+            // Replay intro or skip → go home
+            setIsReplayIntro(false);
+            setScreen('home'); setTab('home');
+          }
+        }} />;
+    }
+
+    // Phase 2: Goal selector (shown after completion post-mood)
+    if (onboardingPhase === 'goal') {
+      return (
+        <div className="fixed inset-0 flex flex-col items-center justify-center px-8 screen-transition" style={{background:WORLDS.ocean.bgGradient}}>
+          <Particles world="ocean" />
+          <div className="text-center z-10">
+            <div className="font-body mb-10" style={{fontSize:24, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.06em'}}>{t.whatBroughtYou}</div>
+            <div className="flex flex-col gap-3 items-center">
+              {[[t.stressRelief,'stress_relief'],[t.betterFocus,'better_focus'],[t.betterSleep,'better_sleep'],[t.moreEnergy,'more_energy']].map(([label,val]) => (
+                <button key={val} className="glass px-8 py-3 font-body w-full max-w-xs"
+                  style={{fontWeight:500, fontSize:16, color:palette.accent, border:`1px solid rgba(${accentRgb},0.25)`}}
+                  onClick={() => { setOnboardingGoal(val); setOnboardingPhase('soft_auth'); }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Phase 3: Soft auth (save progress)
+    if (onboardingPhase === 'soft_auth') {
+      const finishOnboarding = (method) => {
+        if (method === 'anonymous') {
+          localStorage.setItem('dive-anonymous-user', 'true');
+          setAuthUser({ id: 'demo', isDemo: true });
         }
-        setIsReplayIntro(false);
+        setStats(s => ({...s,
+          onboarded:true, introSeen:true, world:'ocean',
+          firstFeeling: onboardingPostMood, userGoal: onboardingGoal,
+        }));
+        ph('onboarding_complete', { goal: onboardingGoal, method });
+        setOnboardingPhase('cinematic');
+        setSoftAuthEmail(''); setSoftAuthLoading(false); setSoftAuthSent(false);
         setScreen('home'); setTab('home');
-      }} />;
+      };
+      return (
+        <div className="fixed inset-0 flex flex-col items-center justify-center px-8 screen-transition" style={{background:WORLDS.ocean.bgGradient}}>
+          <Particles world="ocean" />
+          <div className="text-center z-10" style={{width:'100%', maxWidth:300}}>
+            <div className="font-body mb-2" style={{fontSize:22, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.06em'}}>Save your progress</div>
+            <div className="font-body mb-8" style={{fontSize:14, fontWeight:300, color:'rgba(220,225,235,0.35)'}}>Get your data back on any device</div>
+            {softAuthSent ? (
+              <div>
+                <p className="font-body" style={{fontSize:16, color:'rgba(220,225,235,0.7)'}}>Check your email for a magic link</p>
+                <button onClick={() => finishOnboarding('email')} className="font-body mt-6" style={{fontSize:14, color:'rgba(220,225,235,0.3)', background:'none', border:'none', cursor:'pointer'}}>Continue</button>
+              </div>
+            ) : (
+              <div>
+                <input type="email" value={softAuthEmail} onChange={e => setSoftAuthEmail(e.target.value)}
+                  placeholder="Email address" style={{width:'100%',padding:'14px 16px',borderRadius:12,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.06)',color:'rgba(220,225,235,0.85)',fontFamily:"'DM Sans',sans-serif",fontSize:17,outline:'none',marginBottom:12,boxSizing:'border-box'}} />
+                <button disabled={softAuthLoading || !softAuthEmail} onClick={async () => {
+                  if (!softAuthEmail || !supabaseClient) return;
+                  setSoftAuthLoading(true);
+                  const { error } = await supabaseClient.auth.signInWithOtp({ email: softAuthEmail, options: { emailRedirectTo: window.location.origin } });
+                  setSoftAuthLoading(false);
+                  if (!error) setSoftAuthSent(true);
+                }} style={{width:'100%',padding:'14px',borderRadius:12,background:'rgba(94,170,168,0.10)',border:'1px solid rgba(94,170,168,0.22)',color:'rgba(94,170,168,0.9)',fontFamily:"'DM Sans',sans-serif",fontSize:17,cursor:'pointer',opacity:softAuthLoading||!softAuthEmail?0.4:1}}>
+                  {softAuthLoading ? 'Sending...' : 'Save with email'}
+                </button>
+                <button onClick={() => finishOnboarding('anonymous')} className="font-body" style={{marginTop:20,fontSize:15,color:'rgba(220,225,235,0.3)',background:'none',border:'none',cursor:'pointer',display:'block',width:'100%'}}>
+                  Skip for now
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
   }
 
 
@@ -4132,32 +4297,43 @@ function App() {
     const earnedBadges = BADGES.filter(b => b.condition(stats));
     const scienceFact = SCIENCE_FACTS[Math.floor(((stats.totalSessions || 0) * 7 + Date.now() % 10000) % SCIENCE_FACTS.length)];
     const isSOS = lastSessionWasSOS;
+    const isFirstOnboarding = completionData._isFirstSession;
     const closeCompletion = () => {
       setShowCompletion(false); setCompletionData(null); setCompletionStep('stats');
-      setCompletionFeeling(null); setMoodDelta(null); setLastSessionWasSOS(false); setSosCascadeLevel(0);
+      setCompletionFeeling(null); setMoodDelta(null); setLastSessionWasSOS(false); setSosCascadeLevel(0); setSosPartialMsg(false);
+      setStats(s => ({...s, _masteryLevelUp: null})); // clear transient flag
+      if (isFirstOnboarding) { setOnboardingPhase('goal'); }
     };
-    const startSOSCascade = () => {
-      const nextLevel = sosCascadeLevel + 1;
-      if (nextLevel > 3) { closeCompletion(); return; }
-      // Record cascade in history
+    // SOS cascade technique progression: cyclic_sigh → box → extended_exhale
+    const SOS_CASCADE_TECHNIQUES = [
+      null, // level 0 = initial (cyclic_sigh 90s, already played)
+      { technique:'box', duration:120, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
+      { technique:'diaphragmatic', duration:120, params:{inhale:4,exhale:8} }, // extended exhale style
+    ];
+    const recordSOSOutcome = (outcome) => {
       setStats(s => {
         const hist = [...s.history];
-        if (hist.length > 0) { hist[hist.length-1] = {...hist[hist.length-1], sosOutcome:'cascaded', sosCascadeLevel: sosCascadeLevel}; }
+        if (hist.length > 0) { hist[hist.length-1] = {...hist[hist.length-1], sosOutcome: outcome, sosCascadeLevel, sessionType:'sos'}; }
         return {...s, history: hist};
       });
-      setSosCascadeLevel(nextLevel);
-      setShowCompletion(false); setCompletionData(null); setCompletionStep('stats');
-      // Start new 2-min cyclic sigh immediately
-      const segs = [{ type:'breathing', technique:'physiological_sigh', duration:120, params:{inhale1:2,inhale2:1,exhale:7} }];
-      actuallyStartSession(segs, {scenario:'stress_sos', category:'stress', isSOSSession:true});
-    };
-    const recordSOSBetter = () => {
-      setStats(s => {
-        const hist = [...s.history];
-        if (hist.length > 0) { hist[hist.length-1] = {...hist[hist.length-1], sosOutcome:'better', sosCascadeLevel: sosCascadeLevel}; }
-        return {...s, history: hist};
-      });
-      closeCompletion();
+      if (outcome === 'resolved') {
+        closeCompletion();
+      } else if (outcome === 'partial') {
+        setSosPartialMsg(true);
+        setTimeout(() => { setSosPartialMsg(false); closeCompletion(); }, 2000);
+      } else if (outcome === 'stressed') {
+        const nextLevel = sosCascadeLevel + 1;
+        if (nextLevel > 2) {
+          // After 3rd "Still stressed" → show PostCascadeScreen
+          setCompletionStep('post_cascade');
+          return;
+        }
+        setSosCascadeLevel(nextLevel);
+        setShowCompletion(false); setCompletionData(null); setCompletionStep('stats');
+        const cascade = SOS_CASCADE_TECHNIQUES[nextLevel];
+        const segs = [{ type:'breathing', technique: cascade.technique, duration: cascade.duration, params: cascade.params }];
+        actuallyStartSession(segs, {scenario:'stress_sos', category:'stress', isSOSSession:true});
+      }
     };
     return (
       <div className="fixed inset-0" style={{background:'linear-gradient(180deg, #1a3a5c 0%, #0e2840 50%, #0a1c30 100%)', animation:'surfaceBgLighten 1.5s ease-out forwards'}}>
@@ -4169,49 +4345,73 @@ function App() {
           </div>
           {/* Title */}
           <div className="font-body" style={{fontSize:20,fontWeight:300,color:'rgba(226,232,240,0.95)',animation:'fade-in 600ms 300ms both'}}>{t.diveComplete}</div>
-          {/* Stats line */}
-          <div style={{borderTop:'1px solid rgba(255,255,255,0.08)',borderBottom:'1px solid rgba(255,255,255,0.08)',padding:'16px 0',margin:'8px 0',width:'100%',maxWidth:300}}>
-            <div style={{display:'flex',justifyContent:'center',gap:24}}>
-              {[[Math.round(completionData.duration/60)+'',t.duration||'duration'],[''+(completionData.breathCycles||Math.round(completionData.duration/16)),t.breathCycles||'cycles'],[formatDepth(completionData.depth),WORLDS[world].depthUnit]].map(([val,label],i) => (
-                <div key={i} style={{textAlign:'center',animation:`count-up 600ms ${i*150}ms ease-out both`}}>
-                  <div className="font-mono" style={{fontSize:22,fontWeight:300,color:palette.accent}}>{val}</div>
-                  <div className="font-body" style={{fontSize:11,fontWeight:300,color:'rgba(220,225,235,0.35)',marginTop:4,letterSpacing:'0.05em',textTransform:'lowercase'}}>{label}</div>
-                </div>
-              ))}
+          {/* Stats, badges, science — hidden on first onboarding session */}
+          {!isFirstOnboarding && (
+            <>
+            <div style={{borderTop:'1px solid rgba(255,255,255,0.08)',borderBottom:'1px solid rgba(255,255,255,0.08)',padding:'16px 0',margin:'8px 0',width:'100%',maxWidth:300}}>
+              <div style={{display:'flex',justifyContent:'center',gap:24}}>
+                {[[Math.round(completionData.duration/60)+'',t.duration||'duration'],[''+(completionData.breathCycles||Math.round(completionData.duration/16)),t.breathCycles||'cycles'],[formatDepth(completionData.depth),WORLDS[world].depthUnit]].map(([val,label],i) => (
+                  <div key={i} style={{textAlign:'center',animation:`count-up 600ms ${i*150}ms ease-out both`}}>
+                    <div className="font-mono" style={{fontSize:22,fontWeight:300,color:palette.accent}}>{val}</div>
+                    <div className="font-body" style={{fontSize:11,fontWeight:300,color:'rgba(220,225,235,0.35)',marginTop:4,letterSpacing:'0.05em',textTransform:'lowercase'}}>{label}</div>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-          {/* Badges */}
-          {earnedBadges.length > 0 && (
-            <div className="flex gap-2 justify-center flex-wrap">
-              {earnedBadges.slice(-3).map((b) => (
-                <div key={b.id} className="glass px-3 py-1.5 flex items-center gap-2">
-                  <span style={{color:palette.accent,opacity:0.6}}><Icon name="check" size={12}/></span>
-                  <span className="font-body" style={{fontSize:11,fontWeight:500,color:'rgba(226,232,240,0.85)'}}>{BADGE_NAMES[b.id]}</span>
-                </div>
-              ))}
+            {earnedBadges.length > 0 && (
+              <div className="flex gap-2 justify-center flex-wrap">
+                {earnedBadges.slice(-3).map((b) => (
+                  <div key={b.id} className="glass px-3 py-1.5 flex items-center gap-2">
+                    <span style={{color:palette.accent,opacity:0.6}}><Icon name="check" size={12}/></span>
+                    <span className="font-body" style={{fontSize:11,fontWeight:500,color:'rgba(226,232,240,0.85)'}}>{BADGE_NAMES[b.id]}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div style={{borderTop:'1px solid rgba(255,255,255,0.08)',paddingTop:12,marginTop:4,maxWidth:280,textAlign:'center'}}>
+              <div className="font-body" style={{fontSize:13,fontWeight:300,color:'rgba(220,225,235,0.45)',lineHeight:1.7}}>{scienceFact}</div>
+            </div>
+            <div style={{borderTop:'1px solid rgba(255,255,255,0.08)',width:'100%',maxWidth:300,marginTop:4}} />
+            </>
+          )}
+
+          {/* SOS flow: 3-option response */}
+          {isSOS && completionStep === 'stats' && !sosPartialMsg && (
+            <div className="screen-transition" style={{textAlign:'center'}}>
+              <div className="font-body" style={{fontSize:17,fontWeight:300,color:'rgba(220,225,235,0.7)',marginBottom:16}}>How do you feel now?</div>
+              <div style={{display:'flex',flexDirection:'column',gap:10,alignItems:'center',maxWidth:260}}>
+                <button className="w-full py-3 rounded-xl font-body"
+                  style={{fontWeight:500,background:`rgba(${accentRgb},0.12)`,border:`1px solid rgba(${accentRgb},0.25)`,color:palette.accent,fontSize:15}}
+                  onClick={() => recordSOSOutcome('resolved')}>Much better</button>
+                <button className="w-full py-3 rounded-xl font-body"
+                  style={{fontWeight:400,background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.08)',color:'rgba(220,225,235,0.55)',fontSize:15}}
+                  onClick={() => recordSOSOutcome('partial')}>A little better</button>
+                <button className="w-full py-3 rounded-xl font-body"
+                  style={{fontWeight:400,background:'rgba(255,255,255,0.02)',border:'1px solid rgba(255,255,255,0.06)',color:'rgba(220,225,235,0.35)',fontSize:14}}
+                  onClick={() => recordSOSOutcome('stressed')}>Still stressed</button>
+              </div>
             </div>
           )}
-          {/* Science fact */}
-          <div style={{borderTop:'1px solid rgba(255,255,255,0.08)',paddingTop:12,marginTop:4,maxWidth:280,textAlign:'center'}}>
-            <div className="font-body" style={{fontSize:13,fontWeight:300,color:'rgba(220,225,235,0.45)',lineHeight:1.7}}>{scienceFact}</div>
-          </div>
-          {/* Divider */}
-          <div style={{borderTop:'1px solid rgba(255,255,255,0.08)',width:'100%',maxWidth:300,marginTop:4}} />
-
-          {/* SOS flow: Better? / Not enough */}
-          {isSOS && completionStep === 'stats' && (
+          {/* SOS partial message */}
+          {isSOS && sosPartialMsg && (
             <div className="screen-transition" style={{textAlign:'center'}}>
-              <div className="font-body" style={{fontSize:17,fontWeight:300,color:'rgba(220,225,235,0.7)',marginBottom:16}}>Better?</div>
-              <div style={{display:'flex',gap:12,justifyContent:'center'}}>
-                <button className="px-8 py-3 rounded-full font-body"
-                  style={{fontWeight:500,background:`rgba(${accentRgb},0.12)`,border:`1px solid rgba(${accentRgb},0.25)`,color:palette.accent}}
-                  onClick={recordSOSBetter}>Yes</button>
-                {sosCascadeLevel < 3 && (
-                  <button className="px-8 py-3 rounded-full font-body"
-                    style={{fontWeight:500,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',color:'rgba(220,225,235,0.6)'}}
-                    onClick={startSOSCascade}>Not enough</button>
-                )}
+              <div className="font-body" style={{fontSize:17,fontWeight:300,color:'rgba(220,225,235,0.65)',lineHeight:1.6}}>That's progress. Come back anytime.</div>
+            </div>
+          )}
+          {/* SOS PostCascadeScreen — after 3rd "Still stressed" */}
+          {isSOS && completionStep === 'post_cascade' && (
+            <div className="screen-transition" style={{textAlign:'center',maxWidth:300}}>
+              <div className="font-body" style={{fontSize:18,fontWeight:300,color:'rgba(220,225,235,0.8)',marginBottom:24,lineHeight:1.6}}>Sometimes stress needs more than breathing.</div>
+              <div style={{display:'flex',flexDirection:'column',gap:10,marginBottom:24}}>
+                {['Walk outside \u2014 10 min','Call someone you trust','Write down what\'s bothering you'].map(s => (
+                  <div key={s} className="glass" style={{padding:'14px 16px',borderRadius:12,fontSize:14,color:'rgba(220,225,235,0.6)',fontFamily:"'DM Sans',sans-serif",textAlign:'left'}}>
+                    {s}
+                  </div>
+                ))}
               </div>
+              <button className="px-8 py-3 rounded-full font-body"
+                style={{fontWeight:500,background:`rgba(${accentRgb},0.12)`,border:`1px solid rgba(${accentRgb},0.25)`,color:palette.accent}}
+                onClick={closeCompletion}>Back to Home</button>
             </div>
           )}
 
@@ -4232,7 +4432,9 @@ function App() {
                   if (hist.length > 0) { hist[hist.length-1] = {...hist[hist.length-1], preMood: pre, postMood: n}; }
                   return {...s, history: hist, lastFeeling: n};
                 });
+                if (isFirstOnboarding) setOnboardingPostMood(n);
                 setTimeout(() => {
+                  if (isFirstOnboarding) { setCompletionStep('done'); return; }
                   if (completionData && isIntensiveSession(completionData.segments)) setCompletionStep('safety');
                   else setCompletionStep('done');
                 }, pre !== null ? 2000 : 600);
@@ -4246,6 +4448,15 @@ function App() {
                 {currentMood.pre} \u2192 {currentMood.post}
               </div>
               <div className="font-body" style={{fontSize:15,fontWeight:300,color:'rgba(220,225,235,0.45)',textAlign:'center'}}>{moodDelta}</div>
+            </div>
+          )}
+
+          {/* Mastery level-up toast */}
+          {stats._masteryLevelUp && (
+            <div className="screen-transition" style={{textAlign:'center',marginTop:4}}>
+              <div className="font-body" style={{fontSize:14,fontWeight:400,color:palette.accent,opacity:0.8}}>
+                {'★'.repeat((MASTERY_LEVELS.find(l=>l.name===stats._masteryLevelUp.newLevel)||{stars:1}).stars)} {stats._masteryLevelUp.newLevel.charAt(0).toUpperCase()+stats._masteryLevelUp.newLevel.slice(1)} in {TECHNIQUE_DISPLAY[stats._masteryLevelUp.technique]||stats._masteryLevelUp.technique}
+              </div>
             </div>
           )}
 
@@ -4282,12 +4493,12 @@ function App() {
               </div>
             </div>
           )}
-          {/* Final: New dive */}
+          {/* Final: New dive / Continue */}
           {completionStep === 'done' && (
             <div className="screen-transition" style={{textAlign:'center'}}>
               <button className="px-8 py-3 rounded-full font-body"
                 style={{fontWeight:500,background:`rgba(${accentRgb},0.12)`,border:`1px solid rgba(${accentRgb},0.25)`,color:palette.accent}}
-                onClick={closeCompletion}>{t.newDive}</button>
+                onClick={closeCompletion}>{isFirstOnboarding ? t.continueText || 'Continue' : t.newDive}</button>
             </div>
           )}
         </div>
@@ -4425,6 +4636,19 @@ function App() {
       {/* Time-based greeting */}
       <div className="font-body mb-4" style={{fontSize:16, fontWeight:300, color:'var(--text-3)', textAlign:'left'}}>{getGreeting(t)}</div>
 
+      {/* Milestone card — first unshown milestone */}
+      {(() => {
+        const shown = stats.shownMilestones || [];
+        const milestone = MILESTONES.find(m => m.condition(stats) && !shown.includes(m.id));
+        if (!milestone) return null;
+        return (
+          <div key={milestone.id} style={{marginBottom:12, padding:'14px 16px', borderRadius:12, background:'rgba(94,170,168,0.06)', border:'1px solid rgba(94,170,168,0.12)', display:'flex', alignItems:'center', gap:12}}>
+            <div className="font-body" style={{flex:1, fontSize:14, fontWeight:300, color:'rgba(220,225,235,0.7)', lineHeight:1.5}}>{milestone.message}</div>
+            <button onClick={() => setStats(s => ({...s, shownMilestones:[...(s.shownMilestones||[]), milestone.id]}))} style={{background:'none', border:'none', color:'rgba(220,225,235,0.3)', fontSize:18, cursor:'pointer', padding:'4px 8px', lineHeight:1, flexShrink:0}}>{'\u00D7'}</button>
+          </div>
+        );
+      })()}
+
       {/* Daily recommendation card */}
       <button className="w-full text-left mb-6" style={{
         minHeight:'max(150px, 38vh)', maxHeight:'42vh', borderRadius:14, padding:'32px 24px', position:'relative', overflow:'hidden',
@@ -4511,6 +4735,18 @@ function App() {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Discovery card: breath hold test — appears after 3 sessions if no tests done */}
+      {(stats.totalSessions || 0) >= 3 && !(stats.breathTests || []).length && (
+        <button className="glass w-full text-left mb-4" style={{padding:'16px 20px', display:'flex', alignItems:'center', gap:12}}
+          onClick={() => { setScreen('breath_test'); }}>
+          <span style={{color:palette.accent, opacity:0.5}}><Icon name="deep" size={20}/></span>
+          <div>
+            <div className="font-body" style={{fontWeight:500, fontSize:15, color:'rgba(220,225,235,0.85)'}}>How deep can you go?</div>
+            <div className="font-body" style={{fontWeight:300, fontSize:13, color:'rgba(220,225,235,0.35)', marginTop:2}}>Test your breath hold</div>
+          </div>
+        </button>
       )}
 
       {/* SOS + Breathe now — inline, not fixed */}
@@ -4924,34 +5160,48 @@ function App() {
         })()}
 
         {/* 4. TECHNIQUES mastery */}
-        <div style={{marginBottom:24, borderTop:'1px solid rgba(255,255,255,0.03)', paddingTop:20}}>
-          <div className="font-body mb-4" style={{fontSize:13, fontWeight:500, color:'rgba(220,225,235,0.28)', letterSpacing:'0.12em', textTransform:'uppercase'}}>Techniques</div>
-          <div className="space-y-3">
-            {[
-              ['physiological_sigh','Cyclic Sigh'],
-              ['box','Box Breathing'],
-              ['diaphragmatic','Diaphragmatic'],
-              ['ujjayi','Ujjayi (Ocean Breath)'],
-              ['segmented','Segmented'],
-              ['tidal','Tidal'],
-              ['recovery','Recovery'],
-            ].map(([techKey, displayName]) => {
-              const count = (stats.techniqueStats || {})[techKey] || 0;
-              const masteryLabel = count === 0 ? '\u2014' : count <= 5 ? 'Learning' : count <= 15 ? 'Comfortable' : 'Mastered';
-              const progress = Math.min(count / 16, 1);
-              return (
-                <div key={techKey} className="flex items-center gap-3">
-                  <div className="font-body" style={{fontSize:15, fontWeight:400, color:'rgba(226,232,240,0.7)', minWidth:110, flex:'0 0 110px'}}>{displayName}</div>
-                  <div style={{flex:1, height:4, borderRadius:2, background:'rgba(255,255,255,0.04)', overflow:'hidden'}}>
-                    <div style={{width:(progress*100)+'%', height:'100%', borderRadius:2, background:palette.accent, transition:'width 600ms ease'}} />
+        {(() => {
+          const mastery = stats.techniqueMastery || {};
+          const masterCount = Object.values(mastery).filter(m => m.level && MASTERY_LEVELS.findIndex(l=>l.name===m.level) >= 2).length;
+          return (
+          <div style={{marginBottom:24, borderTop:'1px solid rgba(255,255,255,0.03)', paddingTop:20}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+              <div className="font-body" style={{fontSize:13, fontWeight:500, color:'rgba(220,225,235,0.28)', letterSpacing:'0.12em', textTransform:'uppercase'}}>Techniques</div>
+              <div className="font-mono" style={{fontSize:12, color:palette.accent, opacity:0.6}}>{masterCount}/7 mastered</div>
+            </div>
+            <div className="space-y-3">
+              {[
+                ['physiological_sigh','Cyclic Sigh'],
+                ['box','Box Breathing'],
+                ['diaphragmatic','Diaphragmatic'],
+                ['ujjayi','Ocean Breath'],
+                ['segmented','Segmented'],
+                ['tidal','Tidal'],
+                ['recovery','Recovery'],
+              ].map(([techKey, displayName]) => {
+                const m = mastery[techKey] || { sessions:0, level:null };
+                const count = m.sessions || (stats.techniqueStats || {})[techKey] || 0;
+                const level = getMasteryLevel(count);
+                const stars = level ? level.stars : 0;
+                const nextLevel = MASTERY_LEVELS.find(l => count < l.threshold);
+                const progress = nextLevel ? Math.min(count / nextLevel.threshold, 1) : 1;
+                return (
+                  <div key={techKey} className="flex items-center gap-3">
+                    <div className="font-body" style={{fontSize:14, fontWeight:400, color:'rgba(226,232,240,0.7)', minWidth:100, flex:'0 0 100px'}}>{displayName}</div>
+                    <div style={{flex:1, height:4, borderRadius:2, background:'rgba(255,255,255,0.04)', overflow:'hidden'}}>
+                      <div style={{width:(progress*100)+'%', height:'100%', borderRadius:2, background:palette.accent, transition:'width 600ms ease'}} />
+                    </div>
+                    <div className="font-mono" style={{fontSize:11, color:palette.accent, minWidth:20, textAlign:'right'}}>{count}</div>
+                    <div style={{minWidth:55, textAlign:'right', fontSize:11, color:'rgba(94,170,168,0.6)'}}>
+                      {stars > 0 ? '\u2605'.repeat(stars) : '\u2014'}
+                    </div>
                   </div>
-                  <div className="font-mono" style={{fontSize:12, color:palette.accent, minWidth:16, textAlign:'right'}}>{count}</div>
-                  <div className="font-body" style={{fontSize:12, fontWeight:300, color:'var(--text-3)', minWidth:68, textAlign:'right'}}>{masteryLabel}</div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
-        </div>
+          );
+        })()}
 
         {/* 5. PROGRAM PROGRESS — rings */}
         <div style={{marginBottom:24, borderTop:'1px solid rgba(255,255,255,0.03)', paddingTop:20}}>
@@ -5148,6 +5398,34 @@ function App() {
 
 
   const renderScreen = () => {
+    // Breath hold test (standalone, for retest and Discovery card)
+    if (screen === 'breath_test') return (
+      <FirstBreathScreen palette={palette} accentRgb={accentRgb} t={t} ambientRef={ambientRef}
+        startAtPhase="holdTest"
+        onComplete={(goal, holdTimeResult) => {
+          if (holdTimeResult && holdTimeResult > 0) {
+            setStats(s => {
+              const hDepth = holdTimeToDepth(holdTimeResult);
+              const newState = {...s};
+              newState.breathTests = [...(s.breathTests || []), { date: new Date().toISOString(), holdTime: Math.round(holdTimeResult*10)/10, depth: hDepth }];
+              try { const tests = JSON.parse(localStorage.getItem('dive-breath-tests') || '[]'); tests.push({ date: new Date().toISOString(), holdTime: Math.round(holdTimeResult*10)/10, depth: hDepth }); localStorage.setItem('dive-breath-tests', JSON.stringify(tests)); } catch(e) {}
+              const newBestDepth = Math.max(s.bestHoldDepth || 0, hDepth || 0);
+              const newLevel = getDifficultyLevel(newBestDepth);
+              const currentLevelIdx = DIFFICULTY_LEVELS.findIndex(l => l.id === (s.difficultyLevel || 'beginner'));
+              const newLevelIdx = DIFFICULTY_LEVELS.findIndex(l => l.id === newLevel.id);
+              newState.bestHoldDepth = newBestDepth;
+              newState.difficultyLevel = newLevelIdx > currentLevelIdx ? newLevel.id : (s.difficultyLevel || 'beginner');
+              newState.totalDepth = Math.round((s.totalDepth + hDepth) * 10) / 10;
+              const allTests = [...(s.breathTests || []), { holdTime: Math.round(holdTimeResult*10)/10 }];
+              const newAdaptiveLevel = determineLevel(allTests);
+              if (LEVELS[newAdaptiveLevel].id > LEVELS[s.level || 'basic'].id) newState.level = newAdaptiveLevel;
+              newState.lastRetestDate = new Date().toISOString();
+              return newState;
+            });
+          }
+          setScreen('home'); setTab('home');
+        }} />
+    );
     if (screen === 'custom-pattern') return (
       <CustomPatternScreen
         onBack={() => setScreen('home')}
@@ -5193,7 +5471,7 @@ function App() {
     }
   };
 
-  const showTabs = !['category','program_view','breathe-choice','custom-pattern'].includes(screen);
+  const showTabs = !['category','program_view','breathe-choice','custom-pattern','breath_test'].includes(screen);
 
   return (
     <div className="fixed inset-0" style={{background:bg}}>
