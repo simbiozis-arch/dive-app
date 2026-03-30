@@ -1623,54 +1623,89 @@ class VoicePlayer {
 }
 const voicePlayer = new VoicePlayer();
 
-// ===== DURATION-AWARE PHASE CUE SYSTEM =====
-// Generic cue mapping: all techniques use the same phase cues now
+// ===== RANDOMIZED VOICE CUE SYSTEM =====
+// Phase cue key maps (normal + whisper)
 const PHASE_CUE_MAP = {
-  inhale: 'cue_breathe_in', inhale1: 'cue_breathe_in', inhale2: 'cue_little_more',
-  exhale: 'cue_breathe_out', holdIn: 'cue_hold', hold: 'cue_hold',
-  holdOut: 'cue_pause', pause: 'cue_pause',
-  belly: 'cue_breathe_in', ribs: 'cue_little_more', chest: 'cue_little_more',
+  inhale:'cue_breathe_in', inhale1:'cue_breathe_in', inhale2:'cue_little_more',
+  exhale:'cue_breathe_out', holdIn:'cue_hold', hold:'cue_hold',
+  holdOut:'cue_pause', pause:'cue_pause',
+  belly:'cue_breathe_in', ribs:'cue_little_more', chest:'cue_little_more',
 };
-// Whisper (eyes-closed) fallback cues — shorter
 const EC_CUE_MAP = {
-  inhale: 'ec_breathe_in', inhale1: 'ec_breathe_in', inhale2: 'ec_more',
-  exhale: 'ec_breathe_out', holdIn: 'ec_hold', hold: 'ec_hold',
-  holdOut: 'ec_hold', pause: 'ec_hold',
-  belly: 'ec_breathe_in', ribs: 'ec_more', chest: 'ec_more',
+  inhale:'ec_breathe_in', inhale1:'ec_breathe_in', inhale2:'ec_more',
+  exhale:'ec_breathe_out', holdIn:'ec_hold', hold:'ec_hold',
+  holdOut:'ec_hold', pause:'ec_hold',
+  belly:'ec_breathe_in', ribs:'ec_more', chest:'ec_more',
 };
-// Technique intro mapping
 const TECHNIQUE_INTRO_MAP = {
-  physiological_sigh: 'intro_cyclic_sigh', sigh: 'intro_cyclic_sigh',
-  box: 'intro_box', diaphragmatic: 'intro_diaphragmatic',
-  segmented: 'intro_segmented', ujjayi: 'intro_ujjayi',
-  tidal: 'intro_tidal', recovery: 'intro_diaphragmatic',
+  physiological_sigh:'intro_cyclic_sigh', sigh:'intro_cyclic_sigh',
+  box:'intro_box', diaphragmatic:'intro_diaphragmatic',
+  segmented:'intro_segmented', ujjayi:'intro_ujjayi',
+  tidal:'intro_tidal', recovery:'intro_diaphragmatic',
 };
 
-function playPhaseCue(technique, phase, isFirstCycle, phaseDuration) {
+// Voice randomization state
+let _lastSpokenKey = null;
+let _consecutiveSilences = 0;
+
+function resetVoiceState() { _lastSpokenKey = null; _consecutiveSilences = 0; }
+
+function playPhaseCue(technique, phase, cycleCount, phaseDuration, isEyesClosed) {
   if (!voicePlayer.enabled) return;
   const tech = technique === 'physiological_sigh' ? 'sigh' : technique;
 
-  // Play technique intro only on first cycle, first inhale phase
-  // Intro plays in full — engine.extendCurrentSegment handles timing
-  if (isFirstCycle && (phase === 'inhale' || phase === 'inhale1' || phase === 'belly')) {
+  // Technique intro on first cycle, first inhale
+  if (cycleCount === 0 && (phase === 'inhale' || phase === 'inhale1' || phase === 'belly')) {
     const introKey = TECHNIQUE_INTRO_MAP[tech] || TECHNIQUE_INTRO_MAP[technique];
     if (introKey && AUDIO_MAP[introKey]) { voicePlayer.play(introKey); return; }
   }
 
-  // Duration-aware phase cue selection
   const cueKey = PHASE_CUE_MAP[phase];
-  if (!cueKey || !AUDIO_MAP[cueKey]) return;
+  if (!cueKey) return;
+
+  // RULE 1: Cycles 0-1 — ALWAYS speak (teaching mode)
+  let shouldSpeak = cycleCount < 2;
+
+  if (!shouldSpeak) {
+    // RULE 2: After 3+ consecutive silences → force speak
+    if (_consecutiveSilences >= 3) {
+      shouldSpeak = true;
+    }
+    // RULE 3: Eyes-closed → ~60% chance
+    else if (isEyesClosed) {
+      shouldSpeak = Math.random() < 0.6;
+    }
+    // RULE 4: Normal → ~35% chance
+    else {
+      shouldSpeak = Math.random() < 0.35;
+    }
+    // RULE 5: Never same phrase twice in a row
+    if (shouldSpeak && cueKey === _lastSpokenKey) {
+      shouldSpeak = false;
+    }
+  }
+
+  if (!shouldSpeak) {
+    _consecutiveSilences++;
+    return;
+  }
+
+  // Duration-aware: try normal → whisper → skip
   const cueDur = CLIP_DURATIONS[cueKey] || 4;
   const ecKey = EC_CUE_MAP[phase];
   const ecDur = ecKey ? (CLIP_DURATIONS[ecKey] || 4) : 99;
 
-  // Select: normal if fits in 75% of phase, whisper if fits, else skip (haptic only)
-  if (phaseDuration && cueDur <= phaseDuration * 0.75) {
+  if (phaseDuration && cueDur <= phaseDuration * 0.75 && AUDIO_MAP[cueKey]) {
     voicePlayer.play(cueKey, 0.55);
+    _lastSpokenKey = cueKey;
+    _consecutiveSilences = 0;
   } else if (phaseDuration && ecKey && AUDIO_MAP[ecKey] && ecDur <= phaseDuration * 0.75) {
     voicePlayer.play(ecKey, 0.4);
+    _lastSpokenKey = ecKey;
+    _consecutiveSilences = 0;
+  } else {
+    _consecutiveSilences++;
   }
-  // else: haptic + visual only (cue too long for phase)
 }
 
 // ===== SPLASH WITH VARIATION =====
@@ -2376,11 +2411,11 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
           HAPTIC.phaseChange();
         }
       }
-      // 2. Voice cue (duration-aware — skips or uses whisper for short phases)
+      // 2. Voice cue (randomized — sporadic after cycle 2)
       if (voiceOn) {
         const seg = segments[engine.currentSegmentIndex];
         if (seg && seg.type === 'breathing') {
-          playPhaseCue(seg.technique, phase, cycleCount === 0, phaseDuration);
+          playPhaseCue(seg.technique, phase, cycleCount, phaseDuration, eyesClosedMode);
         }
       }
     };
@@ -3811,6 +3846,7 @@ function App() {
   };
 
   const actuallyStartSession = (segments, meta = {}) => {
+    resetVoiceState(); // Reset randomization state for new session
     // Apply adaptive difficulty level timings to breathing segments
     const userLevel = stats.level || 'basic';
     segments.forEach(seg => {
