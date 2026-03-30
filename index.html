@@ -2885,25 +2885,20 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
 
 // ===== FIRST BREATH SCREEN =====
 function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef, startAtPhase }) {
-  const [breathPhase, setBreathPhase] = useState(startAtPhase || 'cinematic'); // 'cinematic' | 'done' | 'feeling' | 'holdTest' | 'goal'
+  const [breathPhase, setBreathPhase] = useState(startAtPhase || 'cinematic');
   const [holdTestPhase, setHoldTestPhase] = useState('intro');
   const [holdTime, setHoldTime] = useState(0);
   const holdStartRef = useRef(null);
   const holdIntervalRef = useRef(null);
   const diveAudioRef = useRef(null);
 
-  // ===== CINEMATIC INTRO V3 — 4-channel (eyes+ears+hands+brain) =====
+  // ===== CINEMATIC V4 — 6 beats (state-driven for reliability) =====
   const [showSkip, setShowSkip] = useState(false);
-  const bgRef = useRef(null);
-  const centerTextRef = useRef(null);
-  const bubbleRef = useRef(null);
-  const labelRef = useRef(null);
-  const subRef = useRef(null);
-  const zone3Ref = useRef(null);
-  const introSubZoneRef = useRef(null);
+  const [cineTime, setCineTime] = useState(0); // current time in seconds
   const introAmbientRef = useRef(null);
   const rafRef = useRef(null);
   const vibratedRef = useRef({});
+  const bubbleGlowRef = useRef(null);
 
   const fbWorld = 'ocean';
   const fbW = WORLDS.ocean;
@@ -2922,226 +2917,50 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef, star
     }
   }
 
-  // Main cinematic RAF loop — ZERO React setState calls
+  // ===== CINEMATIC V4 — timer drives cineTime state, render computes visuals =====
+  const DEMO_PHASES = [{name:'inhale1',dur:2},{name:'inhale2',dur:1},{name:'exhale',dur:7}];
+  const DEMO_CYCLE = 10;
+  const SESSION_BG = 'linear-gradient(180deg, rgba(30,58,95,0.9), rgba(13,27,42,0.95))';
+
   useEffect(() => {
     if (breathPhase !== 'cinematic') return;
     const startTime = performance.now();
-    let lastPhase = '';
-
-    function tick() {
+    let running = true;
+    const interval = setInterval(() => {
+      if (!running) return;
       const t = (performance.now() - startTime) / 1000;
-
-      // ── BEAT 1: ARRIVAL (0-3s) ──
-      if (t < 3) {
-        if (bgRef.current) bgRef.current.style.background = '#000';
-        if (centerTextRef.current) {
-          if (t < 0.5) {
-            centerTextRef.current.style.opacity = '0';
-            centerTextRef.current.textContent = '';
-          } else if (t < 2.5) {
-            vibrateOnce('arrival', 40);
-            centerTextRef.current.textContent = 'Breathe like a freediver';
-            centerTextRef.current.style.fontSize = '17px';
-            centerTextRef.current.style.color = 'rgba(220,225,235,0.6)';
-            centerTextRef.current.style.letterSpacing = '0.08em';
-            centerTextRef.current.style.fontWeight = '300';
-            centerTextRef.current.style.opacity = String(Math.min(1, (t - 0.5) / 1.0));
-          } else {
-            centerTextRef.current.style.opacity = String(Math.max(0, 1 - (t - 2.5) / 0.5));
-          }
-        }
+      setCineTime(t);
+      // Start ambient at t=10.5 (Beat 4)
+      if (t > 10.5 && !introAmbientRef.current) {
+        try {
+          const a = new Audio('audio/dive_intro_ambient.mp3');
+          a.loop = true; a.volume = 0;
+          a.playbackRate = 0.97 + Math.random() * 0.06;
+          introAmbientRef.current = a;
+          a.play().catch(() => { introAmbientRef.current = null; });
+        } catch(e) {}
       }
-
-      // ── BEAT 2: DESCENT (3-8s) ──
-      else if (t < 8) {
-        // Start ambient once
-        if (!introAmbientRef.current) {
-          vibrateOnce('ambient-start', 30);
-          try {
-            const a = new Audio('audio/dive_intro_ambient.mp3');
-            a.loop = true; a.volume = 0;
-            // Randomize: start position + subtle pitch variation per session
-            a.playbackRate = 0.97 + Math.random() * 0.06; // 0.97-1.03
-            a.addEventListener('loadedmetadata', () => {
-              if (a.duration > 5) a.currentTime = Math.random() * a.duration * 0.8;
-            }, {once:true});
-            introAmbientRef.current = a;
-            a.play().catch(() => { introAmbientRef.current = null; });
-          } catch(e) { introAmbientRef.current = null; }
-        }
-        // Ambient fade in
-        if (introAmbientRef.current) {
-          introAmbientRef.current.volume = Math.min(0.12, (t - 3) / 5 * 0.12);
-        }
-        // Center text: "Follow the bubble"
-        if (centerTextRef.current) {
-          if (t < 3.4) {
-            centerTextRef.current.style.opacity = '0';
-            centerTextRef.current.textContent = '';
-          } else if (t < 7) {
-            centerTextRef.current.textContent = 'Follow the bubble';
-            centerTextRef.current.style.fontSize = '17px';
-            centerTextRef.current.style.color = 'rgba(220,225,235,0.5)';
-            centerTextRef.current.style.opacity = String(Math.min(1, (t - 3.4) / 0.8));
-          } else {
-            centerTextRef.current.style.opacity = String(Math.max(0, 1 - (t - 7) / 1.0));
-          }
-        }
-        // Bubble: caustic glow → formation
-        if (bubbleRef.current) {
-          if (t > 4.5) {
-            const gp = (t - 4.5) / 3.5;
-            bubbleRef.current.style.opacity = String(Math.min(1, gp));
-            if (t < 6.5) {
-              bubbleRef.current.style.transform = 'translate(-50%,-50%) scale(0.4)';
-              bubbleRef.current.style.filter = `blur(${30 - gp * 15}px)`;
-            } else {
-              const tighten = (t - 6.5) / 1.5;
-              bubbleRef.current.style.transform = `translate(-50%,-50%) scale(${0.4 + tighten * 0.6})`;
-              bubbleRef.current.style.filter = `blur(${15 - tighten * 15}px)`;
-            }
-          } else {
-            bubbleRef.current.style.opacity = '0';
-          }
-        }
-        if (t > 7.5) vibrateOnce('bubble-form', 60);
-        // BG starts shifting — stays very dark during Beat 2
-        if (bgRef.current) {
-          const bgP = Math.max(0, (t - 6) / 2); // starts at t=6, reaches 1.0 at t=8
-          bgRef.current.style.background = `rgb(${Math.round(bgP*3)},${Math.round(bgP*8)},${Math.round(bgP*14)})`;
-          // at t=8: rgb(3,8,14) — nearly black with hint of navy
-        }
+      if (introAmbientRef.current && t > 10.5) {
+        const ambientTarget = t < 13 ? Math.min(0.12, (t - 10.5) / 3 * 0.12) : 0.12;
+        introAmbientRef.current.volume += (ambientTarget - introAmbientRef.current.volume) * 0.1;
       }
-
-      // ── BEAT 3: BREATHE (8-29s) — 2 cycles ──
-      else if (t < 29) {
-        if (centerTextRef.current) { centerTextRef.current.style.opacity = '0'; centerTextRef.current.textContent = ''; }
-        if (bubbleRef.current) { bubbleRef.current.style.filter = 'blur(0px)'; bubbleRef.current.style.opacity = '1'; }
-
-        const breathTime = t - 8;
-        // Cycle timing: cycle 0 = 11s (slower), cycle 1 = 10s
-        let cycleNum, cycleTime;
-        if (breathTime < 11) { cycleNum = 0; cycleTime = breathTime; }
-        else { cycleNum = 1; cycleTime = breathTime - 11; }
-
-        const inh1Dur = cycleNum === 0 ? 2.5 : 2;
-        const inh2Dur = 1;
-        const exhDur = cycleNum === 0 ? 7.5 : 7;
-        let phase, progress;
-        if (cycleTime < inh1Dur) { phase = 'inhale1'; progress = cycleTime / inh1Dur; }
-        else if (cycleTime < inh1Dur + inh2Dur) { phase = 'inhale2'; progress = (cycleTime - inh1Dur) / inh2Dur; }
-        else { phase = 'exhale'; progress = (cycleTime - inh1Dur - inh2Dur) / exhDur; }
-
-        const eased = 0.5 - 0.5 * Math.cos(Math.min(progress, 1) * Math.PI);
-        let sc = 1.0;
-        if (phase === 'inhale1') sc = 1.0 + eased * 0.3;
-        else if (phase === 'inhale2') sc = 1.3 + eased * 0.15;
-        else sc = 1.45 - eased * 0.45;
-
-        if (bubbleRef.current) bubbleRef.current.style.transform = `translate(-50%,-50%) scale(${sc})`;
-
-        // Haptic on phase boundaries
-        vibrateOnce(`c${cycleNum}-inh`, 60);
-        if (phase === 'inhale2') vibrateOnce(`c${cycleNum}-inh2`, [30, 40, 30]);
-        if (phase === 'exhale') vibrateOnce(`c${cycleNum}-exh`, 100);
-
-        // Zone 3 crossfade
-        if (zone3Ref.current) zone3Ref.current.style.opacity = '0.9';
-        if (introSubZoneRef.current) introSubZoneRef.current.style.opacity = '0.9';
-        if (phase !== lastPhase) {
-          lastPhase = phase;
-          // Labels
-          let lbl = '', sub = '';
-          if (phase === 'inhale1') {
-            lbl = 'INHALE';
-            sub = cycleNum === 0 ? 'Deep breath, through your nose' : 'Through your nose';
-          } else if (phase === 'inhale2') {
-            lbl = '+ INHALE';
-            sub = cycleNum === 0 ? 'One more sip of air' : 'One more sip';
-          } else {
-            lbl = 'EXHALE';
-            sub = cycleNum === 0 ? 'Slow exhale, through your mouth' : 'Let go';
-          }
-          // Crossfade via opacity
-          if (labelRef.current) {
-            labelRef.current.style.opacity = '0';
-            setTimeout(() => { if (labelRef.current) { labelRef.current.textContent = lbl; labelRef.current.style.opacity = '1'; } }, 150);
-          }
-          if (subRef.current) {
-            subRef.current.style.opacity = '0';
-            setTimeout(() => { if (subRef.current) { subRef.current.textContent = sub; subRef.current.style.opacity = '1'; } }, 150);
-          }
-        }
-
-        // Ambient breathes with user
-        if (introAmbientRef.current) {
-          const target = phase === 'exhale' ? 0.09 : 0.14;
-          const cur = introAmbientRef.current.volume;
-          introAmbientRef.current.volume = cur + (target - cur) * 0.05;
-        }
-        // Background slowly lightens (21s of breathing → full ocean)
-        if (bgRef.current) {
-          const bp = Math.min(breathTime / 21, 1);
-          bgRef.current.style.background = `rgb(${Math.round(3 + bp * 11)},${Math.round(8 + bp * 53)},${Math.round(14 + bp * 78)})`;
-        }
-      }
-
-      // ── BEAT 4: IDENTITY (29-34s) ──
-      else if (t < 34) {
-        const idTime = t - 29;
-        // Zone 3 fades out
-        if (zone3Ref.current) zone3Ref.current.style.opacity = String(Math.max(0, 1 - idTime / 0.5));
-        if (introSubZoneRef.current) introSubZoneRef.current.style.opacity = String(Math.max(0, 1 - idTime / 0.5));
-        // Bubble dissolves
-        if (bubbleRef.current) {
-          if (idTime < 1.2) {
-            bubbleRef.current.style.transform = `translate(-50%,-50%) scale(${1.0 - (idTime / 1.2) * 0.05})`;
-            bubbleRef.current.style.opacity = String(1 - idTime / 1.2);
-          } else {
-            bubbleRef.current.style.opacity = '0';
-          }
-        }
-        // Sequential words
-        if (centerTextRef.current) {
-          centerTextRef.current.style.fontSize = '22px';
-          centerTextRef.current.style.letterSpacing = '0.15em';
-          centerTextRef.current.style.fontWeight = '400';
-          if (idTime >= 1.5 && idTime < 2.5) {
-            vibrateOnce('w-prepare', 30);
-            centerTextRef.current.textContent = 'Prepare.';
-            centerTextRef.current.style.color = 'rgba(220,225,235,0.7)';
-            centerTextRef.current.style.opacity = String(Math.min(1, (idTime - 1.5) / 0.5));
-          } else if (idTime >= 2.5 && idTime < 3.5) {
-            vibrateOnce('w-breathe', 30);
-            centerTextRef.current.textContent = 'Breathe.';
-            centerTextRef.current.style.color = 'rgba(220,225,235,0.7)';
-            centerTextRef.current.style.opacity = String(Math.min(1, (idTime - 2.5) / 0.5));
-          } else if (idTime >= 3.5 && idTime < 5) {
-            vibrateOnce('w-dive', 50);
-            centerTextRef.current.textContent = 'Dive.';
-            centerTextRef.current.style.color = 'rgba(94,170,168,0.9)';
-            centerTextRef.current.style.opacity = String(Math.min(1, (idTime - 3.5) / 0.5));
-          } else if (idTime < 1.5) {
-            centerTextRef.current.textContent = '';
-            centerTextRef.current.style.opacity = '0';
-          }
-        }
-      }
-
-      // ── DONE ──
-      else {
-        cancelAnimationFrame(rafRef.current);
+      // Haptic on Beat 3 words
+      if (t >= 6 && t < 6.05) vibrateOnce('w-prepare', 30);
+      if (t >= 7.2 && t < 7.25) vibrateOnce('w-breathe', 30);
+      if (t >= 8.4 && t < 8.45) vibrateOnce('w-dive', 30);
+      if (t >= 11.5 && t < 11.55) vibrateOnce('bubble-born', 60);
+      // Done at 35s
+      if (t >= 35) {
+        running = false;
+        clearInterval(interval);
         setBreathPhase('done');
-        return;
       }
-
-      rafRef.current = requestAnimationFrame(tick);
-    }
-    rafRef.current = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafRef.current);
+    }, 32); // ~30fps for state updates
+    rafRef.current = interval;
+    return () => { running = false; clearInterval(interval); };
   }, [breathPhase]);
 
-  // Done → signal parent to start real session (new onboarding flow)
+  // Done → signal parent to start real session
   useEffect(() => {
     if (breathPhase === 'done') {
       if (introAmbientRef.current) {
@@ -3151,8 +2970,7 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef, star
           else { a.pause(); a.volume = 0; clearInterval(fo); }
         }, 50);
       }
-      // After short pause, tell parent cinematic is done → start real session
-      const t0 = setTimeout(() => onComplete('cinematic_done', null), 1500);
+      const t0 = setTimeout(() => onComplete('cinematic_done', null), 800);
       return () => clearTimeout(t0);
     }
   }, [breathPhase]);
@@ -3402,66 +3220,37 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef, star
     );
   }
 
-  // ===== CINEMATIC INTRO V3 — 4-channel rendering =====
+  // ===== CINEMATIC V4 RENDER — computed from cineTime =====
+  const ct = cineTime;
+  // Text
+  let centerText='', centerOp=0, centerSize=20, centerWeight='300', centerColor='rgba(255,255,255,0.8)', centerWrap=true;
+  if (ct < 3) { centerText='When did you last take a real breath?'; centerOp = ct<0.3?0:ct<2.3?Math.min(1,(ct-0.3)/0.8):Math.max(0,1-(ct-2.3)/0.7); }
+  else if (ct < 6) { centerText='What if 5 minutes could change your day?'; centerOp = ct<3.3?0:ct<5.3?Math.min(1,(ct-3.3)/0.8):Math.max(0,1-(ct-5.3)/0.7); }
+  else if (ct < 10) { const bt=ct-6; centerSize=38; centerWeight='600'; centerWrap=false;
+    if (bt<1.2){centerText='Prepare.';centerColor='rgba(255,255,255,0.9)';centerOp=bt<0.1?0:bt<0.8?Math.min(1,bt/0.5):Math.max(0,1-(bt-0.8)/0.4);}
+    else if(bt<2.4){centerText='Breathe.';centerColor='rgba(255,255,255,0.9)';const b2=bt-1.2;centerOp=b2<0.1?0:b2<0.8?Math.min(1,b2/0.5):Math.max(0,1-(b2-0.8)/0.4);}
+    else{centerText='Dive.';centerColor='rgba(94,170,168,0.9)';const b3=bt-2.4;centerOp=b3<0.5?Math.min(1,b3/0.4):b3<1.2?1:Math.max(0,1-(b3-1.2)/0.5);}
+  }
+  // Background
+  let cineBg = '#000';
+  if (ct>=10&&ct<13){const p=Math.min((ct-10)/2,1);cineBg=`linear-gradient(180deg,rgba(${Math.round(p*30)},${Math.round(p*58)},${Math.round(p*95)},${Math.max(0.01,0.9*p)}),rgba(${Math.round(p*13)},${Math.round(p*27)},${Math.round(p*42)},${Math.max(0.01,0.95*p)}))`;}
+  else if(ct>=13){cineBg=SESSION_BG;}
+  // Bubble
+  let bubbleOp=0,bubbleScale=0,bubbleY='-50%';
+  if(ct>=10&&ct<13){bubbleOp=1;const gp=Math.min((ct-10)/1.5,1);bubbleScale=1-Math.pow(1-gp,3);}
+  else if(ct>=13&&ct<33){bubbleOp=1;const breathTime=ct-13,cycleTime=breathTime%DEMO_CYCLE;let el=0;for(const p of DEMO_PHASES){if(cycleTime<el+p.dur){const pr=(cycleTime-el)/p.dur,ea=0.5-0.5*Math.cos(Math.min(pr,1)*Math.PI);if(p.name==='inhale1')bubbleScale=1+ea*0.3;else if(p.name==='inhale2')bubbleScale=1.3+ea*0.15;else bubbleScale=1.45-ea*0.45;break;}el+=p.dur;}}
+  else if(ct>=33&&ct<35){const bt=ct-33;bubbleOp=Math.max(0,1-bt);bubbleScale=0.9;bubbleY=`calc(-50% + ${bt*60}vh)`;}
+  // Phase label
+  let phaseLabel='',phaseSub='';
+  if(ct>=13&&ct<33){const breathTime=ct-13,cycleTime=breathTime%DEMO_CYCLE;if(cycleTime<2)phaseLabel='INHALE';else if(cycleTime<3)phaseLabel='+ INHALE';else phaseLabel='EXHALE';phaseSub='Breathe with the bubble';}
+
   return (
-    <div ref={bgRef} style={{position:'fixed', inset:0, zIndex:60, background:'#000', display:'flex', alignItems:'center', justifyContent:'center'}}>
-      {/* Skip button — appears after 5s */}
-      {showSkip && (
-        <button onClick={() => {
-          cancelAnimationFrame(rafRef.current);
-          if (introAmbientRef.current) { introAmbientRef.current.pause(); introAmbientRef.current = null; }
-          setBreathPhase('done'); // triggers onComplete('cinematic_done') via useEffect
-        }} style={{
-          position:'fixed', top:'calc(16px + env(safe-area-inset-top, 0px))', right:16, zIndex:100,
-          background:'none', border:'none', fontFamily:"'DM Sans',sans-serif", fontWeight:400, fontSize:14,
-          color:'rgba(220,225,235,0.2)', padding:'8px 16px', cursor:'pointer',
-        }}>Skip</button>
-      )}
-
-      {/* Bubble — always in DOM, opacity controlled by RAF */}
-      <div ref={bubbleRef} style={{
-        position:'absolute', top:'42%', left:'50%',
-        transform:'translate(-50%,-50%) scale(0)',
-        width:'min(65vw,260px)', height:'min(65vw,260px)',
-        borderRadius:'50%',
-        background:'radial-gradient(ellipse at center, rgba(94,170,168,0.12) 0%, rgba(94,170,168,0.04) 50%, transparent 70%)',
-        boxShadow:'0 0 60px rgba(94,170,168,0.08), inset 0 0 40px rgba(94,170,168,0.05)',
-        opacity:0, filter:'blur(30px)',
-        pointerEvents:'none', willChange:'transform, opacity, filter',
-      }} />
-
-      {/* Center text — used for Beat 1, 2, 4 */}
-      <div ref={centerTextRef} style={{
-        position:'absolute', top:'42%', left:'50%',
-        transform:'translate(-50%,-50%)',
-        fontFamily:"'DM Sans',sans-serif", fontWeight:300, fontSize:17,
-        letterSpacing:'0.08em', color:'rgba(220,225,235,0.6)',
-        opacity:0, textAlign:'center', zIndex:10, pointerEvents:'none', whiteSpace:'nowrap',
-      }} />
-
-      {/* Phase label — ABOVE bubble (intro) */}
-      <div ref={zone3Ref} style={{
-        position:'fixed', top:'calc(42% - min(32.5vw, 130px) - 36px)',
-        left:0, right:0, textAlign:'center', opacity:0, pointerEvents:'none',
-      }}>
-        <div ref={labelRef} style={{
-          fontFamily:"'DM Sans',sans-serif", fontWeight:600, fontSize:13,
-          letterSpacing:'0.2em', textTransform:'uppercase',
-          color:'rgba(220,225,235,0.55)',
-          transition:'opacity 0.15s ease',
-        }} />
-      </div>
-      {/* Sub-instruction — BELOW bubble (intro) */}
-      <div ref={introSubZoneRef} style={{
-        position:'fixed', top:'calc(42% + min(32.5vw, 130px) + 20px)',
-        left:0, right:0, textAlign:'center', opacity:0, pointerEvents:'none',
-      }}>
-        <div ref={subRef} style={{
-          fontFamily:"'DM Sans',sans-serif", fontWeight:300, fontSize:14,
-          color:'rgba(220,225,235,0.35)', minHeight:22,
-          transition:'opacity 0.15s ease',
-        }} />
-      </div>
+    <div style={{position:'fixed',inset:0,zIndex:60,background:cineBg,display:'flex',alignItems:'center',justifyContent:'center'}}>
+      {showSkip && <button onClick={()=>{clearInterval(rafRef.current);if(introAmbientRef.current){introAmbientRef.current.pause();introAmbientRef.current=null;}setBreathPhase('done');}} style={{position:'fixed',top:'calc(16px + env(safe-area-inset-top, 0px))',right:16,zIndex:100,background:'none',border:'none',fontFamily:"'DM Sans',sans-serif",fontWeight:400,fontSize:14,color:'rgba(255,255,255,0.4)',padding:'8px 16px',cursor:'pointer'}}>Skip</button>}
+      {bubbleOp>0 && <div style={{position:'absolute',top:'42%',left:'50%',transform:`translate(-50%,${bubbleY}) scale(${bubbleScale})`,width:'min(75vw, 300px)',aspectRatio:'1',opacity:bubbleOp,pointerEvents:'none'}}><OceanBubble ref={bubbleGlowRef}/></div>}
+      {centerText&&centerOp>0.01 && <div style={{position:'absolute',top:'42%',left:'50%',transform:'translate(-50%,-50%)',fontFamily:"'DM Sans',sans-serif",fontWeight:centerWeight,fontSize:centerSize,color:centerColor,opacity:centerOp,textAlign:'center',zIndex:10,pointerEvents:'none',whiteSpace:centerWrap?'normal':'nowrap',maxWidth:centerWrap?280:'none'}}>{centerText}</div>}
+      {phaseLabel && <div style={{position:'fixed',top:'calc(42% - min(37.5vw, 150px) - 36px)',left:0,right:0,textAlign:'center',zIndex:15,pointerEvents:'none'}}><div className="font-body" style={{fontWeight:600,fontSize:13,letterSpacing:'0.2em',textTransform:'uppercase',color:'rgba(220,225,235,0.55)'}}>{phaseLabel}</div></div>}
+      {phaseSub && <div style={{position:'fixed',top:'calc(42% + min(37.5vw, 150px) + 20px)',left:0,right:0,textAlign:'center',zIndex:15,pointerEvents:'none'}}><div className="font-body" style={{fontSize:15,fontWeight:300,color:'rgba(220,225,235,0.35)'}}>{phaseSub}</div></div>}
     </div>
   );
 }
