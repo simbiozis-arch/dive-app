@@ -68,7 +68,7 @@ html,body,#root { width:100%; height:100%; overflow:hidden; font-family:'DM Sans
 @keyframes slowRotate { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
 @keyframes surfaceUp { 0%{transform:translateY(0);opacity:0.9} 60%{opacity:1} 100%{transform:translateY(-40px);opacity:0} }
 @keyframes pulse { 0%,100%{opacity:0.15;transform:scale(1)} 50%{opacity:0.4;transform:scale(1.5)} }
-@keyframes surfaceBgLighten { 0%{background:linear-gradient(180deg,#070c15 0%,#0c1322 100%)} 100%{background:linear-gradient(180deg,#1a3a5c 0%,#0e2840 100%)} }
+@keyframes surfaceBgLighten { 0%{background:linear-gradient(180deg,#050a12 0%,#080e1a 100%)} 100%{background:linear-gradient(180deg,#0a1520 0%,#060c16 100%)} }
 @keyframes completionFadeIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
 @keyframes checkPop { from{transform:scale(0.5);opacity:0} to{transform:scale(1);opacity:1} }
 .intro-title { font-family:'DM Sans',sans-serif; font-weight:200; font-size:42px; letter-spacing:0.3em; text-transform:uppercase; color:rgba(94,170,168,0.9); }
@@ -196,11 +196,10 @@ const LANG = {
     home:'Home',explore:'Explore',programs:'Programs',profile:'Me',settings:'Settings',
     todaysDive:"Today's dive",quickDives:'Quick Dives',myPrograms:'My Programs',seeAll:'See all',
     focus:'Focus',stress:'Stress & Recovery',energy:'Energy',deep:'Deep',
-    beforeMeeting:'Before a big meeting',beforeSpeech:'Before a speech',beforeCall:'Before a tough call',
-    cantFocus:"Can't focus",beforeDecision:'Before a decision',afterToughDay:'After a tough day',
-    afterArgument:'After an argument',stuckInTraffic:'Stuck in traffic',deadlinePressure:'Deadline pressure',
-    infoOverload:'Info overload',morningStart:'Morning start',afternoonSlump:'Afternoon slump',
-    beforeWorkout:'Before a workout',quickReset:'Quick reset',afterWorkout:'After a workout',
+    beforeMeeting:'Before a big meeting',beforeSpeech:'Before a speech',
+    cantFocus:"Can't focus",afterToughDay:'After a tough day',
+    morningStart:'Morning start',
+    beforeWorkout:'Before a workout',quickReset:'Quick reset',
     cantSleep:"Can't sleep",anxiousMorning:'Anxious morning',betweenMeetings:'Between meetings',
     justRelax:'Just relax',deepDive:'Deep dive',
     min:'min',begin:'Begin',pause:'Pause',resume:'Resume',skip:'Skip',
@@ -217,12 +216,12 @@ const LANG = {
     diveComplete:'Dive complete',duration:'Duration',breathCycles:'Breath cycles',depth:'Depth',
     repeat:'Repeat',newDive:'New dive',totalDepth:'Total depth',dayStreak:'day streak',
     sessionHistory:'Session history',badges:'Badges',resetData:'Reset all data',
-    firstDive:'First Dive',firstDiveSub:'5 days · Learn the basics',
-    stressShield:'Stress Shield',stressShieldSub:'7 days · Build resilience',
-    deepFocus:'Deep Focus',deepFocusSub:'5 days · Sharpen your mind',
+    firstDive:'First Dive',firstDiveSub:'5 days · Your first descent',
+    stressShield:'Stress Shield',stressShieldSub:'7 days · Breathe through pressure',
+    deepFocus:'Deep Focus',deepFocusSub:'5 days · Train your depth of attention',
     dayN:'Day',startDay:'Start',completed:'Completed',locked:'Locked',
     videoComingSoon:'Video lessons from coach — coming soon',continueText:'Continue',
-    unlockAll:'Unlock everything',monthly:'$6.99/mo',yearly:'$49.99/yr',yearlySave:'Save 40%',
+    unlockAll:'Unlock everything',monthly:'$5.99/mo',yearly:'$39.99/yr',yearlySave:'Save 44%',
     startTrial:'Start 7-day free trial',demoUnlock:'Unlock for demo',
     voiceGuided:'Voice guided',
     bodyScanFull:"Forehead — release all tension. Eyes — heavy lids. Jaw — slightly open, tongue resting free. Neck — long, relaxed. Shoulders — drop them away from your ears. Arms — heavy, warm. Chest — open. Belly — soft. Legs — heavy. Feet — warm.",
@@ -240,7 +239,7 @@ const LANG = {
     onb1title:'DIVE',onb1sub:'Breathe like a freediver',onb1desc:'Anti-stress techniques from people who dive 130 meters on a single breath.',
     onb2title:'7 techniques',onb2sub:'Proven by science and depth',onb2desc:'Diaphragmatic, box, ujjayi, physiological sigh — and three more.',
     onb3title:'14 scenarios',onb3sub:'For every occasion',onb3desc:'Before a meeting, after a tough day, insomnia, morning anxiety — find the right one.',
-    onb4title:'3 programs',onb4sub:'Step-by-step learning',onb4desc:'First Dive. Stress Shield. Deep Focus. With video coaching.',
+    onb4title:'3 programs',onb4sub:'Step-by-step learning',onb4desc:'First Dive. Stress Shield. Deep Focus. Guided progression.',
     paywallFeatures:['All 14 breathing scenarios','All programs with coaching','10-minute deep sessions','Advanced technique mastery tracking'],
     morningIntro:'Good morning. Five minutes of breathing before coffee. Your body will wake up faster.',
     overloadIntro:'Five minutes. Zero input. Just you and your breath.',
@@ -271,9 +270,9 @@ const LANG = {
     whatBroughtYou:'What brought you here?',stressRelief:'Stress relief',betterFocus:'Better focus',betterSleep:'Better sleep',moreEnergy:'More energy',
     missedYesterday:'You missed yesterday',surfaceBreathOffer:'Take a 1-min surface breath to save your {N}-day streak',surfaceBreathButton:'Surface Breath — 1 min',letItGo:'Let it go',streakSaved:'Streak saved',freshStart:'Fresh start',
     buildHabit:'Build a daily habit?',habitMorning:'Morning reminder',habitEvening:'Evening reminder',habitNotNow:'Not now',
-    paywallMonthly:'$9.99/mo',paywallYearly:'$49.99/yr',paywallYearlySave:'Save 58%',paywallTrialNote:"You won't be charged for 7 days. Cancel anytime.",paywallStartTrial:'Start free trial',
+    paywallMonthly:'$5.99/mo',paywallYearly:'$39.99/yr',paywallYearlySave:'Save 44%',paywallTrialNote:"You won't be charged for 7 days. Cancel anytime.",paywallStartTrial:'Start free trial',
     holdTestTitle:"Let's find your starting depth",holdTestDesc:'Exhale fully. Then hold. Tap when you need to breathe.',holdTestStart:'Start',holdTestYourDepth:'Your starting depth',holdTestSwimmingPool:'A swimming pool',holdTestCoralReef:'A coral reef',holdTestShipwreck:'A shallow shipwreck',holdTestSunlightFades:'Where sunlight fades',holdTestTwilightZone:'The twilight zone',
-    howStressed:'How stressed are you right now?',andNow:'And now?',moodLow:'low',moodHigh:'high',
+    howStressed:'How stressed are you right now?',andNow:'And now?',moodLow:'1 — calm',moodHigh:'5 — stressed',
     moodImprove:'{pre} \u2192 {post} \u00b7 \u2212{delta} points',moodSame:'Consistency builds resilience.',moodWorse:'Some sessions plant seeds for later.',
     techniques:'Techniques',masteryNone:'\u2014',masteryLearning:'Learning',masteryComfortable:'Comfortable',masteryMastered:'Mastered',
     goodMorning:'Good morning',goodAfternoon:'Good afternoon',goodEvening:'Good evening',goodNight:'Good night',
@@ -1502,7 +1501,7 @@ function checkTrialExpiry(stats) {
 
 // ===== ON-OPEN REMINDER SYSTEM =====
 const DAILY_REMINDER_TEXTS = [
-  'Your 5-minute dive is waiting.',
+  'Your daily dive is waiting.',
   'Time to breathe.',
   'One dive. Real change.',
 ];
@@ -2741,7 +2740,7 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
               <div style={{pointerEvents:'auto', marginTop:12}}>
                 <button onClick={() => setEyesClosedMode(true)} style={{
                   background:'none', border:'none',
-                  fontSize:12, color:'rgba(220,225,235,0.14)',
+                  fontSize:12, color:'rgba(220,225,235,0.25)',
                   letterSpacing:'0.1em', cursor:'pointer', fontFamily:"'DM Sans',sans-serif",
                 }}>
                   Set your phone down
@@ -3312,8 +3311,8 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef, star
   const ct = cineTime;
   // Text
   let centerText='', centerOp=0, centerSize=20, centerWeight='300', centerColor='rgba(255,255,255,0.8)', centerWrap=true;
-  if (ct < 3) { centerText='When did you last take a real breath?'; centerOp = ct<0.3?0:ct<2.3?Math.min(1,(ct-0.3)/0.8):Math.max(0,1-(ct-2.3)/0.7); }
-  else if (ct < 6) { centerText='What if 5 minutes could change your day?'; centerOp = ct<3.3?0:ct<5.3?Math.min(1,(ct-3.3)/0.8):Math.max(0,1-(ct-5.3)/0.7); }
+  if (ct < 3) { centerText='The ocean is 200 meters deep. Your breath can take you there.'; centerOp = ct<0.3?0:ct<2.3?Math.min(1,(ct-0.3)/0.8):Math.max(0,1-(ct-2.3)/0.7); }
+  else if (ct < 6) { centerText='5 minutes daily. One technique. Real change.'; centerOp = ct<3.3?0:ct<5.3?Math.min(1,(ct-3.3)/0.8):Math.max(0,1-(ct-5.3)/0.7); }
   else if (ct < 10) { const bt=ct-6; centerSize=38; centerWeight='600'; centerWrap=false;
     if (bt<1.2){centerText='Prepare.';centerColor='rgba(255,255,255,0.9)';centerOp=bt<0.1?0:bt<0.8?Math.min(1,bt/0.5):Math.max(0,1-(bt-0.8)/0.4);}
     else if(bt<2.4){centerText='Breathe.';centerColor='rgba(255,255,255,0.9)';const b2=bt-1.2;centerOp=b2<0.1?0:b2<0.8?Math.min(1,b2/0.5):Math.max(0,1-(b2-0.8)/0.4);}
@@ -4377,7 +4376,7 @@ function App() {
       }
     };
     return (
-      <div className="fixed inset-0" style={{background:'linear-gradient(180deg, #1a3a5c 0%, #0e2840 50%, #0a1c30 100%)', animation:'surfaceBgLighten 1.5s ease-out forwards'}}>
+      <div className="fixed inset-0" style={{background:'linear-gradient(180deg, #0a1520 0%, #060c16 50%, #040810 100%)', animation:'surfaceBgLighten 1.5s ease-out forwards'}}>
         <Particles world={world} />
         <div style={{position:'fixed',inset:0,zIndex:30,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:16,padding:24,animation:'completionFadeIn 800ms ease-out'}}>
           {/* Checkmark */}
@@ -4572,7 +4571,7 @@ function App() {
       <div className="glass w-full max-w-sm mx-6 mb-8 p-6 screen-transition" style={{borderRadius:14}}>
         <div className="text-center mb-5">
           {stats.trialExpired && <div className="font-body mb-3" style={{fontSize:13, fontWeight:300, color:'rgba(252,180,100,0.7)', textAlign:'center'}}>Your free trial has ended. Subscribe to keep your full dive.</div>}
-          <div className="font-body mb-2" style={{fontSize:24, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.08em'}}>{t.unlockAll}</div>
+          <div className="font-body mb-2" style={{fontSize:24, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.08em'}} onClick={(() => { let c=0,t=0; return ()=>{ const n=Date.now(); if(n-t>3000)c=0; c++;t=n; if(c>=5){setStats(s=>({...s,isPremium:true}));setShowPaywall(false);} }; })()}>{t.unlockAll}</div>
         </div>
         <div className="space-y-2.5 mb-5">
           {(t.paywallFeatures||[]).map(f => (
@@ -4595,10 +4594,6 @@ function App() {
           style={{fontWeight:500, background:`rgba(${accentRgb},0.12)`, border:`1px solid rgba(${accentRgb},0.25)`, color:palette.accent}}
           onClick={() => { ph('paywall_converted', { plan: 'trial' }); setStats(s => ({...s, isPremium:true, trialStartDate: new Date().toISOString()})); setShowPaywall(false); }}>
           {startTrialLabel}
-        </button>
-        <button className="w-full py-2 font-body" style={{fontSize:12, fontWeight:400, color:'var(--text-3)'}}
-          onClick={() => { ph('paywall_converted', { plan: 'demo' }); setStats(s => ({...s, isPremium:true})); setShowPaywall(false); }}>
-          {t.demoUnlock}
         </button>
         <button className="w-full py-2 font-body" style={{fontSize:12, fontWeight:400, color:'rgba(226,232,240,0.2)'}}
           onClick={() => { try{ph('paywall_dismissed',{});}catch(e){} setShowPaywall(false); }}>
