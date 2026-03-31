@@ -3007,6 +3007,7 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef, star
 
   useEffect(() => {
     if (breathPhase !== 'cinematic') return;
+    try { ph('onboarding_started', {}); } catch(e) {}
     const startTime = performance.now();
     let running = true;
     const interval = setInterval(() => {
@@ -3333,7 +3334,7 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef, star
 
   return (
     <div style={{position:'fixed',inset:0,zIndex:60,background:cineBg,display:'flex',alignItems:'center',justifyContent:'center'}}>
-      {showSkip && <button onClick={()=>{clearInterval(rafRef.current);if(introAmbientRef.current){introAmbientRef.current.pause();introAmbientRef.current=null;}setBreathPhase('done');}} style={{position:'fixed',top:'calc(16px + env(safe-area-inset-top, 0px))',right:16,zIndex:100,background:'none',border:'none',fontFamily:"'DM Sans',sans-serif",fontWeight:400,fontSize:14,color:'rgba(255,255,255,0.4)',padding:'8px 16px',cursor:'pointer'}}>Skip</button>}
+      {showSkip && <button onClick={()=>{clearInterval(rafRef.current);if(introAmbientRef.current){introAmbientRef.current.pause();introAmbientRef.current=null;}try{ph('onboarding_cinematic_skipped',{});}catch(e){}setBreathPhase('done');}} style={{position:'fixed',top:'calc(16px + env(safe-area-inset-top, 0px))',right:16,zIndex:100,background:'none',border:'none',fontFamily:"'DM Sans',sans-serif",fontWeight:400,fontSize:14,color:'rgba(255,255,255,0.4)',padding:'8px 16px',cursor:'pointer'}}>Skip</button>}
       {bubbleOp>0 && <div style={{position:'absolute',top:'42%',left:'50%',transform:`translate(-50%,${bubbleY}) scale(${bubbleScale})`,width:'min(75vw, 300px)',aspectRatio:'1',opacity:bubbleOp,pointerEvents:'none'}}><OceanBubble ref={bubbleGlowRef}/></div>}
       {centerText&&centerOp>0.01 && <div style={{position:'absolute',top:'42%',left:'50%',transform:'translate(-50%,-50%)',fontFamily:"'DM Sans',sans-serif",fontWeight:centerWeight,fontSize:centerSize,color:centerColor,opacity:centerOp,textAlign:'center',zIndex:10,pointerEvents:'none',whiteSpace:centerWrap?'normal':'nowrap',maxWidth:centerWrap?280:'none'}}>{centerText}</div>}
       {phaseLabel && <div style={{position:'fixed',top:'calc(42% - min(37.5vw, 150px) - 36px)',left:0,right:0,textAlign:'center',zIndex:15,pointerEvents:'none'}}><div className="font-body" style={{fontWeight:600,fontSize:13,letterSpacing:'0.2em',textTransform:'uppercase',color:'rgba(220,225,235,0.55)'}}>{phaseLabel}</div></div>}
@@ -3787,6 +3788,7 @@ function App() {
       const sessions = stats.totalSessions || 0;
       if ((sessions >= 2 && !stats.installPromptDismissed) || (sessions >= 5 && stats.installPromptDismissed)) {
         setShowInstallBanner(true);
+        try { ph('install_prompt_shown', {}); } catch(e) {}
       }
     }
     // Handle /?sos=true shortcut (PWA shortcut from manifest)
@@ -3914,6 +3916,7 @@ function App() {
         if (newLevel && newLevel.name !== oldLevel) {
           newMastery[tc].level = newLevel.name;
           masteryLevelUp = { technique: tc, newLevel: newLevel.name };
+          try { ph('mastery_level_up', { technique: tc, level: newLevel.name }); } catch(e) {}
         }
       });
       return {
@@ -3960,7 +3963,7 @@ function App() {
       }
     });
     const mergedSegs = mergeConsecutiveTexts(segments);
-    ph('session_start', { scenario: meta?.scenario, technique: segments.find(s=>s.type==='breathing')?.technique, duration: segments.reduce((a,s)=>a+(s.duration||0),0), level: userLevel });
+    ph('session_start', { scenario: meta?.scenario, technique: segments.find(s=>s.type==='breathing')?.technique, duration: segments.reduce((a,s)=>a+(s.duration||0),0), level: userLevel, session_type: meta?.isSOSSession ? 'sos' : meta?.isFirstSession ? 'onboarding' : meta?.programId ? 'program' : meta?.category === 'custom' ? 'custom' : meta?.category === 'breathe_now' ? 'breathe_now' : 'quick_dive' });
     setActiveSession({ segments: mergedSegs, meta });
     if (stats.soundEnabled) {
       ambientRef.current.init(WORLDS[world].ambient);
@@ -4041,7 +4044,9 @@ function App() {
             return total + (cycleDur > 0 ? Math.floor(s.duration / cycleDur) : 0);
           }, 0) || Math.round(totalDur / 16));
       const cData = { duration: actualDur, techniques: techs, depth: sessionDepth(actualDur, mainTech, stats.level || 'basic'), breathCycles, segments: segs, _lastScenario: activeSession.meta?.scenario, _isFirstSession: activeSession.meta?.isFirstSession || false };
-      ph('session_complete', { scenario: activeSession.meta?.scenario, depth: cData.depth, preMood: currentMood.pre, postMood: currentMood.post });
+      ph('session_complete', { scenario: activeSession.meta?.scenario, technique: mainTech, duration: actualDur, depth: cData.depth, preMood: currentMood.pre, postMood: currentMood.post, mood_delta: (currentMood.pre != null && currentMood.post != null) ? currentMood.pre - currentMood.post : null, session_type: activeSession.meta?.isSOSSession ? 'sos' : activeSession.meta?.isFirstSession ? 'onboarding' : activeSession.meta?.programId ? 'program' : 'quick_dive' });
+      // Update user properties
+      try { ph('$set', { total_sessions: (stats.totalSessions||0)+1, streak: stats.streak, is_premium: stats.isPremium, techniques_tried: Object.keys(stats.techniqueStats||{}).length, total_depth: stats.totalDepth, goal: stats.userGoal }); } catch(e) {}
       setActiveSession(null);
       setShowSurfacing(true);
       HAPTIC.celebrate();
@@ -4164,6 +4169,7 @@ function App() {
             setCurrentMood({pre: null, post: null});
             setMoodDelta(null);
             const segs = [{ type:'breathing', technique:'physiological_sigh', duration:120, params:{inhale1:2,inhale2:1,exhale:7} }];
+            try { ph('onboarding_first_session_started', {}); } catch(e) {}
             actuallyStartSession(segs, {scenario:'first_session_real', category:'onboarding', isFirstSession:true});
           } else {
             // Replay intro or skip → go home
@@ -4184,7 +4190,7 @@ function App() {
               {[[t.stressRelief,'stress_relief'],[t.betterFocus,'better_focus'],[t.betterSleep,'better_sleep'],[t.moreEnergy,'more_energy']].map(([label,val]) => (
                 <button key={val} className="glass px-8 py-3 font-body w-full max-w-xs"
                   style={{fontWeight:500, fontSize:16, color:palette.accent, border:`1px solid rgba(${accentRgb},0.25)`}}
-                  onClick={() => { setOnboardingGoal(val); setOnboardingPhase('soft_auth'); }}>
+                  onClick={() => { try{ph('onboarding_goal_selected',{goal:val});}catch(e){} setOnboardingGoal(val); setOnboardingPhase('soft_auth'); }}>
                   {label}
                 </button>
               ))}
@@ -4197,6 +4203,7 @@ function App() {
     // Phase 3: Soft auth (save progress)
     if (onboardingPhase === 'soft_auth') {
       const finishOnboarding = (method) => {
+        try { ph(method === 'anonymous' ? 'onboarding_auth_skipped' : 'onboarding_auth_email', {}); } catch(e) {}
         if (method === 'anonymous') {
           localStorage.setItem('dive-anonymous-user', 'true');
           setAuthUser({ id: 'demo', isDemo: true });
@@ -4343,6 +4350,7 @@ function App() {
       { technique:'diaphragmatic', duration:120, params:{inhale:4,exhale:8} }, // extended exhale style
     ];
     const recordSOSOutcome = (outcome) => {
+      try { ph('sos_outcome', { outcome, cascade_level: sosCascadeLevel }); } catch(e) {}
       setStats(s => {
         const hist = [...s.history];
         if (hist.length > 0) { hist[hist.length-1] = {...hist[hist.length-1], sosOutcome: outcome, sosCascadeLevel, sessionType:'sos'}; }
@@ -4357,6 +4365,7 @@ function App() {
         const nextLevel = sosCascadeLevel + 1;
         if (nextLevel > 2) {
           // After 3rd "Still stressed" → show PostCascadeScreen
+          try { ph('sos_post_cascade_shown', {}); } catch(e) {}
           setCompletionStep('post_cascade');
           return;
         }
@@ -4592,7 +4601,7 @@ function App() {
           {t.demoUnlock}
         </button>
         <button className="w-full py-2 font-body" style={{fontSize:12, fontWeight:400, color:'rgba(226,232,240,0.2)'}}
-          onClick={() => setShowPaywall(false)}>
+          onClick={() => { try{ph('paywall_dismissed',{});}catch(e){} setShowPaywall(false); }}>
           {t.close}
         </button>
       </div>
@@ -4693,7 +4702,7 @@ function App() {
         if (!milestone) return null;
         return (
           <div key={milestone.id} style={{marginBottom:12, padding:'14px 16px', borderRadius:12, background:'rgba(94,170,168,0.06)', border:'1px solid rgba(94,170,168,0.12)', display:'flex', alignItems:'center', gap:12}}>
-            <div className="font-body" style={{flex:1, fontSize:14, fontWeight:300, color:'rgba(220,225,235,0.7)', lineHeight:1.5}}>{milestone.message}</div>
+            <div className="font-body" style={{flex:1, fontSize:14, fontWeight:300, color:'rgba(220,225,235,0.7)', lineHeight:1.5}} ref={el => { if (el && !el._tracked) { el._tracked = true; try{ph('milestone_shown',{milestone_id:milestone.id});}catch(e){} } }}>{milestone.message}</div>
             <button onClick={() => setStats(s => ({...s, shownMilestones:[...(s.shownMilestones||[]), milestone.id]}))} style={{background:'none', border:'none', color:'rgba(220,225,235,0.3)', fontSize:18, cursor:'pointer', padding:'4px 8px', lineHeight:1, flexShrink:0}}>{'\u00D7'}</button>
           </div>
         );
@@ -4732,7 +4741,7 @@ function App() {
         background:'rgba(255,255,255,0.024)',
         border:'1px solid rgba(255,255,255,0.05)',
         display:'flex', flexDirection:'column', justifyContent:'space-between',
-      }} onClick={() => launchScenario(rec.scenario, rec.duration)}>
+      }} onClick={() => { try{ph('daily_dive_tapped',{technique:rec.technique,scenario:rec.scenario});}catch(e){} launchScenario(rec.scenario, rec.duration); }}>
         <div>
           <div className="font-body mb-2" style={{fontSize:12, fontWeight:500, color:palette.accent, opacity:0.7, letterSpacing:'0.08em', textTransform:'uppercase'}}>{rec.isGoTo ? 'YOUR GO-TO' : t.todaysDiveLabel}</div>
           <div className="font-body mb-3" style={{fontSize:22, fontWeight:400, color:'rgba(226,232,240,0.95)', letterSpacing:'0.04em'}}>{rec.title}</div>
@@ -4812,7 +4821,7 @@ function App() {
               <button key={val} onClick={async () => {
                 let granted = false;
                 if (typeof Notification !== 'undefined' && Notification.permission !== 'denied') {
-                  try { const perm = await Notification.requestPermission(); granted = perm === 'granted'; } catch(e) {}
+                  try { const perm = await Notification.requestPermission(); granted = perm === 'granted'; ph(granted ? 'notification_permission_granted' : 'notification_permission_denied', {}); } catch(e) {}
                 }
                 setStats(s => ({...s, reminderTime: val, notificationsGranted: granted}));
                 if (granted) scheduleNextNotification({...stats, reminderTime: val, notificationsGranted: true});
@@ -4832,7 +4841,7 @@ function App() {
       {/* Discovery card: breath hold test — appears after 3 sessions if no tests done */}
       {(stats.totalSessions || 0) >= 3 && !(stats.breathTests || []).length && (
         <button className="glass w-full text-left mb-4" style={{padding:'16px 20px', display:'flex', alignItems:'center', gap:12}}
-          onClick={() => { setScreen('breath_test'); }}>
+          onClick={() => { try{ph('discovery_card_tapped',{});}catch(e){} setScreen('breath_test'); }}>
           <span style={{color:palette.accent, opacity:0.5}}><Icon name="deep" size={20}/></span>
           <div>
             <div className="font-body" style={{fontWeight:500, fontSize:15, color:'rgba(220,225,235,0.85)'}}>How deep can you go?</div>
@@ -4851,7 +4860,7 @@ function App() {
           setMoodDelta(null);
           setLastSessionWasSOS(true);
           setSosCascadeLevel(1);
-          ph('sos_used', {});
+          ph('sos_started', {});
           const segs = [{ type:'breathing', technique:'physiological_sigh', duration:90, params:{inhale1:2,inhale2:1,exhale:7} }];
           actuallyStartSession(segs, {scenario:'stress_sos', category:'stress', isSOSSession:true});
         }}>
@@ -5485,6 +5494,8 @@ function App() {
         startAtPhase="holdTest"
         onComplete={(goal, holdTimeResult) => {
           if (holdTimeResult && holdTimeResult > 0) {
+            const hDepthForTracking = holdTimeToDepth(holdTimeResult);
+            try { ph('breath_test_completed', { depth: hDepthForTracking, hold_time: Math.round(holdTimeResult*10)/10 }); } catch(e) {}
             setStats(s => {
               const hDepth = holdTimeToDepth(holdTimeResult);
               const newState = {...s};
