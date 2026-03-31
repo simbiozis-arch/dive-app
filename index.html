@@ -3323,7 +3323,7 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef, star
   const ct = cineTime;
   // Text
   let centerText='', centerOp=0, centerSize=20, centerWeight='300', centerColor='rgba(255,255,255,0.8)', centerWrap=true;
-  if (ct < 3) { centerText='The ocean is 200 meters deep. Your breath can take you there.'; centerOp = ct<0.3?0:ct<2.3?Math.min(1,(ct-0.3)/0.8):Math.max(0,1-(ct-2.3)/0.7); }
+  if (ct < 3) { centerText='Freedivers train one thing above all \u2014 how to breathe.'; centerOp = ct<0.3?0:ct<2.3?Math.min(1,(ct-0.3)/0.8):Math.max(0,1-(ct-2.3)/0.7); }
   else if (ct < 6) { centerText='5 minutes daily. One technique. Real change.'; centerOp = ct<3.3?0:ct<5.3?Math.min(1,(ct-3.3)/0.8):Math.max(0,1-(ct-5.3)/0.7); }
   else if (ct < 10) { const bt=ct-6; centerSize=38; centerWeight='600'; centerWrap=false;
     if (bt<1.2){centerText='Prepare.';centerColor='rgba(255,255,255,0.9)';centerOp=bt<0.1?0:bt<0.8?Math.min(1,bt/0.5):Math.max(0,1-(bt-0.8)/0.4);}
