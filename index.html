@@ -221,7 +221,7 @@ const LANG = {
     deepFocus:'Deep Focus',deepFocusSub:'5 days · Train your depth of attention',
     dayN:'Day',startDay:'Start',completed:'Completed',locked:'Locked',
     videoComingSoon:'Video lessons from coach — coming soon',continueText:'Continue',
-    unlockAll:'Unlock everything',monthly:'$5.99/mo',yearly:'$39.99/yr',yearlySave:'Save 44%',
+    unlockAll:'Unlock deeper dives',monthly:'$5.99/mo',yearly:'$39.99/yr',yearlySave:'Save 44%',
     startTrial:'Start 7-day free trial',demoUnlock:'Unlock for demo',
     voiceGuided:'Voice guided',
     bodyScanFull:"Forehead — release all tension. Eyes — heavy lids. Jaw — slightly open, tongue resting free. Neck — long, relaxed. Shoulders — drop them away from your ears. Arms — heavy, warm. Chest — open. Belly — soft. Legs — heavy. Feet — warm.",
@@ -240,7 +240,7 @@ const LANG = {
     onb2title:'7 techniques',onb2sub:'Proven by science and depth',onb2desc:'Diaphragmatic, box, ujjayi, physiological sigh — and three more.',
     onb3title:'14 scenarios',onb3sub:'For every occasion',onb3desc:'Before a meeting, after a tough day, insomnia, morning anxiety — find the right one.',
     onb4title:'3 programs',onb4sub:'Step-by-step learning',onb4desc:'First Dive. Stress Shield. Deep Focus. Guided progression.',
-    paywallFeatures:['All 14 breathing scenarios','All programs with coaching','10-minute deep sessions','Advanced technique mastery tracking'],
+    paywallFeatures:['All 14 dive scenarios','All programs with guided descent','10-minute deep descents','Advanced dive mastery tracking'],
     morningIntro:'Good morning. Five minutes of breathing before coffee. Your body will wake up faster.',
     overloadIntro:'Five minutes. Zero input. Just you and your breath.',
     conflictIntro:'Stop. Before replaying it in your head — breathe. Adrenaline leaves your blood in 3 to 5 minutes. Let it pass.',
@@ -439,16 +439,26 @@ const WORLDS = {
 
 // ===== SCIENCE FACTS =====
 const SCIENCE_FACTS = [
-  "Stanford research: 5 minutes of cyclic sighing daily improves mood more than meditation. (Balban et al., 2023)",
-  "Your diaphragm is the only skeletal muscle that works 24/7.",
-  "Slow breathing activates the vagus nerve \u2014 your body\u2019s built-in calm switch.",
-  "HRV starts improving after just 90 seconds of controlled breathing.",
-  "Extended exhales directly activate your parasympathetic nervous system.",
-  "Freedivers use the same techniques before descending to 100+ meters.",
-  "You can\u2019t be in fight-or-flight and breathe slowly at the same time.",
-  "Box breathing is used by Navy SEALs before high-stakes operations.",
-  "Coherence breathing at 5.5 breaths/min maximizes heart rate variability.",
-  "A single cyclic sigh can shift your nervous system in under 60 seconds.",
+  "Stanford research: 5 min of cyclic sighing daily improves mood more than meditation (Balban et al., 2023)",
+  "Your diaphragm is the only skeletal muscle that works 24/7 \u2014 and you can control it consciously (Zaccaro 2018)",
+  "Slow breathing activates the vagus nerve, your body\u2019s built-in calm switch (Gerritsen & Band 2018)",
+  "Heart rate variability shifts within 90 seconds of slow breathing (Tabor 2022)",
+  "Extended exhales widen your vagal response window \u2014 the longer the exhale, the deeper the calm (De Couck 2019)",
+  "Freedivers train the same breathing patterns to reach 200m depths. You\u2019re using their toolkit (Alkan 2013)",
+  "Slow breathing at 6 breaths per minute disrupts the fight-or-flight loop directly (Zaccaro 2018)",
+  "Navy SEALs use box breathing before high-stakes missions \u2014 equal phases create neural balance (Theobald 2023)",
+  "Breathing at 5.5 breaths/min produces the largest measurable HRV response \u2014 your cardiovascular resonance frequency (Lin 2014)",
+  "A single cyclic sigh can reduce stress in under 60 seconds \u2014 the fastest evidence-based technique (Balban 2023)",
+  "Freedivers slow their heart rate from 80 to 30 bpm using the mammalian dive reflex \u2014 you activate it with every exhale",
+  "Breathing at resonance frequency produces Hedges\u2019 g=0.83 for stress reduction \u2014 the largest effect in breathwork research (Goessl 2017)",
+  "4 minutes of cyclic sighing reduced pain intensity in an orthopedic clinic (Hanley 2025)",
+  "Regular breathwork reduces anxiety with effect size g=\u22120.32 across 12 randomized trials (Fincham 2023, n=785)",
+  "The preBötzinger Complex \u2014 200 neurons in your brainstem \u2014 controls the sigh reflex that resets your breathing (Li 2016, Nature)",
+  "Diaphragmatic breathing for 8 weeks significantly reduced cortisol levels and improved sustained attention (Ma 2017)",
+  "Breath hold capacity improves 15.8% in 8 weeks of practice \u2014 even in non-divers (Apnea training 2024)",
+  "Coherence breathing synchronizes your heart rhythm with your breath \u2014 0\u00b0 phase delay, maximum efficiency (Lehrer & Gevirtz 2014)",
+  "2 minutes of extended exhale breathing improved decision-making accuracy by ~50% in a controlled study (De Couck 2019)",
+  "The largest breathwork study (n=400) found breathing + attention together produce the benefit \u2014 both matter (Daniel-Watanabe 2023)",
 ];
 
 // ===== TECHNIQUE INFO (science annotations) =====
@@ -1402,12 +1412,13 @@ function getScenarioDisplayName(key) {
 // ===== SMART DAILY RECOMMENDATION =====
 // ===== MASTERY LEVELS =====
 const MASTERY_LEVELS = [
-  { name:'beginner', threshold:3, stars:1 },
-  { name:'practitioner', threshold:10, stars:2 },
-  { name:'master', threshold:25, stars:3 },
-  { name:'expert', threshold:50, stars:4 },
-  { name:'elite', threshold:100, stars:5 },
+  { name:'snorkeler', threshold:3, stars:1 },
+  { name:'open_water', threshold:10, stars:2 },
+  { name:'deep_diver', threshold:25, stars:3 },
+  { name:'free_diver', threshold:50, stars:4 },
+  { name:'abyss_diver', threshold:100, stars:5 },
 ];
+const MASTERY_DISPLAY = {snorkeler:'Snorkeler',open_water:'Open Water',deep_diver:'Deep Diver',free_diver:'Free Diver',abyss_diver:'Abyss Diver'};
 function getMasteryLevel(sessionCount) {
   let level = null;
   for (const l of MASTERY_LEVELS) {
@@ -1424,7 +1435,7 @@ const MILESTONES = [
   { id:'depth_10', condition: s => (s.totalDepth||0) >= 10, message:"10 meters deep. That's a swimming pool of breath hold capacity." },
   { id:'sessions_30', condition: s => (s.totalSessions||0) >= 30, message:"30 dives. You're in the top 10% of DIVE users." },
   { id:'sessions_40', condition: s => (s.totalSessions||0) >= 40, message:"40 dives. Breathing is becoming automatic." },
-  { id:'first_mastery', condition: s => Object.values(s.techniqueMastery||{}).some(t => t.level === 'master'), message:"You've mastered a technique." },
+  { id:'first_mastery', condition: s => Object.values(s.techniqueMastery||{}).some(t => t.level === 'deep_diver'), message:"Deep Diver unlocked. You've mastered a technique." },
   { id:'sessions_50', condition: s => (s.totalSessions||0) >= 50, message:"50 dives. A freediver trains for years. You're on the path." },
   { id:'all_7_tried', condition: s => Object.keys(s.techniqueStats||{}).length >= 7, message:"All 7 techniques tried. Your breathing toolkit is complete." },
   { id:'sessions_100', condition: s => (s.totalSessions||0) >= 100, message:"100 dives. You're an Elite Diver." },
@@ -3241,7 +3252,8 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef, star
           <div className="screen-transition text-center z-10">
             <div className="font-body mb-6" style={{fontSize:16, fontWeight:300, color:'rgba(220,225,235,0.55)', letterSpacing:'0.04em'}}>{isFirstTest ? 'Your baseline' : 'Your depth'}</div>
             <div className="font-mono mb-2" style={{fontSize:48, fontWeight:300, color:palette.accent}}>{formatDepth(holdDepth)}<span style={{fontSize:24}}>m</span></div>
-            <div className="font-body mb-3" style={{fontSize:17, fontWeight:300, color:'rgba(220,225,235,0.5)'}}>{depthContext(holdDepth)}</div>
+            <div className="font-body mb-2" style={{fontSize:17, fontWeight:300, color:'rgba(220,225,235,0.5)'}}>{depthContext(holdDepth)}</div>
+            <div className="font-body mb-3" style={{fontSize:13, fontWeight:300, color:'rgba(220,225,235,0.35)'}}>CO₂ tolerance predicts how calm you stay under pressure.</div>
             {getEqualizationFact(holdDepth) && (
               <div className="font-body mb-3" style={{fontSize:13, fontWeight:300, color:'rgba(220,225,235,0.3)', fontStyle:'italic'}}>{getEqualizationFact(holdDepth)}</div>
             )}
@@ -4428,7 +4440,7 @@ function App() {
           {/* SOS flow: 3-option response */}
           {isSOS && completionStep === 'stats' && !sosPartialMsg && (
             <div className="screen-transition" style={{textAlign:'center'}}>
-              <div className="font-body" style={{fontSize:17,fontWeight:300,color:'rgba(220,225,235,0.7)',marginBottom:16}}>How do you feel now?</div>
+              <div className="font-body" style={{fontSize:17,fontWeight:300,color:'rgba(220,225,235,0.7)',marginBottom:16}}>How's the surface?</div>
               <div style={{display:'flex',flexDirection:'column',gap:10,alignItems:'center',maxWidth:260}}>
                 <button className="w-full py-3 rounded-xl font-body"
                   style={{fontWeight:500,background:`rgba(${accentRgb},0.12)`,border:`1px solid rgba(${accentRgb},0.25)`,color:palette.accent,fontSize:15}}
@@ -4505,7 +4517,7 @@ function App() {
           {stats._masteryLevelUp && (
             <div className="screen-transition" style={{textAlign:'center',marginTop:4}}>
               <div className="font-body" style={{fontSize:14,fontWeight:400,color:palette.accent,opacity:0.8}}>
-                {'★'.repeat((MASTERY_LEVELS.find(l=>l.name===stats._masteryLevelUp.newLevel)||{stars:1}).stars)} {stats._masteryLevelUp.newLevel.charAt(0).toUpperCase()+stats._masteryLevelUp.newLevel.slice(1)} in {TECHNIQUE_DISPLAY[stats._masteryLevelUp.technique]||stats._masteryLevelUp.technique}
+                {'★'.repeat((MASTERY_LEVELS.find(l=>l.name===stats._masteryLevelUp.newLevel)||{stars:1}).stars)} {MASTERY_DISPLAY[stats._masteryLevelUp.newLevel]||stats._masteryLevelUp.newLevel} in {TECHNIQUE_DISPLAY[stats._masteryLevelUp.technique]||stats._masteryLevelUp.technique}
               </div>
             </div>
           )}
@@ -4752,7 +4764,7 @@ function App() {
           <div className="font-body mb-3" style={{fontSize:22, fontWeight:400, color:'rgba(220,225,235,0.95)', letterSpacing:'0.04em'}}>{rec.title}</div>
           <div className="font-body" style={{fontSize:16, fontWeight:300, color:'var(--text-2)'}}>{rec.sub}</div>
           {rec.technique && (() => {
-            const WHY = {physiological_sigh:'Fastest stress relief \u2014 Stanford research',box:'Sharpens focus under pressure',diaphragmatic:'Foundation technique \u2014 lowers cortisol',segmented:'Builds breath awareness and energy',ujjayi:'Advanced focus through breath control',tidal:'Natural rhythm \u2014 calming baseline'};
+            const WHY = {physiological_sigh:'Fastest stress relief \u2014 Stanford protocol (Balban 2023)',box:'Sharpens focus under pressure (Theobald 2023)',diaphragmatic:'Foundation technique \u2014 lowers cortisol (Ma 2017)',segmented:'Builds breath awareness and lung capacity',ujjayi:'Advanced focus via glottic resistance (Mason 2013)',tidal:'Natural rhythm \u2014 calming baseline (Fincham 2023)'};
             const why = WHY[rec.technique];
             return why ? <div className="font-body" style={{fontSize:12, fontWeight:300, color:'rgba(220,225,235,0.3)', marginTop:6}}>{why}</div> : null;
           })()}
@@ -5251,7 +5263,7 @@ function App() {
           <div style={{marginBottom:24, borderTop:'1px solid rgba(255,255,255,0.03)', paddingTop:20}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
               <div className="font-body" style={{fontSize:13, fontWeight:500, color:'rgba(220,225,235,0.28)', letterSpacing:'0.12em', textTransform:'uppercase'}}>Techniques</div>
-              <div className="font-mono" style={{fontSize:12, color:palette.accent, opacity:0.6}}>{masterCount}/7 mastered</div>
+              <div className="font-mono" style={{fontSize:12, color:palette.accent, opacity:0.6}}>{masterCount}/7 at Deep Diver</div>
             </div>
             <div className="space-y-3">
               {[
