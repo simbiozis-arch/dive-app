@@ -1290,8 +1290,13 @@ const defaultStats = () => ({
   bestHoldDepth: 0,
   introSeen:false,
   depthExplained:false,
-  techniqueMastery:{},  // { technique_id: { sessions: N, level: 'beginner' } }
-  shownMilestones:[],   // milestone IDs that have been dismissed
+  techniqueMastery:{},
+  shownMilestones:[],
+  notificationsGranted:false,
+  lastOnOpenReminder:null,
+  lastStreakWarning:null,
+  showDailyReminder:false,
+  showStreakWarning:false,
 });
 
 // ===== FIRST SESSION (cyclic sigh) =====
@@ -1475,6 +1480,59 @@ function getTimeSlot(hour) {
   if (hour >= 11 && hour < 17) return 1; // midday
   if (hour >= 17 && hour < 22) return 2; // evening
   return 3; // night
+}
+
+// ===== ON-OPEN REMINDER SYSTEM =====
+const DAILY_REMINDER_TEXTS = [
+  'Your 5-minute dive is waiting.',
+  'Time to breathe.',
+  'One dive. Real change.',
+];
+function checkOnOpenReminders(stats) {
+  if (!stats.onboarded || !stats.reminderTime || stats.reminderTime === 'dismissed') return stats;
+  const now = new Date();
+  const today = now.toDateString();
+  const hour = now.getHours();
+  const reminderHour = stats.reminderTime === 'evening' ? 20 : 9;
+  // Daily reminder: past reminder hour + no session today
+  const todaySessions = (stats.history || []).filter(h => new Date(h.date).toDateString() === today);
+  let changed = false;
+  if (hour >= reminderHour && todaySessions.length === 0 && stats.lastOnOpenReminder !== today) {
+    stats.showDailyReminder = true;
+    stats.lastOnOpenReminder = today;
+    changed = true;
+  }
+  // Streak at risk: missed yesterday, streak ≥ 3
+  if ((stats.streak || 0) >= 3 && stats.history && stats.history.length > 0) {
+    const lastSession = new Date(stats.history[stats.history.length - 1].date);
+    const daysSince = (now - lastSession) / (1000*60*60*24);
+    if (daysSince >= 1.5 && daysSince < 2.5 && stats.lastStreakWarning !== today) {
+      stats.showStreakWarning = true;
+      stats.lastStreakWarning = today;
+      changed = true;
+    }
+  }
+  if (changed) saveData(stats);
+  return stats;
+}
+
+// ===== NOTIFICATION SCHEDULER (best-effort, tab must be open) =====
+function scheduleNextNotification(stats) {
+  if (!stats.notificationsGranted || typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+  const now = new Date();
+  const next = new Date();
+  const hour = stats.reminderTime === 'evening' ? 20 : 9;
+  next.setHours(hour, 0, 0, 0);
+  if (next <= now) next.setDate(next.getDate() + 1);
+  const ms = next - now;
+  setTimeout(() => {
+    const today = new Date().toDateString();
+    const todaySessions = (stats.history || []).filter(h => new Date(h.date).toDateString() === today);
+    if (todaySessions.length === 0 && Notification.permission === 'granted') {
+      try { new Notification('DIVE', { body:'Your 5-minute dive is waiting.', icon:'/icon-192.png' }); } catch(e) {}
+    }
+    scheduleNextNotification(stats);
+  }, Math.min(ms, 86400000)); // cap at 24h to avoid overflow
 }
 
 function getDailyRecommendation(stats, t) {
@@ -3687,6 +3745,13 @@ function App() {
   useEffect(() => {
     audioDebug();
     ph('app_open', { totalSessions: stats.totalSessions, streak: stats.currentStreak, totalDepth: stats.totalDepth });
+    // On-open reminder checks
+    const checked = checkOnOpenReminders({...stats});
+    if (checked.showDailyReminder !== stats.showDailyReminder || checked.showStreakWarning !== stats.showStreakWarning) {
+      setStats(s => ({...s, showDailyReminder: checked.showDailyReminder, showStreakWarning: checked.showStreakWarning, lastOnOpenReminder: checked.lastOnOpenReminder, lastStreakWarning: checked.lastStreakWarning}));
+    }
+    // Schedule browser notification if granted
+    scheduleNextNotification(stats);
     // Handle /?sos=true shortcut (PWA shortcut from manifest)
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('sos') === 'true' && stats.onboarded) {
@@ -4575,6 +4640,33 @@ function App() {
         );
       })()}
 
+      {/* Daily reminder banner (on-open system) */}
+      {stats.showDailyReminder && (
+        <div style={{marginBottom:12, padding:'14px 16px', borderRadius:12, background:'rgba(94,170,168,0.06)', border:'1px solid rgba(94,170,168,0.12)', display:'flex', alignItems:'center', gap:12}}>
+          <div className="font-body" style={{flex:1, fontSize:15, fontWeight:300, color:'rgba(220,225,235,0.75)', lineHeight:1.5}}>
+            {DAILY_REMINDER_TEXTS[Math.floor(Math.random() * DAILY_REMINDER_TEXTS.length)]}
+          </div>
+          <button onClick={() => { setStats(s => ({...s, showDailyReminder:false})); launchScenario(getDailyRecommendation(stats, t).scenario, getDailyRecommendation(stats, t).duration); }}
+            style={{padding:'6px 14px', borderRadius:8, background:`rgba(${accentRgb},0.12)`, border:`1px solid rgba(${accentRgb},0.25)`, color:palette.accent, fontSize:13, fontWeight:500, cursor:'pointer', flexShrink:0}}>Dive now</button>
+          <button onClick={() => setStats(s => ({...s, showDailyReminder:false}))} style={{background:'none', border:'none', color:'rgba(220,225,235,0.25)', fontSize:18, cursor:'pointer', padding:'2px 6px', lineHeight:1, flexShrink:0}}>{'\u00D7'}</button>
+        </div>
+      )}
+
+      {/* Streak warning banner */}
+      {stats.showStreakWarning && (stats.streak || 0) >= 3 && (
+        <div style={{marginBottom:12, padding:'14px 16px', borderRadius:12, background:'rgba(255,180,80,0.06)', border:'1px solid rgba(255,180,80,0.12)', display:'flex', alignItems:'center', gap:12}}>
+          <div className="font-body" style={{flex:1, fontSize:14, fontWeight:300, color:'rgba(220,225,235,0.7)', lineHeight:1.5}}>
+            Your {stats.streak}-day streak needs you. 1 minute to save it.
+          </div>
+          <button onClick={() => {
+            setStats(s => ({...s, showStreakWarning:false}));
+            const segs = [{ type:'breathing', technique:'physiological_sigh', duration:60, params:{inhale1:2,inhale2:1,exhale:7} }];
+            actuallyStartSession(segs, {scenario:'surface_breath', category:'recovery'});
+          }} style={{padding:'6px 14px', borderRadius:8, background:'rgba(255,180,80,0.12)', border:'1px solid rgba(255,180,80,0.25)', color:'rgba(255,200,120,0.9)', fontSize:13, fontWeight:500, cursor:'pointer', flexShrink:0}}>Save streak</button>
+          <button onClick={() => setStats(s => ({...s, showStreakWarning:false}))} style={{background:'none', border:'none', color:'rgba(220,225,235,0.25)', fontSize:18, cursor:'pointer', padding:'2px 6px', lineHeight:1, flexShrink:0}}>{'\u00D7'}</button>
+        </div>
+      )}
+
       {/* Daily recommendation card */}
       <button className="w-full text-left mb-6" style={{
         minHeight:'max(150px, 38vh)', maxHeight:'42vh', borderRadius:14, padding:'32px 24px', position:'relative', overflow:'hidden',
@@ -4653,17 +4745,26 @@ function App() {
       {stats.totalSessions >= 3 && !stats.reminderTime && (
         <div style={{padding:'14px 16px', marginBottom:16, borderRadius:10, background:'rgba(94,170,168,0.05)', border:'1px solid rgba(94,170,168,0.10)', fontSize:15, color:'rgba(220,225,235,0.6)', lineHeight:1.6}}>
           {t.buildHabit || 'Build a daily habit?'}
-          <div style={{fontSize:12, color:'rgba(220,225,235,0.3)', marginTop:4, marginBottom:8}}>We'll greet you with a session when you open the app</div>
+          <div style={{fontSize:12, color:'rgba(220,225,235,0.3)', marginTop:4, marginBottom:8}}>
+            {typeof Notification !== 'undefined' ? "We'll send you a daily reminder" : "We'll remind you when you open the app"}
+          </div>
           <div style={{display:'flex', gap:8}}>
-            {[['Morning','morning'],['Evening','evening']].map(([label,val]) => (
-              <button key={val} onClick={() => setStats(s => ({...s, reminderTime: val}))}
+            {[['Morning (9 AM)','morning'],['Evening (8 PM)','evening']].map(([label,val]) => (
+              <button key={val} onClick={async () => {
+                let granted = false;
+                if (typeof Notification !== 'undefined' && Notification.permission !== 'denied') {
+                  try { const perm = await Notification.requestPermission(); granted = perm === 'granted'; } catch(e) {}
+                }
+                setStats(s => ({...s, reminderTime: val, notificationsGranted: granted}));
+                if (granted) scheduleNextNotification({...stats, reminderTime: val, notificationsGranted: true});
+              }}
                 style={{padding:'6px 14px', borderRadius:8, background:`rgba(${accentRgb},0.08)`, border:`1px solid rgba(${accentRgb},0.18)`, fontSize:12, fontWeight:500, color:palette.accent, cursor:'pointer'}}>
                 {label}
               </button>
             ))}
             <button onClick={() => setStats(s => ({...s, reminderTime: 'dismissed'}))}
               style={{padding:'6px 14px', borderRadius:8, background:'none', border:'1px solid rgba(255,255,255,0.06)', fontSize:12, color:'rgba(220,225,235,0.35)', cursor:'pointer'}}>
-              {t.habitNotNow || 'Not now'}
+              Not now
             </button>
           </div>
         </div>
@@ -5247,6 +5348,31 @@ function App() {
               </button>
             </div>
           </div>
+
+          {/* Daily reminder settings */}
+          {stats.reminderTime && stats.reminderTime !== 'dismissed' && (
+            <div className="glass p-5 mt-3 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="font-body" style={{fontSize:16, fontWeight:400, color:'rgba(226,232,240,0.75)'}}>Daily reminder</span>
+                <button className="relative rounded-full" style={{width:44, height:24, background:`rgba(${accentRgb},0.25)`, border:'1px solid rgba(255,255,255,0.06)', transition:'all 200ms ease'}}
+                  onClick={() => setStats(s => ({...s, reminderTime: null}))}>
+                  <div className="absolute rounded-full transition-all" style={{top:3, width:16, height:16, background:palette.accent, left:'calc(100% - 20px)'}} />
+                </button>
+              </div>
+              <div className="flex gap-2">
+                {[['Morning (9 AM)','morning'],['Evening (8 PM)','evening']].map(([label,val]) => (
+                  <button key={val} onClick={() => setStats(s => ({...s, reminderTime: val}))}
+                    style={{flex:1, padding:'8px', borderRadius:8, fontSize:13,
+                      background: stats.reminderTime === val ? `rgba(${accentRgb},0.15)` : 'rgba(255,255,255,0.03)',
+                      border: stats.reminderTime === val ? `1px solid rgba(${accentRgb},0.3)` : '1px solid rgba(255,255,255,0.06)',
+                      color: stats.reminderTime === val ? palette.accent : 'rgba(220,225,235,0.4)', cursor:'pointer'}}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {stats.notificationsGranted && <div className="font-body" style={{fontSize:11, color:'rgba(94,170,168,0.5)'}}>Browser notifications active</div>}
+            </div>
+          )}
 
           {/* Replay intro + Reset */}
           <button className="w-full py-3 font-body rounded-full mb-3" style={{fontSize:15, fontWeight:400, color:'var(--text-2)', border:'1px solid rgba(255,255,255,0.07)', marginTop:16}}
