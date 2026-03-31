@@ -1482,6 +1482,23 @@ function getTimeSlot(hour) {
   return 3; // night
 }
 
+// ===== FREE TIER GATING =====
+const FREE_TECHNIQUES = ['physiological_sigh','box','diaphragmatic'];
+const FREE_MAX_DURATION = 120; // 2 minutes in seconds
+const FREE_PROGRAM_DAYS = { first_dive: 3 }; // first 3 days free
+
+function checkTrialExpiry(stats) {
+  if (stats.isPremium && stats.trialStartDate) {
+    const daysSince = (Date.now() - new Date(stats.trialStartDate).getTime()) / (1000*60*60*24);
+    if (daysSince > 7) {
+      stats.isPremium = false;
+      stats.trialExpired = true;
+      return true; // changed
+    }
+  }
+  return false;
+}
+
 // ===== ON-OPEN REMINDER SYSTEM =====
 const DAILY_REMINDER_TEXTS = [
   'Your 5-minute dive is waiting.',
@@ -1599,12 +1616,18 @@ function getDailyRecommendation(stats, t) {
     if (sorted.length > 0) pick = sorted[0];
   }
 
+  // Free tier: substitute premium techniques
+  if (!stats.isPremium && !FREE_TECHNIQUES.includes(pick)) {
+    const subs = {segmented:'physiological_sigh', ujjayi:'diaphragmatic', tidal:'box', recovery:'diaphragmatic'};
+    pick = subs[pick] || 'physiological_sigh';
+  }
+
   const displayName = TECHNIQUE_DISPLAY[pick] || pick;
-  // Map technique to best scenario
   const techToScenario = { physiological_sigh:'hard_day', box:'meeting', diaphragmatic:'just_relax', segmented:'morning', ujjayi:'just_relax', tidal:'insomnia' };
   const scenario = techToScenario[pick] || 'just_relax';
+  const durMin = stats.isPremium ? 5 : 2;
 
-  return { scenario, duration:5, title: slotLabel, sub:'5 ' + t.min + ' \u00b7 ' + displayName, technique:pick, isDailyDive:true };
+  return { scenario, duration:durMin, title: slotLabel, sub:durMin + ' ' + t.min + ' \u00b7 ' + displayName, technique:pick, isDailyDive:true };
 }
 
 // ===== AMBIENT ENGINE =====
@@ -3745,6 +3768,10 @@ function App() {
   useEffect(() => {
     audioDebug();
     ph('app_open', { totalSessions: stats.totalSessions, streak: stats.currentStreak, totalDepth: stats.totalDepth });
+    // Trial expiry check
+    if (checkTrialExpiry(stats)) {
+      setStats(s => ({...s, isPremium: false, trialExpired: true}));
+    }
     // On-open reminder checks
     const checked = checkOnOpenReminders({...stats});
     if (checked.showDailyReminder !== stats.showDailyReminder || checked.showStreakWarning !== stats.showStreakWarning) {
@@ -3990,6 +4017,10 @@ function App() {
           if (!pp[activeSession.meta.programId].includes(activeSession.meta.day)) pp[activeSession.meta.programId] = [...pp[activeSession.meta.programId], activeSession.meta.day];
           const prog = PROGRAMS[activeSession.meta.programId];
           const programsCompleted = prog && pp[activeSession.meta.programId].length >= prog.days ? prev.programsCompleted + 1 : prev.programsCompleted;
+          // Proactive paywall after First Dive Day 3 (day index 2)
+          if (activeSession.meta.programId === 'first_dive' && activeSession.meta.day === 2 && !prev.paywallShownAfterDay3 && !prev.isPremium) {
+            return {...prev, programProgress: pp, programsCompleted, showDay3Paywall: true};
+          }
           return {...prev, programProgress: pp, programsCompleted};
         });
       }
@@ -4019,10 +4050,13 @@ function App() {
   const checkAccess = (item, dur) => {
     if (stats.isPremium) return true;
     if (!item.free) return false;
-    // Free scenarios: 10min versions are premium only
-    if (dur && dur >= 10) return false;
+    // Free users: only 2-min durations
+    if (dur && dur > 2) return false;
     return true;
   };
+  const isTechniqueFree = (tech) => stats.isPremium || FREE_TECHNIQUES.includes(tech);
+  const isDurationFree = (durMin) => stats.isPremium || durMin <= 2;
+  const isProgramDayFree = (progId, dayIdx) => stats.isPremium || (FREE_PROGRAM_DAYS[progId] || 0) > dayIdx;
 
   const bg = getDepthBackground(stats.totalDepth);
 
@@ -4481,6 +4515,19 @@ function App() {
               </div>
             </div>
           )}
+          {/* Day 3 proactive paywall prompt */}
+          {completionStep === 'done' && stats.showDay3Paywall && !stats.paywallShownAfterDay3 && (
+            <div className="screen-transition" style={{textAlign:'center', marginBottom:16}}>
+              <div className="font-body" style={{fontSize:16, fontWeight:300, color:'rgba(220,225,235,0.8)', marginBottom:4}}>You've learned 3 techniques in 3 days.</div>
+              <div className="font-body" style={{fontSize:14, fontWeight:300, color:'rgba(220,225,235,0.5)', marginBottom:12}}>Ready for the full experience?</div>
+              <button className="px-6 py-2.5 rounded-full font-body mb-3"
+                style={{fontWeight:500, background:`rgba(${accentRgb},0.12)`, border:`1px solid rgba(${accentRgb},0.25)`, color:palette.accent}}
+                onClick={() => { setStats(s => ({...s, paywallShownAfterDay3:true, showDay3Paywall:false})); setShowPaywall(true); }}>See what's next</button>
+              <button className="font-body block mx-auto"
+                style={{fontSize:13, color:'rgba(220,225,235,0.3)', background:'none', border:'none', cursor:'pointer'}}
+                onClick={() => setStats(s => ({...s, paywallShownAfterDay3:true, showDay3Paywall:false}))}>Not now</button>
+            </div>
+          )}
           {/* Final: New dive / Continue */}
           {completionStep === 'done' && (
             <div className="screen-transition" style={{textAlign:'center'}}>
@@ -4505,6 +4552,7 @@ function App() {
     <div className="fixed inset-0 z-50 flex items-end justify-center" style={{background:'rgba(0,0,0,0.7)', backdropFilter:'blur(12px)'}}>
       <div className="glass w-full max-w-sm mx-6 mb-8 p-6 screen-transition" style={{borderRadius:14}}>
         <div className="text-center mb-5">
+          {stats.trialExpired && <div className="font-body mb-3" style={{fontSize:13, fontWeight:300, color:'rgba(252,180,100,0.7)', textAlign:'center'}}>Your free trial has ended. Subscribe to keep your full dive.</div>}
           <div className="font-body mb-2" style={{fontSize:24, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.08em'}}>{t.unlockAll}</div>
         </div>
         <div className="space-y-2.5 mb-5">
@@ -4885,8 +4933,8 @@ function App() {
             </button>
           ))}
           {/* Custom pattern card */}
-          <button className="glass w-full text-left flex items-center gap-3 px-4 py-3"
-            onClick={() => setScreen('custom-pattern')}>
+          <button className="glass w-full text-left flex items-center gap-3 px-4 py-3" style={{position:'relative'}}
+            onClick={() => { if (!stats.isPremium) { setShowPaywall(true); return; } setScreen('custom-pattern'); }}>
             <span style={{color:'rgba(94,170,168,0.5)'}}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
             </span>
@@ -4894,6 +4942,7 @@ function App() {
               <div className="font-body" style={{fontWeight:500, fontSize:15, color:'rgba(255,255,255,0.85)'}}>Custom</div>
               <div className="font-mono mt-1" style={{fontSize:13, fontWeight:300, color:'rgba(255,255,255,0.35)'}}>Build your own pattern</div>
             </div>
+            {!stats.isPremium && <span style={{color:'var(--text-3)', opacity:0.4}}><Icon name="lock" size={14}/></span>}
           </button>
         </div>
       </div>
@@ -5469,16 +5518,20 @@ function App() {
             {label:'Get focused', sub:'Box breathing \u00b7 3 min', technique:'box', duration:180, methodLabel:'Military performance'},
             {label:'Energy boost', sub:'Segmented \u00b7 3 min', technique:'segmented', duration:180, methodLabel:'Pranayama'},
             {label:'Just breathe', sub:'Extended exhale \u00b7 3 min', technique:'diaphragmatic', duration:180, methodLabel:'Vagal stimulation'},
-          ].map(opt => (
-            <button key={opt.label} onClick={() => { setScreen('home'); startBreatheNowChoice(opt); }} style={{padding:'20px 16px',borderRadius:'14px',background:'rgba(255,255,255,0.025)',border:'1px solid rgba(255,255,255,0.06)',cursor:'pointer',textAlign:'left'}}>
+          ].map(opt => {
+            const locked = !isTechniqueFree(opt.technique);
+            return (
+            <button key={opt.label} onClick={() => { if (locked) { setShowPaywall(true); return; } setScreen('home'); startBreatheNowChoice(opt); }} style={{padding:'20px 16px',borderRadius:'14px',background:'rgba(255,255,255,0.025)',border:'1px solid rgba(255,255,255,0.06)',cursor:'pointer',textAlign:'left',position:'relative',opacity:locked?0.6:1}}>
               <div style={{fontSize:'17px',fontWeight:400,color:'rgba(220,225,235,0.8)'}}>{opt.label}</div>
               <div style={{fontSize:'13px',fontWeight:300,color:'rgba(220,225,235,0.35)',marginTop:4}}>{opt.sub}</div>
               <div style={{display:'flex',alignItems:'center',marginTop:6}}>
                 <span style={{fontFamily:"'DM Sans',sans-serif",fontSize:10,fontWeight:400,color:'rgba(94,170,168,0.5)',letterSpacing:'0.03em'}}>{opt.methodLabel}</span>
                 <InfoButton techniqueId={opt.technique} />
               </div>
+              {locked && <div style={{position:'absolute',top:8,right:8,fontSize:10,color:'rgba(220,225,235,0.4)'}}>Premium</div>}
             </button>
-          ))}
+            );
+          })}
         </div>
         <button onClick={() => setScreen('home')} style={{marginTop:32,fontSize:15,color:'rgba(220,225,235,0.3)',background:'none',border:'none',cursor:'pointer'}}>Cancel</button>
       </div>
