@@ -677,7 +677,6 @@ const HAPTIC = {
   inhaleCue: () => { if (!isIOS && navigator.vibrate) navigator.vibrate(40); else playTick(40, 250); },
   exhaleCue: () => { if (!isIOS && navigator.vibrate) navigator.vibrate(20); else playTick(20, 120); },
   holdCue: () => { if (!isIOS && navigator.vibrate) navigator.vibrate([30,20,30]); else { playTick(30,180); setTimeout(()=>playTick(30,150),50); } },
-  textMoment: () => { if (!isIOS && navigator.vibrate) navigator.vibrate([50,30,50]); else { playTick(50,180); setTimeout(()=>playTick(50,150),80); } },
   sessionStart: () => { if (!isIOS && navigator.vibrate) navigator.vibrate([100,50,100,50,100]); else { playTick(100,200); setTimeout(()=>playTick(100,170),150); setTimeout(()=>playTick(100,140),300); } },
   splash: () => { if (!isIOS && navigator.vibrate) navigator.vibrate(200); else playTick(200, 100); },
   celebrate: () => { if (!isIOS && navigator.vibrate) navigator.vibrate([50,30,50,30,80,40,120]); else { playTick(50,250); setTimeout(()=>playTick(80,200),80); setTimeout(()=>playTick(120,150),200); } },
@@ -1732,13 +1731,11 @@ const AUDIO_MAP = {
   intro_diaphragmatic: '/audio/intro_diaphragmatic.mp3',
   intro_cyclic_sigh: '/audio/intro_cyclic_sigh.mp3',
   intro_box: '/audio/intro_box.mp3',
-  intro_extended_exhale: '/audio/intro_extended_exhale.mp3',
   intro_segmented: '/audio/intro_segmented.mp3',
   intro_ujjayi: '/audio/intro_ujjayi.mp3',
   intro_tidal: '/audio/intro_tidal.mp3',
   // P1 Bookends
   bookend_sit: '/audio/bookend_sit.mp3',
-  bookend_ready: '/audio/bookend_ready.mp3',
   bookend_sleep: '/audio/bookend_sleep.mp3',
   bookend_done: '/audio/bookend_done.mp3',
   // P1 Body scan
@@ -1941,11 +1938,11 @@ const TEXT_VOICE_MAP = {
 
 // Measured audio clip durations (seconds, estimated from file size @ 128kbps)
 const CLIP_DURATIONS = {
-  bookend_done:3.6, bookend_ready:3.9, bookend_sit:7.3, bookend_sleep:5.4,
+  bookend_done:3.6, bookend_sit:7.3, bookend_sleep:5.4,
   cue_breathe_in:3.4, cue_breathe_out:3.4, cue_hold:4.2, cue_little_more:3.5, cue_pause:3.3,
   ec_breathe_in:3.9, ec_breathe_out:4.8, ec_hold:3.9, ec_more:3.6,
   intro_box:15.1, intro_cyclic_sigh:13.7, intro_diaphragmatic:13.5,
-  intro_extended_exhale:13.4, intro_segmented:12.0, intro_tidal:10.9, intro_ujjayi:10.1,
+  intro_segmented:12.0, intro_tidal:10.9, intro_ujjayi:10.1,
   scan_full:26.0, scan_short:13.9, scan_sleep:25.3,
   vis_ocean_calm:23.1, vis_ocean_focus:21.7,
 };
