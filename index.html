@@ -1061,8 +1061,8 @@ const PROGRAMS = {
   }
 };
 
-// ===== SESSION INSIGHTS (WOW 5) =====
-const SESSION_INSIGHTS = [
+// SESSION_INSIGHTS and getSessionInsight removed — were defined but never rendered
+const _SESSION_INSIGHTS_REMOVED = [
   // Breathing science (20)
   {id:'sci1',text:'Your heart rate variability just improved. That means your nervous system is more flexible now than {cycles} cycles ago.',condition:()=>true},
   {id:'sci2',text:'You just hit cardiac coherence — the state where your heart, lungs, and brain synchronize. It takes about 3 minutes to reach.',condition:(s)=>s.duration>=180},
@@ -1418,6 +1418,7 @@ const MILESTONES = [
   { id:'minutes_60', condition: s => (s.totalMinutes||0) >= 60, message:"60 minutes of active nervous system training." },
   { id:'depth_10', condition: s => (s.totalDepth||0) >= 10, message:"10 meters deep. That's a swimming pool of breath hold capacity." },
   { id:'sessions_30', condition: s => (s.totalSessions||0) >= 30, message:"30 dives. You're in the top 10% of DIVE users." },
+  { id:'sessions_40', condition: s => (s.totalSessions||0) >= 40, message:"40 dives. Breathing is becoming automatic." },
   { id:'first_mastery', condition: s => Object.values(s.techniqueMastery||{}).some(t => t.level === 'master'), message:"You've mastered a technique." },
   { id:'sessions_50', condition: s => (s.totalSessions||0) >= 50, message:"50 dives. A freediver trains for years. You're on the path." },
   { id:'all_7_tried', condition: s => Object.keys(s.techniqueStats||{}).length >= 7, message:"All 7 techniques tried. Your breathing toolkit is complete." },
@@ -3863,6 +3864,7 @@ function App() {
       ambientRef.current.init(WORLDS[world].ambient);
       ambientRef.current.fadeIn();
       playSplashWithVariation(); // splash on dive start
+      HAPTIC.sessionStart();
     }
     // P1.2: MediaSession metadata so lock screen shows session info
     if ('mediaSession' in navigator) {
@@ -3936,6 +3938,8 @@ function App() {
       ph('session_complete', { scenario: activeSession.meta?.scenario, depth: cData.depth, preMood: currentMood.pre, postMood: currentMood.post });
       setActiveSession(null);
       setShowSurfacing(true);
+      HAPTIC.celebrate();
+      try { const doneAudio = new Audio('/audio/bookend_done.mp3'); doneAudio.volume = 0.6; doneAudio.play().catch(()=>{}); } catch(e) {}
       setTimeout(() => {
         setShowSurfacing(false);
         setCompletionData(cData);
@@ -4553,8 +4557,10 @@ function App() {
         </div>
       </div>
 
-      {/* Time-based greeting */}
-      <div className="font-body mb-4" style={{fontSize:16, fontWeight:300, color:'var(--text-3)', textAlign:'left'}}>{getGreeting(t)}</div>
+      {/* Time-based greeting + streak */}
+      <div className="font-body mb-4" style={{fontSize:16, fontWeight:300, color:'var(--text-3)', textAlign:'left'}}>
+        {getGreeting(t)}{stats.streak > 0 && <span style={{marginLeft:8, color:'rgba(220,225,235,0.25)'}}>{stats.streak}-day streak</span>}
+      </div>
 
       {/* Milestone card — first unshown milestone */}
       {(() => {
@@ -4580,6 +4586,11 @@ function App() {
           <div className="font-body mb-2" style={{fontSize:12, fontWeight:500, color:palette.accent, opacity:0.7, letterSpacing:'0.08em', textTransform:'uppercase'}}>{rec.isGoTo ? 'YOUR GO-TO' : t.todaysDiveLabel}</div>
           <div className="font-body mb-3" style={{fontSize:22, fontWeight:400, color:'rgba(226,232,240,0.95)', letterSpacing:'0.04em'}}>{rec.title}</div>
           <div className="font-body" style={{fontSize:16, fontWeight:300, color:'var(--text-2)'}}>{rec.sub}</div>
+          {rec.technique && (() => {
+            const WHY = {physiological_sigh:'Fastest stress relief \u2014 Stanford research',box:'Sharpens focus under pressure',diaphragmatic:'Foundation technique \u2014 lowers cortisol',segmented:'Builds breath awareness and energy',ujjayi:'Advanced focus through breath control',tidal:'Natural rhythm \u2014 calming baseline'};
+            const why = WHY[rec.technique];
+            return why ? <div className="font-body" style={{fontSize:12, fontWeight:300, color:'rgba(220,225,235,0.3)', marginTop:6}}>{why}</div> : null;
+          })()}
         </div>
         <div style={{textAlign:'center', marginTop:16}}>
           <div className="inline-flex items-center justify-center font-body"
@@ -4595,7 +4606,7 @@ function App() {
           {stats.streak > 0 ? <><span className="font-mono">{stats.streak}</span> {t.dayStreak}</> : t.streakStart}
         </div>
         <div className="font-body" style={{fontSize:12, fontWeight:400, color:'var(--text-3)'}}>
-          <span className="font-mono">{formatDepth(stats.totalDepth)}</span> {WORLDS[world].depthUnit} {t.depth}
+          <span className="font-mono">{formatDepth(stats.totalDepth)}</span>{WORLDS[world].depthUnit} · {depthContext(stats.totalDepth)}
         </div>
         <span style={{
           display:'inline-flex', alignItems:'center', gap:4,
@@ -4819,38 +4830,7 @@ function App() {
     );
   };
 
-  const renderQuickDive = () => (
-    <div className="screen-transition overflow-y-auto h-full no-scrollbar" style={{padding:'env(safe-area-inset-top, 48px) 24px 100px 24px'}}>
-      <div className="font-body mb-6" style={{fontSize:24, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.1em'}}>{t.quickDives}</div>
-      <div className="flex gap-2 overflow-x-auto no-scrollbar mb-4">
-        {Object.keys(CATEGORIES).map(catKey => (
-          <button key={catKey} className="flex-shrink-0 font-body" style={{
-            padding:'6px 16px', borderRadius:20, fontSize:15,
-            background: exploreCat === catKey ? `rgba(${accentRgb},0.10)` : 'transparent',
-            border: exploreCat === catKey ? `1px solid rgba(${accentRgb},0.20)` : '1px solid rgba(255,255,255,0.06)',
-            color: exploreCat === catKey ? palette.accent : 'var(--text-2)',
-          }} onClick={() => setExploreCat(catKey)}>
-            {t[CATEGORY_LANG_KEY[catKey]]}
-          </button>
-        ))}
-      </div>
-      <div className="space-y-3">
-        {Object.entries(SCENARIOS).filter(([_, sc]) => sc.cat === exploreCat).map(([id, sc]) => (
-          <button key={id} className="glass p-5 w-full text-left flex items-center gap-4"
-            onClick={() => handleScenarioTap(id)}>
-            <span style={{color:palette.accent,opacity:0.6}}><Icon name={sc.svgIcon || id} size={24}/></span>
-            <div className="flex-1">
-              <div className="font-body" style={{fontWeight:500, fontSize:17, color:'rgba(255,255,255,0.92)'}}>{t[SCENARIO_LANG_KEY[id]]}</div>
-              <div className="font-mono" style={{fontSize:12, fontWeight:300, color:'rgba(255,255,255,0.4)', marginTop:3}}>
-                {sc.durations.map(d => d + ' ' + t.min).join(' / ')}
-              </div>
-            </div>
-            {!checkAccess(sc) && <span style={{color:'var(--text-3)',opacity:0.4}}><Icon name="lock" size={14}/></span>}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
+
 
   const renderProgramView = () => {
     const prog = PROGRAMS[selectedProgram];
@@ -5265,20 +5245,6 @@ function App() {
                 onClick={() => setStats(s => ({...s, voiceEnabled:!s.voiceEnabled}))}>
                 <div className="absolute rounded-full transition-all" style={{top:3, width:16, height:16, background: stats.voiceEnabled ? palette.accent : 'rgba(255,255,255,0.3)', left: stats.voiceEnabled ? 'calc(100% - 20px)' : '4px'}} />
               </button>
-            </div>
-            {/* Font size setting */}
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-              <span style={{fontSize:17,color:'rgba(220,225,235,0.65)'}}>Font size</span>
-              <div style={{display:'flex',gap:8}}>
-                {['normal','large'].map(s => (
-                  <button key={s} onClick={() => { setStats(prev => ({...prev, fontScale: s})); }}
-                    style={{padding:'6px 12px',borderRadius:8,fontSize:15,
-                      background: stats.fontScale === s ? 'rgba(94,170,168,0.15)' : 'rgba(255,255,255,0.04)',
-                      border: `1px solid ${stats.fontScale === s ? 'rgba(94,170,168,0.3)' : 'rgba(255,255,255,0.06)'}`,
-                      color: stats.fontScale === s ? 'rgba(94,170,168,0.8)' : 'rgba(220,225,235,0.5)',
-                    }}>{s === 'normal' ? 'Normal' : 'Large'}</button>
-                ))}
-              </div>
             </div>
           </div>
 
