@@ -2362,6 +2362,7 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
   const [eyesClosedMode, setEyesClosedMode] = useState(false);
   const ecPhaseRef = useRef(null);
   const [voiceOn, setVoiceOn] = useState(voiceEnabled);
+  const [sessionMuted, setSessionMuted] = useState(false);
   const [bodyScanIdx, setBodyScanIdx] = useState(0);
   const lastPhaseRef = useRef('');
   const lastDiveProgressRef = useRef(0);
@@ -2858,20 +2859,23 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
               <Icon name={paused ? 'play' : 'pause'} size={14}/>
             </button>
             <button onClick={() => {
-              setHapticOn(prev => !prev);
+              const newMuted = !sessionMuted;
+              setSessionMuted(newMuted);
+              if (newMuted) {
+                ambientRef.current?.duck(0.2);
+                voicePlayer.stop();
+                setVoiceOn(false);
+                setHapticOn(false);
+              } else {
+                ambientRef.current?.unduck(0.5);
+                setVoiceOn(voiceEnabled);
+                setHapticOn(true);
+              }
             }} className="flex items-center justify-center rounded-full" style={{width:36,height:36,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.06)'}}>
-              {hapticOn ? (
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(220,225,235,0.6)" strokeWidth="1.5" strokeLinecap="round">
-                  <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-                  <path d="M13.73 21a2 2 0 01-3.46 0"/>
-                </svg>
+              {!sessionMuted ? (
+                <Icon name="sound" size={16}/>
               ) : (
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(220,225,235,0.6)" strokeWidth="1.5" strokeLinecap="round">
-                  <path d="M13.73 21a2 2 0 01-3.46 0"/>
-                  <path d="M18.63 13A17.89 17.89 0 0018 8"/>
-                  <path d="M6.26 6.26A5.86 5.86 0 006 8c0 7-3 9-3 9h14"/>
-                  <line x1="1" y1="1" x2="23" y2="23"/>
-                </svg>
+                <Icon name="mute" size={16}/>
               )}
             </button>
           </div>
