@@ -2843,7 +2843,7 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
           <button onClick={() => setShowExitConfirm(true)} className="flex items-center justify-center rounded-full" style={{width:40,height:40,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.06)'}}>
             <Icon name="close" size={16}/>
           </button>
-          <div ref={timeDisplayRef} className="font-mono" style={{fontSize:15, fontWeight:300, color:'rgba(226,232,240,0.35)', letterSpacing:'0.02em'}}>
+          <div ref={timeDisplayRef} className="font-mono" style={{fontSize:15, fontWeight:300, color:'rgba(220,225,235,0.35)', letterSpacing:'0.02em'}}>
             0:00 / {Math.floor(totalDuration / 60)}:{String(Math.floor(totalDuration % 60)).padStart(2,'0')}
           </div>
           <div className="flex items-center gap-2">
@@ -2854,12 +2854,12 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
               setHapticOn(prev => !prev);
             }} className="flex items-center justify-center rounded-full" style={{width:36,height:36,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.06)'}}>
               {hapticOn ? (
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(226,232,240,0.6)" strokeWidth="1.5" strokeLinecap="round">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(220,225,235,0.6)" strokeWidth="1.5" strokeLinecap="round">
                   <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
                   <path d="M13.73 21a2 2 0 01-3.46 0"/>
                 </svg>
               ) : (
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(226,232,240,0.6)" strokeWidth="1.5" strokeLinecap="round">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(220,225,235,0.6)" strokeWidth="1.5" strokeLinecap="round">
                   <path d="M13.73 21a2 2 0 01-3.46 0"/>
                   <path d="M18.63 13A17.89 17.89 0 0018 8"/>
                   <path d="M6.26 6.26A5.86 5.86 0 006 8c0 7-3 9-3 9h14"/>
@@ -2908,9 +2908,9 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
 
         {/* Exit confirm */}
         {showExitConfirm && (
-          <div style={{position:'fixed', inset:0, background:'rgba(0,0,0,0.65)', zIndex:60, display:'flex', alignItems:'center', justifyContent:'center', backdropFilter:'blur(12px)'}}>
+          <div style={{position:'fixed', inset:0, background:'rgba(0,0,0,0.65)', zIndex:60, display:'flex', alignItems:'center', justifyContent:'center', backdropFilter:'blur(12px)', animation:'fade-in 300ms ease-out'}}>
             <div className="text-center screen-transition" style={{background:'rgba(12,19,34,0.95)', border:'1px solid rgba(255,255,255,0.06)', borderRadius:14, padding:24, maxWidth:280, width:'calc(100% - 48px)', zIndex:61}}>
-              <div className="font-body mb-2" style={{fontSize:20, fontWeight:400, color:'rgba(226,232,240,0.95)'}}>{t.exitSession}</div>
+              <div className="font-body mb-2" style={{fontSize:20, fontWeight:400, color:'rgba(220,225,235,0.95)'}}>{t.exitSession}</div>
               <div className="font-body mb-6" style={{fontSize:16, fontWeight:300, color:'var(--text-2)'}}>{t.exitConfirm}</div>
               <div className="flex gap-3 justify-center">
                 <button onClick={() => { setShowExitConfirm(false); onExit(); }} className="px-6 py-3 rounded-full font-body" style={{fontWeight:500, background:'rgba(255,255,255,0.08)', border:'1px solid rgba(255,255,255,0.1)', color:'var(--text)'}}>{t.exitYes}</button>
@@ -2924,7 +2924,7 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
         {paused && !showExitConfirm && (
           <div className="absolute inset-0 flex items-center justify-center" style={{zIndex:60, background:'rgba(0,0,0,0.7)', backdropFilter:'blur(12px)'}}>
             <div className="text-center screen-transition" style={{zIndex:61}}>
-              <div className="font-body mb-6" style={{fontSize:32, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.1em'}}>{t.pause}</div>
+              <div className="font-body mb-6" style={{fontSize:32, fontWeight:300, color:'rgba(220,225,235,0.95)', letterSpacing:'0.1em'}}>{t.pause}</div>
               <button onClick={() => setPaused(false)} className="px-8 py-3 rounded-full font-body" style={{fontWeight:500, background:`rgba(${accentRgb},0.12)`, border:`1px solid rgba(${accentRgb},0.25)`, color:palette.accent}}>
                 {t.resume}
               </button>
@@ -3130,7 +3130,7 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef, star
       <div className="fixed inset-0 flex flex-col items-center justify-center px-8" style={{background:oceanBg}}>
         <Particles world={fbWorld} />
         <div className="screen-transition text-center z-10">
-          <div className="font-body mb-10" style={{fontSize:24, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.06em'}}>{t.whatBroughtYou}</div>
+          <div className="font-body mb-10" style={{fontSize:24, fontWeight:300, color:'rgba(220,225,235,0.95)', letterSpacing:'0.06em'}}>{t.whatBroughtYou}</div>
           <div className="flex flex-col gap-3 items-center">
             {[[t.stressRelief,'stress_relief'],[t.betterFocus,'better_focus'],[t.betterSleep,'better_sleep'],[t.moreEnergy,'more_energy']].map(([label,val]) => (
               <button key={val} className="glass px-8 py-3 font-body w-full max-w-xs"
@@ -3153,7 +3153,7 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef, star
         <div className="fixed inset-0 flex flex-col items-center justify-center px-8" style={{background:oceanBg}}>
           <Particles world={fbWorld} />
           <div className="screen-transition text-center z-10">
-            <div className="font-body mb-8" style={{fontSize:22, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.04em'}}>{t.holdTestTitle || "Let's find your depth"}</div>
+            <div className="font-body mb-8" style={{fontSize:22, fontWeight:300, color:'rgba(220,225,235,0.95)', letterSpacing:'0.04em'}}>{t.holdTestTitle || "Let's find your depth"}</div>
             <div className="flex flex-col gap-3 mb-10" style={{maxWidth:260, margin:'0 auto 40px'}}>
               {[
                 '1. Take a big breath IN through your nose',
@@ -3292,7 +3292,7 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef, star
       <div className="fixed inset-0 flex flex-col items-center justify-center px-8" style={{background:oceanBg}}>
         <Particles world={fbWorld} />
         <div className="screen-transition text-center z-10">
-          <div className="font-body mb-10" style={{fontSize:24, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.06em'}}>{t.howDoYouFeel}</div>
+          <div className="font-body mb-10" style={{fontSize:24, fontWeight:300, color:'rgba(220,225,235,0.95)', letterSpacing:'0.06em'}}>{t.howDoYouFeel}</div>
           <div className="flex gap-3 justify-center">
             {[[t.feelBetter,'better'],[t.feelCalmer,'calmer'],[t.feelCurious,'curious']].map(([label,val]) => (
               <button key={val} className="glass px-6 py-3 font-body"
@@ -3370,7 +3370,7 @@ function CustomPatternScreen({ onBack, onStart, onSave }) {
         <button onClick={onBack} style={{color:'var(--text-3)', background:'none', border:'none', cursor:'pointer', padding:0}}>
           <Icon name="back" size={20}/>
         </button>
-        <div className="font-body" style={{fontSize:18, fontWeight:300, color:'rgba(226,232,240,0.95)', flex:1}}>Create Pattern</div>
+        <div className="font-body" style={{fontSize:18, fontWeight:300, color:'rgba(220,225,235,0.95)', flex:1}}>Create Pattern</div>
       </div>
 
       {/* Timeline Preview Bar */}
@@ -3998,14 +3998,19 @@ function App() {
     }
   };
 
+  // Fade out pre-mood then start session
+  const dismissPreMood = () => {
+    const el = document.querySelector('.pre-mood-fade');
+    if (el) { el.style.opacity = '0'; el.style.transition = 'opacity 0.3s ease'; }
+    setTimeout(() => {
+      setShowPreMood(false);
+      if (pendingSessionData) { actuallyStartSession(pendingSessionData.segments, pendingSessionData.meta); setPendingSessionData(null); }
+    }, 300);
+  };
   // Auto-dismiss pre-mood after 5 seconds
   useEffect(() => {
     if (showPreMood && pendingSessionData) {
-      preMoodTimerRef.current = setTimeout(() => {
-        setShowPreMood(false);
-        actuallyStartSession(pendingSessionData.segments, pendingSessionData.meta);
-        setPendingSessionData(null);
-      }, 5000);
+      preMoodTimerRef.current = setTimeout(dismissPreMood, 5000);
       return () => clearTimeout(preMoodTimerRef.current);
     }
   }, [showPreMood, pendingSessionData]);
@@ -4184,7 +4189,7 @@ function App() {
         <div className="fixed inset-0 flex flex-col items-center justify-center px-8 screen-transition" style={{background:WORLDS.ocean.bgGradient}}>
           <Particles world="ocean" />
           <div className="text-center z-10">
-            <div className="font-body mb-10" style={{fontSize:24, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.06em'}}>{t.whatBroughtYou}</div>
+            <div className="font-body mb-10" style={{fontSize:24, fontWeight:300, color:'rgba(220,225,235,0.95)', letterSpacing:'0.06em'}}>{t.whatBroughtYou}</div>
             <div className="flex flex-col gap-3 items-center">
               {[[t.stressRelief,'stress_relief'],[t.betterFocus,'better_focus'],[t.betterSleep,'better_sleep'],[t.moreEnergy,'more_energy']].map(([label,val]) => (
                 <button key={val} className="glass px-8 py-3 font-body w-full max-w-xs"
@@ -4220,7 +4225,7 @@ function App() {
         <div className="fixed inset-0 flex flex-col items-center justify-center px-8 screen-transition" style={{background:WORLDS.ocean.bgGradient}}>
           <Particles world="ocean" />
           <div className="text-center z-10" style={{width:'100%', maxWidth:300}}>
-            <div className="font-body mb-2" style={{fontSize:22, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.06em'}}>Save your progress</div>
+            <div className="font-body mb-2" style={{fontSize:22, fontWeight:300, color:'rgba(220,225,235,0.95)', letterSpacing:'0.06em'}}>Save your progress</div>
             <div className="font-body mb-8" style={{fontSize:14, fontWeight:300, color:'rgba(220,225,235,0.35)'}}>Get your data back on any device</div>
             {softAuthSent ? (
               <div>
@@ -4259,7 +4264,7 @@ function App() {
       <div className="fixed inset-0 flex flex-col items-center justify-center px-8 screen-transition" style={{background:WORLDS.ocean.bgGradient}}>
         <Particles world="ocean" />
         <div className="text-center z-10" style={{maxWidth:320}}>
-          <div className="font-body mb-3" style={{fontSize:20, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.04em'}}>{intro.title}</div>
+          <div className="font-body mb-3" style={{fontSize:20, fontWeight:300, color:'rgba(220,225,235,0.95)', letterSpacing:'0.04em'}}>{intro.title}</div>
           <div className="font-body mb-10" style={{fontSize:15, fontWeight:300, color:'rgba(220,225,235,0.5)', lineHeight:1.7}}>{intro.text}</div>
           <button className="px-10 py-3 rounded-full font-body" onClick={() => {
             setPendingProgramDay(null);
@@ -4277,7 +4282,7 @@ function App() {
   // Pre-mood overlay
   if (showPreMood && pendingSessionData) {
     return (
-      <div className="fixed inset-0 flex flex-col items-center justify-center" style={{background:bg, zIndex:50}}>
+      <div className="fixed inset-0 flex flex-col items-center justify-center pre-mood-fade" style={{background:bg, zIndex:50, transition:'opacity 0.3s ease'}}>
         <Particles world={world} />
         <div className="z-10 text-center">
           <p className="font-body" style={{fontWeight:300, fontSize:20, color:'var(--text)', marginBottom:32}}>How are you feeling?</p>
@@ -4286,7 +4291,7 @@ function App() {
               <button key={n} onClick={() => {
                 if (preMoodTimerRef.current) clearTimeout(preMoodTimerRef.current);
                 setCurrentMood(m => ({...m, pre:n}));
-                setShowPreMood(false);
+                dismissPreMood();
                 actuallyStartSession(pendingSessionData.segments, pendingSessionData.meta);
                 setPendingSessionData(null);
               }} style={{
@@ -4337,10 +4342,15 @@ function App() {
     const isSOS = lastSessionWasSOS;
     const isFirstOnboarding = completionData._isFirstSession;
     const closeCompletion = () => {
-      setShowCompletion(false); setCompletionData(null); setCompletionStep('stats');
-      setCompletionFeeling(null); setMoodDelta(null); setLastSessionWasSOS(false); setSosCascadeLevel(0); setSosPartialMsg(false);
-      setStats(s => ({...s, _masteryLevelUp: null})); // clear transient flag
-      if (isFirstOnboarding) { setOnboardingPhase('goal'); }
+      // Fade out completion overlay
+      const el = document.querySelector('.completion-fade-target');
+      if (el) { el.style.opacity = '0'; el.style.transition = 'opacity 0.4s ease'; }
+      setTimeout(() => {
+        setShowCompletion(false); setCompletionData(null); setCompletionStep('stats');
+        setCompletionFeeling(null); setMoodDelta(null); setLastSessionWasSOS(false); setSosCascadeLevel(0); setSosPartialMsg(false);
+        setStats(s => ({...s, _masteryLevelUp: null}));
+        if (isFirstOnboarding) { setOnboardingPhase('goal'); }
+      }, 400);
     };
     // SOS cascade technique progression: cyclic_sigh → box → extended_exhale
     const SOS_CASCADE_TECHNIQUES = [
@@ -4376,7 +4386,7 @@ function App() {
       }
     };
     return (
-      <div className="fixed inset-0" style={{background:'linear-gradient(180deg, #0a1520 0%, #060c16 50%, #040810 100%)', animation:'surfaceBgLighten 1.5s ease-out forwards'}}>
+      <div className="fixed inset-0 completion-fade-target" style={{background:'linear-gradient(180deg, #0a1520 0%, #060c16 50%, #040810 100%)', animation:'surfaceBgLighten 1.5s ease-out forwards', transition:'opacity 0.4s ease'}}>
         <Particles world={world} />
         <div style={{position:'fixed',inset:0,zIndex:30,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:16,padding:24,animation:'completionFadeIn 800ms ease-out'}}>
           {/* Checkmark */}
@@ -4384,7 +4394,7 @@ function App() {
             <Icon name="check" size={16} style={{color:palette.accent, opacity:0.7}}/>
           </div>
           {/* Title */}
-          <div className="font-body" style={{fontSize:20,fontWeight:300,color:'rgba(226,232,240,0.95)',animation:'fade-in 600ms 300ms both'}}>{t.diveComplete}</div>
+          <div className="font-body" style={{fontSize:20,fontWeight:300,color:'rgba(220,225,235,0.95)',animation:'fade-in 600ms 300ms both'}}>{t.diveComplete}</div>
           {/* Stats, badges, science — hidden on first onboarding session */}
           {!isFirstOnboarding && (
             <>
@@ -4403,7 +4413,7 @@ function App() {
                 {earnedBadges.slice(-3).map((b) => (
                   <div key={b.id} className="glass px-3 py-1.5 flex items-center gap-2">
                     <span style={{color:palette.accent,opacity:0.6}}><Icon name="check" size={12}/></span>
-                    <span className="font-body" style={{fontSize:11,fontWeight:500,color:'rgba(226,232,240,0.85)'}}>{BADGE_NAMES[b.id]}</span>
+                    <span className="font-body" style={{fontSize:11,fontWeight:500,color:'rgba(220,225,235,0.85)'}}>{BADGE_NAMES[b.id]}</span>
                   </div>
                 ))}
               </div>
@@ -4503,7 +4513,7 @@ function App() {
           {/* Safety check */}
           {completionStep === 'safety' && (
             <div className="screen-transition">
-              <div className="font-body mb-5" style={{fontSize:16,fontWeight:300,color:'rgba(226,232,240,0.8)',textAlign:'center'}}>{t.safetyQuestion}</div>
+              <div className="font-body mb-5" style={{fontSize:16,fontWeight:300,color:'rgba(220,225,235,0.8)',textAlign:'center'}}>{t.safetyQuestion}</div>
               <div className="flex gap-3 justify-center">
                 <button className="glass px-6 py-2.5 font-body" style={{fontSize:16,fontWeight:500,color:'rgba(252,129,129,0.8)',border:'1px solid rgba(252,129,129,0.25)'}}
                   onClick={() => { setStats(s => ({...s, safetyFlag:{date:new Date().toISOString()}})); setCompletionStep('safety_msg'); }}>{t.safetyYes}</button>
@@ -4523,11 +4533,11 @@ function App() {
           {/* Reminder */}
           {completionStep === 'reminder' && (
             <div className="screen-transition">
-              <div className="font-body mb-4" style={{fontSize:16,fontWeight:300,color:'rgba(226,232,240,0.8)',textAlign:'center'}}>{t.buildHabit || t.setReminder}</div>
+              <div className="font-body mb-4" style={{fontSize:16,fontWeight:300,color:'rgba(220,225,235,0.8)',textAlign:'center'}}>{t.buildHabit || t.setReminder}</div>
               <div className="flex gap-3 justify-center">
                 {[[t.habitMorning||t.reminderMorning,'morning'],[t.habitEvening||t.reminderEvening,'evening'],[t.habitNotNow||t.reminderNotNow,null]].map(([label,val]) => (
                   <button key={label} className="glass px-5 py-2.5 font-body"
-                    style={{fontSize:15,fontWeight:500,color:val?palette.accent:'rgba(226,232,240,0.5)',border:val?`1px solid rgba(${accentRgb},0.25)`:'1px solid rgba(255,255,255,0.06)'}}
+                    style={{fontSize:15,fontWeight:500,color:val?palette.accent:'rgba(220,225,235,0.5)',border:val?`1px solid rgba(${accentRgb},0.25)`:'1px solid rgba(255,255,255,0.06)'}}
                     onClick={() => { setStats(s => ({...s, reminderTime:val})); setCompletionStep('done'); }}>{label}</button>
                 ))}
               </div>
@@ -4567,22 +4577,22 @@ function App() {
     const trialNote = t.trialNotice || t.paywallTrialNote || '';
     const startTrialLabel = t.paywallStartTrial || t.startTrial;
     return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center" style={{background:'rgba(0,0,0,0.7)', backdropFilter:'blur(12px)'}}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center" style={{background:'rgba(0,0,0,0.7)', backdropFilter:'blur(12px)', animation:'fade-in 300ms ease-out'}}>
       <div className="glass w-full max-w-sm mx-6 mb-8 p-6 screen-transition" style={{borderRadius:14}}>
         <div className="text-center mb-5">
           {stats.trialExpired && <div className="font-body mb-3" style={{fontSize:13, fontWeight:300, color:'rgba(252,180,100,0.7)', textAlign:'center'}}>Your free trial has ended. Subscribe to keep your full dive.</div>}
-          <div className="font-body mb-2" style={{fontSize:24, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.08em'}} onClick={(() => { let c=0,t=0; return ()=>{ const n=Date.now(); if(n-t>3000)c=0; c++;t=n; if(c>=5){setStats(s=>({...s,isPremium:true}));setShowPaywall(false);} }; })()}>{t.unlockAll}</div>
+          <div className="font-body mb-2" style={{fontSize:24, fontWeight:300, color:'rgba(220,225,235,0.95)', letterSpacing:'0.08em'}} onClick={(() => { let c=0,t=0; return ()=>{ const n=Date.now(); if(n-t>3000)c=0; c++;t=n; if(c>=5){setStats(s=>({...s,isPremium:true}));setShowPaywall(false);} }; })()}>{t.unlockAll}</div>
         </div>
         <div className="space-y-2.5 mb-5">
           {(t.paywallFeatures||[]).map(f => (
-            <div key={f} className="flex items-center gap-3 font-body" style={{fontSize:15, fontWeight:400, color:'rgba(226,232,240,0.75)'}}>
+            <div key={f} className="flex items-center gap-3 font-body" style={{fontSize:15, fontWeight:400, color:'rgba(220,225,235,0.75)'}}>
               <span style={{color:palette.accent}}><Icon name="check" size={14}/></span>{f}
             </div>
           ))}
         </div>
         <div style={{display:'flex', gap:12, marginBottom:16, padding:'0 2px', boxSizing:'border-box'}}>
           <div className="flex-1 glass p-4 text-center cursor-pointer" style={{border:'1px solid rgba(255,255,255,0.06)', minWidth:0}}>
-            <div className="font-body" style={{fontWeight:500, fontSize:15, color:'rgba(226,232,240,0.7)', whiteSpace:'nowrap'}}>{monthlyPrice}</div>
+            <div className="font-body" style={{fontWeight:500, fontSize:15, color:'rgba(220,225,235,0.7)', whiteSpace:'nowrap'}}>{monthlyPrice}</div>
           </div>
           <div className="flex-1 glass p-5 text-center cursor-pointer" style={{border:`2px solid rgba(${accentRgb},0.4)`, boxShadow:`0 0 20px rgba(${accentRgb},0.12)`, transform:'scale(1.03)', minWidth:0}}>
             <div className="font-body" style={{fontWeight:500, fontSize:16, color:palette.accent, whiteSpace:'nowrap'}}>{yearlyPrice}</div>
@@ -4595,7 +4605,7 @@ function App() {
           onClick={() => { ph('paywall_converted', { plan: 'trial' }); setStats(s => ({...s, isPremium:true, trialStartDate: new Date().toISOString()})); setShowPaywall(false); }}>
           {startTrialLabel}
         </button>
-        <button className="w-full py-2 font-body" style={{fontSize:12, fontWeight:400, color:'rgba(226,232,240,0.2)'}}
+        <button className="w-full py-2 font-body" style={{fontSize:12, fontWeight:400, color:'rgba(220,225,235,0.2)'}}
           onClick={() => { try{ph('paywall_dismissed',{});}catch(e){} setShowPaywall(false); }}>
           {t.close}
         </button>
@@ -4680,7 +4690,7 @@ function App() {
     <div className="screen-transition overflow-y-auto h-full no-scrollbar" style={{padding:'env(safe-area-inset-top, 48px) 24px 100px 24px'}}>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <div className="font-body" style={{fontSize:24, fontWeight:200, color:'rgba(226,232,240,0.95)', letterSpacing:'0.25em', textTransform:'uppercase'}}>{t.appName}</div>
+          <div className="font-body" style={{fontSize:24, fontWeight:200, color:'rgba(220,225,235,0.95)', letterSpacing:'0.25em', textTransform:'uppercase'}}>{t.appName}</div>
           <div className="font-body" style={{fontSize:13, fontWeight:300, letterSpacing:'0.15em', color:'rgba(220,225,235,0.25)', marginTop:4}}>PREPARE &middot; BREATHE &middot; DIVE</div>
         </div>
       </div>
@@ -4739,7 +4749,7 @@ function App() {
       }} onClick={() => { try{ph('daily_dive_tapped',{technique:rec.technique,scenario:rec.scenario});}catch(e){} launchScenario(rec.scenario, rec.duration); }}>
         <div>
           <div className="font-body mb-2" style={{fontSize:12, fontWeight:500, color:palette.accent, opacity:0.7, letterSpacing:'0.08em', textTransform:'uppercase'}}>{rec.isGoTo ? 'YOUR GO-TO' : t.todaysDiveLabel}</div>
-          <div className="font-body mb-3" style={{fontSize:22, fontWeight:400, color:'rgba(226,232,240,0.95)', letterSpacing:'0.04em'}}>{rec.title}</div>
+          <div className="font-body mb-3" style={{fontSize:22, fontWeight:400, color:'rgba(220,225,235,0.95)', letterSpacing:'0.04em'}}>{rec.title}</div>
           <div className="font-body" style={{fontSize:16, fontWeight:300, color:'var(--text-2)'}}>{rec.sub}</div>
           {rec.technique && (() => {
             const WHY = {physiological_sigh:'Fastest stress relief \u2014 Stanford research',box:'Sharpens focus under pressure',diaphragmatic:'Foundation technique \u2014 lowers cortisol',segmented:'Builds breath awareness and energy',ujjayi:'Advanced focus through breath control',tidal:'Natural rhythm \u2014 calming baseline'};
@@ -4974,7 +4984,7 @@ function App() {
         </button>
         <div className="flex items-center gap-3 mb-8">
           <span style={{color:palette.accent,opacity:0.6}}><Icon name={selectedCat} size={24}/></span>
-          <div className="font-body" style={{fontSize:24, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.08em'}}>{t[CATEGORY_LANG_KEY[selectedCat]]}</div>
+          <div className="font-body" style={{fontSize:24, fontWeight:300, color:'rgba(220,225,235,0.95)', letterSpacing:'0.08em'}}>{t[CATEGORY_LANG_KEY[selectedCat]]}</div>
         </div>
         <div className="space-y-3">
           {scenarios.map(([id, sc]) => (
@@ -5018,7 +5028,7 @@ function App() {
         </button>
         <div className="text-center mb-8">
           <div style={{color:palette.accent, opacity:0.4}}><Icon name={selectedProgram === 'first_dive' ? 'prog_bubble' : selectedProgram === 'stress_shield' ? 'prog_shield' : 'prog_target'} size={36}/></div>
-          <div className="font-body mt-3" style={{fontSize:24, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.08em'}}>{t[nameKey]}</div>
+          <div className="font-body mt-3" style={{fontSize:24, fontWeight:300, color:'rgba(220,225,235,0.95)', letterSpacing:'0.08em'}}>{t[nameKey]}</div>
           <div className="font-body mt-1" style={{fontSize:15, fontWeight:400, color:'var(--text-3)'}}>{t[subKey]}</div>
           <div className="mt-4 mx-auto" style={{height:2, borderRadius:1, background:'rgba(255,255,255,0.04)', maxWidth:200}}>
             <div style={{height:'100%', borderRadius:1, width:`${progress.length/prog.days*100}%`, background:`rgba(${accentRgb},0.6)`, transition:'width 1s ease'}} />
@@ -5055,7 +5065,7 @@ function App() {
                   }
                 }}>
                 <div className="flex items-center justify-center rounded-full font-mono"
-                  style={{width:40, height:40, fontWeight:300, fontSize:16, background: completed ? `rgba(${accentRgb},0.15)` : 'rgba(255,255,255,0.06)', border: completed ? `1px solid rgba(${accentRgb},0.3)` : '1px solid rgba(255,255,255,0.06)', color: completed ? palette.accent : 'rgba(226,232,240,0.5)'}}>
+                  style={{width:40, height:40, fontWeight:300, fontSize:16, background: completed ? `rgba(${accentRgb},0.15)` : 'rgba(255,255,255,0.06)', border: completed ? `1px solid rgba(${accentRgb},0.3)` : '1px solid rgba(255,255,255,0.06)', color: completed ? palette.accent : 'rgba(220,225,235,0.5)'}}>
                   {completed ? <Icon name="check" size={16}/> : i + 1}
                 </div>
                 <div className="flex-1">
@@ -5075,7 +5085,7 @@ function App() {
 
   const renderPrograms = () => (
     <div className="screen-transition overflow-y-auto h-full no-scrollbar" style={{padding:'env(safe-area-inset-top, 48px) 24px 100px 24px'}}>
-      <div className="font-body mb-8" style={{fontSize:24, fontWeight:300, color:'rgba(226,232,240,0.95)', letterSpacing:'0.1em'}}>{t.programs}</div>
+      <div className="font-body mb-8" style={{fontSize:24, fontWeight:300, color:'rgba(220,225,235,0.95)', letterSpacing:'0.1em'}}>{t.programs}</div>
       <div className="space-y-4">
         {Object.entries(PROGRAMS).map(([key, prog]) => {
           const progress = (stats.programProgress?.[key] || []).length;
@@ -5261,7 +5271,7 @@ function App() {
                 const progress = nextLevel ? Math.min(count / nextLevel.threshold, 1) : 1;
                 return (
                   <div key={techKey} className="flex items-center gap-3">
-                    <div className="font-body" style={{fontSize:14, fontWeight:400, color:'rgba(226,232,240,0.7)', minWidth:100, flex:'0 0 100px'}}>{displayName}</div>
+                    <div className="font-body" style={{fontSize:14, fontWeight:400, color:'rgba(220,225,235,0.7)', minWidth:100, flex:'0 0 100px'}}>{displayName}</div>
                     <div style={{flex:1, height:4, borderRadius:2, background:'rgba(255,255,255,0.04)', overflow:'hidden'}}>
                       <div style={{width:(progress*100)+'%', height:'100%', borderRadius:2, background:palette.accent, transition:'width 600ms ease'}} />
                     </div>
@@ -5298,7 +5308,7 @@ function App() {
                       style={{fontFamily:"'JetBrains Mono',monospace", fontSize:9, fill:'rgba(220,225,235,0.5)'}}>{pct}%</text>
                   </svg>
                   <div style={{flex:1}}>
-                    <div className="font-body" style={{fontSize:15, fontWeight:400, color:'rgba(226,232,240,0.75)'}}>{progNames[key] || key}</div>
+                    <div className="font-body" style={{fontSize:15, fontWeight:400, color:'rgba(220,225,235,0.75)'}}>{progNames[key] || key}</div>
                     <div className="font-mono" style={{fontSize:12, fontWeight:300, color:'var(--text-3)', marginTop:2}}>Day {completed} of {total}</div>
                   </div>
                   {completed >= total && (
@@ -5363,7 +5373,7 @@ function App() {
               {stats.history.slice(-10).reverse().map((h, i) => (
                 <div key={i} style={{display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 0', borderBottom:'1px solid rgba(255,255,255,0.02)'}}>
                   <div>
-                    <div className="font-body" style={{fontSize:16, fontWeight:400, color:'rgba(226,232,240,0.8)'}}>{getScenarioDisplayName(h.scenario)}</div>
+                    <div className="font-body" style={{fontSize:16, fontWeight:400, color:'rgba(220,225,235,0.8)'}}>{getScenarioDisplayName(h.scenario)}</div>
                     <div className="font-body" style={{fontSize:13, fontWeight:400, color:'var(--text-3)', marginTop:2}}>{new Date(h.date).toLocaleDateString('en', {month:'short', day:'numeric'})}</div>
                   </div>
                   <div style={{textAlign:'right'}}>
@@ -5396,7 +5406,7 @@ function App() {
               [t.vibration, 'vibrateEnabled'],
             ].map(([label, key]) => (
               <div key={key} className="flex items-center justify-between">
-                <span className="font-body" style={{fontSize:16, fontWeight:400, color:'rgba(226,232,240,0.75)'}}>{label}</span>
+                <span className="font-body" style={{fontSize:16, fontWeight:400, color:'rgba(220,225,235,0.75)'}}>{label}</span>
                 <button className="relative rounded-full" style={{width:44, height:24, background: stats[key] ? `rgba(${accentRgb},0.25)` : 'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.06)', transition:'all 200ms ease'}}
                   onClick={() => setStats(s => ({...s, [key]:!s[key]}))}>
                   <div className="absolute rounded-full transition-all" style={{top:3, width:16, height:16, background: stats[key] ? palette.accent : 'rgba(255,255,255,0.3)', left: stats[key] ? 'calc(100% - 20px)' : '4px'}} />
@@ -5405,7 +5415,7 @@ function App() {
             ))}
             {/* Voice narration toggle */}
             <div className="flex items-center justify-between">
-              <span className="font-body" style={{fontSize:16, fontWeight:400, color:'rgba(226,232,240,0.75)'}}>{t.voiceNarration}</span>
+              <span className="font-body" style={{fontSize:16, fontWeight:400, color:'rgba(220,225,235,0.75)'}}>{t.voiceNarration}</span>
               <button className="relative rounded-full" style={{width:44, height:24, background: stats.voiceEnabled ? `rgba(${accentRgb},0.25)` : 'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.06)', transition:'all 200ms ease'}}
                 onClick={() => setStats(s => ({...s, voiceEnabled:!s.voiceEnabled}))}>
                 <div className="absolute rounded-full transition-all" style={{top:3, width:16, height:16, background: stats.voiceEnabled ? palette.accent : 'rgba(255,255,255,0.3)', left: stats.voiceEnabled ? 'calc(100% - 20px)' : '4px'}} />
@@ -5417,7 +5427,7 @@ function App() {
           {stats.reminderTime && stats.reminderTime !== 'dismissed' && (
             <div className="glass p-5 mt-3 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="font-body" style={{fontSize:16, fontWeight:400, color:'rgba(226,232,240,0.75)'}}>Daily reminder</span>
+                <span className="font-body" style={{fontSize:16, fontWeight:400, color:'rgba(220,225,235,0.75)'}}>Daily reminder</span>
                 <button className="relative rounded-full" style={{width:44, height:24, background:`rgba(${accentRgb},0.25)`, border:'1px solid rgba(255,255,255,0.06)', transition:'all 200ms ease'}}
                   onClick={() => setStats(s => ({...s, reminderTime: null}))}>
                   <div className="absolute rounded-full transition-all" style={{top:3, width:16, height:16, background:palette.accent, left:'calc(100% - 20px)'}} />
@@ -5620,7 +5630,7 @@ function App() {
       {showSurfaceBreath && (
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{background:'rgba(0,0,0,0.8)', backdropFilter:'blur(16px)'}}>
           <div className="screen-transition text-center z-10 px-8">
-            <div className="font-body mb-3" style={{fontSize:20, fontWeight:300, color:'rgba(226,232,240,0.95)'}}>{t.missedYesterday}</div>
+            <div className="font-body mb-3" style={{fontSize:20, fontWeight:300, color:'rgba(220,225,235,0.95)'}}>{t.missedYesterday}</div>
             <div className="font-body mb-6" style={{fontSize:16, fontWeight:400, color:palette.accent}}>
               {surfaceBreathStreak} {t.streakAtRisk || t.dayStreak}
             </div>
@@ -5667,7 +5677,7 @@ function App() {
         return (
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{background:'rgba(0,0,0,0.8)', backdropFilter:'blur(16px)'}}>
           <div className="screen-transition text-center z-10 px-8">
-            <div className="font-body mb-4" style={{fontSize:20, fontWeight:300, color:'rgba(226,232,240,0.95)'}}>Weekly Deep Dive</div>
+            <div className="font-body mb-4" style={{fontSize:20, fontWeight:300, color:'rgba(220,225,235,0.95)'}}>Weekly Deep Dive</div>
             <div className="font-body mb-2" style={{fontSize:14, fontWeight:300, color:'rgba(220,225,235,0.45)'}}>Time to go deeper</div>
             <div className="font-body mb-4" style={{fontSize:16, fontWeight:400, color:'var(--text-2)', maxWidth:280, margin:'0 auto', lineHeight:1.6}}>
               {retestDays === 999 ? '' : retestDays + ' days since your last test.'}
@@ -5777,7 +5787,7 @@ function App() {
               </div>
               <div className="glass p-4 mx-auto mb-8" style={{maxWidth:200}}>
                 <div className="font-body" style={{fontSize:13, fontWeight:500, color:'var(--text-3)', letterSpacing:'0.06em', textTransform:'uppercase', marginBottom:4}}>{t.mostUsed}</div>
-                <div className="font-body" style={{fontSize:16, fontWeight:400, color:'rgba(226,232,240,0.9)'}}>{topTechLabel}</div>
+                <div className="font-body" style={{fontSize:16, fontWeight:400, color:'rgba(220,225,235,0.9)'}}>{topTechLabel}</div>
               </div>
               <button className="px-10 py-3 rounded-full font-body"
                 style={{fontWeight:500, background:`rgba(${accentRgb},0.12)`, border:`1px solid rgba(${accentRgb},0.25)`, color:palette.accent}}
