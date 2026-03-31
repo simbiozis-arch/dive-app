@@ -68,7 +68,7 @@ html,body,#root { width:100%; height:100%; overflow:hidden; font-family:'DM Sans
 @keyframes slowRotate { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
 @keyframes surfaceUp { 0%{transform:translateY(0);opacity:0.9} 60%{opacity:1} 100%{transform:translateY(-40px);opacity:0} }
 @keyframes pulse { 0%,100%{opacity:0.15;transform:scale(1)} 50%{opacity:0.4;transform:scale(1.5)} }
-@keyframes surfaceBgLighten { 0%{background:linear-gradient(180deg,#050a12 0%,#080e1a 100%)} 100%{background:linear-gradient(180deg,#0a1520 0%,#060c16 100%)} }
+@keyframes surfaceBgDarken { 0%{background:linear-gradient(180deg,#0a1520 0%,#080e1a 100%)} 100%{background:linear-gradient(180deg,#040810 0%,#030608 100%)} }
 @keyframes completionFadeIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
 @keyframes checkPop { from{transform:scale(0.5);opacity:0} to{transform:scale(1);opacity:1} }
 .intro-title { font-family:'DM Sans',sans-serif; font-weight:200; font-size:42px; letter-spacing:0.3em; text-transform:uppercase; color:rgba(94,170,168,0.9); }
@@ -1684,6 +1684,7 @@ class AmbientEngine {
   }
   updateForBreathing(phase, progress) {
     if (!this.ctx || !this.masterGain) return;
+    if (this.ctx.state === 'suspended') { try { this.ctx.resume(); } catch(e) {} }
     const now = this.ctx.currentTime;
     const t = progress;
     if (phase === 'inhale' || phase === 'inhale1' || phase === 'inhale2') {
@@ -1704,7 +1705,7 @@ class AmbientEngine {
   }
   duck(dur=0.5) { if (!this.ctx||!this.masterGain) return; this.masterGain.gain.cancelScheduledValues(this.ctx.currentTime); this.masterGain.gain.setValueAtTime(this.masterGain.gain.value,this.ctx.currentTime); this.masterGain.gain.linearRampToValueAtTime(0.03,this.ctx.currentTime+dur); }
   unduck(dur=2) { if (!this.ctx||!this.masterGain) return; this.masterGain.gain.cancelScheduledValues(this.ctx.currentTime); this.masterGain.gain.setValueAtTime(this.masterGain.gain.value,this.ctx.currentTime); this.masterGain.gain.linearRampToValueAtTime(0.12,this.ctx.currentTime+dur); }
-  fadeIn(dur=3) { if (!this.ctx||!this.masterGain) return; if (this.ctx.state==='suspended') this.ctx.resume(); this.masterGain.gain.cancelScheduledValues(this.ctx.currentTime); this.masterGain.gain.setValueAtTime(this.masterGain.gain.value,this.ctx.currentTime); this.masterGain.gain.linearRampToValueAtTime(0.15,this.ctx.currentTime+dur); }
+  fadeIn(dur=3) { if (!this.ctx||!this.masterGain) return; if (this.ctx.state==='suspended') this.ctx.resume(); this.masterGain.gain.cancelScheduledValues(this.ctx.currentTime); this.masterGain.gain.setValueAtTime(this.masterGain.gain.value,this.ctx.currentTime); this.masterGain.gain.linearRampToValueAtTime(0.20,this.ctx.currentTime+dur); }
   fadeOut(dur=2) { if (!this.ctx||!this.masterGain) return; this.masterGain.gain.cancelScheduledValues(this.ctx.currentTime); this.masterGain.gain.setValueAtTime(this.masterGain.gain.value,this.ctx.currentTime); this.masterGain.gain.linearRampToValueAtTime(0,this.ctx.currentTime+dur); }
   destroy() { this.fadeOut(0.5); setTimeout(() => { try { this.ctx?.close(); } catch {} this.ctx = null; this.running = false; }, 600); }
 }
@@ -4393,7 +4394,7 @@ function App() {
       }
     };
     return (
-      <div className="fixed inset-0 completion-fade-target" style={{background:'linear-gradient(180deg, #0a1520 0%, #060c16 50%, #040810 100%)', animation:'surfaceBgLighten 1.5s ease-out forwards', transition:'opacity 0.4s ease'}}>
+      <div className="fixed inset-0 completion-fade-target" style={{background:'linear-gradient(180deg, #0a1520 0%, #060c16 50%, #040810 100%)', animation:'surfaceBgDarken 1.5s ease-out forwards', transition:'opacity 0.4s ease'}}>
         <Particles world={world} />
         <div style={{position:'fixed',inset:0,zIndex:30,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:16,padding:24,animation:'completionFadeIn 800ms ease-out'}}>
           {/* Checkmark */}
