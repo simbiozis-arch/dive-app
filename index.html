@@ -5,6 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#070c15">
+<link rel="apple-touch-icon" href="/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>DIVE</title>
@@ -3730,6 +3731,7 @@ function App() {
   const [showRetestPrompt, setShowRetestPrompt] = useState(false);
   const [retestDays, setRetestDays] = useState(0);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showInstallBanner, setShowInstallBanner] = useState(false);
   const [durationPickerScenario, setDurationPickerScenario] = useState(null);
   // showStressChoice removed — SOS is instant
   const [exploreCat, setExploreCat] = useState('focus');
@@ -3779,6 +3781,14 @@ function App() {
     }
     // Schedule browser notification if granted
     scheduleNextNotification(stats);
+    // PWA install banner check
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+    if (!isStandalone && stats.onboarded) {
+      const sessions = stats.totalSessions || 0;
+      if ((sessions >= 2 && !stats.installPromptDismissed) || (sessions >= 5 && stats.installPromptDismissed)) {
+        setShowInstallBanner(true);
+      }
+    }
     // Handle /?sos=true shortcut (PWA shortcut from manifest)
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('sos') === 'true' && stats.onboarded) {
@@ -5557,6 +5567,32 @@ function App() {
       </div>
 
       {/* Tab bar */}
+      {/* PWA install banner */}
+      {showInstallBanner && showTabs && (
+        <div style={{position:'fixed', bottom:'calc(60px + env(safe-area-inset-bottom, 0px))', left:12, right:12, zIndex:45,
+          background:'rgba(14,61,92,0.95)', backdropFilter:'blur(16px)', borderRadius:14, padding:'14px 16px',
+          border:'1px solid rgba(94,170,168,0.15)', display:'flex', alignItems:'center', gap:12}}>
+          <div style={{flex:1}}>
+            <div className="font-body" style={{fontSize:14, fontWeight:500, color:'rgba(220,225,235,0.85)'}}>Add DIVE to your home screen</div>
+            <div className="font-body" style={{fontSize:12, fontWeight:300, color:'rgba(220,225,235,0.4)'}}>
+              {/iPhone|iPad/.test(navigator.userAgent) && !window.navigator.standalone ? 'Tap Share then Add to Home Screen' : 'Quick access, works offline'}
+            </div>
+          </div>
+          {!/iPhone|iPad/.test(navigator.userAgent) && window._diveInstallPrompt && (
+            <button onClick={async () => {
+              if (window._diveInstallPrompt) {
+                window._diveInstallPrompt.prompt();
+                const result = await window._diveInstallPrompt.userChoice;
+                if (result.outcome === 'accepted') { setShowInstallBanner(false); ph('install_prompt_accepted', {}); }
+                window._diveInstallPrompt = null;
+              }
+            }} style={{padding:'8px 16px', borderRadius:10, background:`rgba(${accentRgb},0.15)`, border:`1px solid rgba(${accentRgb},0.3)`, color:palette.accent, fontSize:13, fontWeight:500, cursor:'pointer', flexShrink:0}}>Install</button>
+          )}
+          <button onClick={() => { setShowInstallBanner(false); setStats(s => ({...s, installPromptDismissed:true})); }}
+            style={{background:'none', border:'none', color:'rgba(220,225,235,0.3)', fontSize:16, cursor:'pointer', padding:'2px 6px', lineHeight:1, flexShrink:0}}>{'\u00D7'}</button>
+        </div>
+      )}
+
       {showTabs && (
         <div className="fixed bottom-0 left-0 right-0 z-40" style={{background:'rgba(7,12,21,0.72)', backdropFilter:'blur(24px) saturate(1.4)', WebkitBackdropFilter:'blur(24px) saturate(1.4)', borderTop:'1px solid rgba(255,255,255,0.04)'}}>
           <div className="flex justify-around" style={{paddingTop:12, paddingBottom:'env(safe-area-inset-bottom, 24px)'}}>
@@ -5762,6 +5798,12 @@ try {
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js').catch(() => {});
 }
+// PWA install prompt capture
+window._diveInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', function(e) {
+  e.preventDefault();
+  window._diveInstallPrompt = e;
+});
 </script>
 </body>
 </html>
