@@ -905,7 +905,7 @@ const getSessionContent = (t, world) => ({
 // ===== PROGRAMS (preserved exactly) =====
 const PROGRAMS = {
   first_dive: {
-    id: 'first_dive', days: 5, free: false, trialDay: 0,
+    id: 'first_dive', days: 5, free: false, trialDay: 2,
     sessions: [
       [
         { type:'video', duration:0, src:'', textKey:'videoComingSoon' },
@@ -4609,7 +4609,8 @@ function App() {
     if (!checkAccess(sc)) { ph('paywall_shown', {}); setShowPaywall(true); return; }
     const d = dur || sc.durations[0];
     // Check 10min premium restriction
-    if (d >= 10 && !sc.free && !stats.isPremium) { ph('paywall_shown', {}); setShowPaywall(true); return; }
+    // Free users: max 2-min sessions (except SOS which bypasses launchScenario)
+    if (!stats.isPremium && d > 2) { ph('paywall_shown', { reason:'duration' }); setShowPaywall(true); return; }
     let segs = getSessionContent(t, world)[id]?.[d];
     // Fallback: if no segments for this duration, generate a generic session
     if (!segs || segs.length === 0) {
