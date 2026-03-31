@@ -203,7 +203,7 @@ const LANG = {
     cantSleep:"Can't sleep",anxiousMorning:'Anxious morning',betweenMeetings:'Between meetings',
     justRelax:'Just relax',deepDive:'Deep dive',
     min:'min',begin:'Begin',pause:'Pause',resume:'Resume',skip:'Skip',
-    exitSession:'Exit session?',exitConfirm:'Progress will be saved.',exitYes:'Exit',exitNo:'Stay',
+    exitSession:'Exit session?',exitConfirm:'Session progress won\'t be saved.',exitYes:'Exit',exitNo:'Stay',
     inhale:'Inhale',exhale:'Exhale',hold:'Hold',holdPause:'Pause',belly:'Belly',ribs:'Ribs',chest:'Chest',inhale2:'+ Inhale',
     subInhaleNose:'Through your nose, belly expands',subExhaleMouth:'Through your mouth, slow and steady',
     subHoldStill:'Keep still, air stays inside',subEmptyPause:'Empty pause, just wait',
@@ -240,7 +240,7 @@ const LANG = {
     onb2title:'7 techniques',onb2sub:'Proven by science and depth',onb2desc:'Diaphragmatic, box, ujjayi, physiological sigh — and three more.',
     onb3title:'14 scenarios',onb3sub:'For every occasion',onb3desc:'Before a meeting, after a tough day, insomnia, morning anxiety — find the right one.',
     onb4title:'3 programs',onb4sub:'Step-by-step learning',onb4desc:'First Dive. Stress Shield. Deep Focus. With video coaching.',
-    paywallFeatures:['All 14 breathing scenarios','All programs with video coaching','10-minute deep sessions','Bioluminescent deep-dive visuals','Mood tracking & statistics'],
+    paywallFeatures:['All 14 breathing scenarios','All programs with coaching','10-minute deep sessions','Advanced technique mastery tracking'],
     morningIntro:'Good morning. Five minutes of breathing before coffee. Your body will wake up faster.',
     overloadIntro:'Five minutes. Zero input. Just you and your breath.',
     conflictIntro:'Stop. Before replaying it in your head — breathe. Adrenaline leaves your blood in 3 to 5 minutes. Let it pass.',
@@ -269,7 +269,7 @@ const LANG = {
     reminderSet:'Reminder set',
     whatBroughtYou:'What brought you here?',stressRelief:'Stress relief',betterFocus:'Better focus',betterSleep:'Better sleep',moreEnergy:'More energy',
     missedYesterday:'You missed yesterday',surfaceBreathOffer:'Take a 1-min surface breath to save your {N}-day streak',surfaceBreathButton:'Surface Breath — 1 min',letItGo:'Let it go',streakSaved:'Streak saved',freshStart:'Fresh start',
-    buildHabit:'Build a daily habit?',habitMorning:'Morning 8:00',habitEvening:'Evening 21:00',habitNotNow:'Not now',
+    buildHabit:'Build a daily habit?',habitMorning:'Morning reminder',habitEvening:'Evening reminder',habitNotNow:'Not now',
     paywallMonthly:'$9.99/mo',paywallYearly:'$49.99/yr',paywallYearlySave:'Save 58%',paywallTrialNote:"You won't be charged for 7 days. Cancel anytime.",paywallStartTrial:'Start free trial',
     holdTestTitle:"Let's find your starting depth",holdTestDesc:'Exhale fully. Then hold. Tap when you need to breathe.',holdTestStart:'Start',holdTestYourDepth:'Your starting depth',holdTestSwimmingPool:'A swimming pool',holdTestCoralReef:'A coral reef',holdTestShipwreck:'A shallow shipwreck',holdTestSunlightFades:'Where sunlight fades',holdTestTwilightZone:'The twilight zone',
     howStressed:'How stressed are you right now?',andNow:'And now?',moodLow:'low',moodHigh:'high',
@@ -3037,7 +3037,11 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef, star
     setHoldTestPhase('result');
   };
 
-  // Goal screen (What brought you here?)
+  // Goal screen — skip for standalone retests (startAtPhase='holdTest')
+  if (breathPhase === 'goal' && startAtPhase === 'holdTest') {
+    onComplete(null, holdTime > 0 ? holdTime : null);
+    return null;
+  }
   if (breathPhase === 'goal') {
     return (
       <div className="fixed inset-0 flex flex-col items-center justify-center px-8" style={{background:oceanBg}}>
@@ -4452,7 +4456,8 @@ function App() {
         </div>
         {trialNote && <div className="font-body text-center mb-4" style={{fontSize:13, fontWeight:400, color:'var(--text-3)', lineHeight:1.5}}>{trialNote}</div>}
         <button className="w-full py-3.5 rounded-full font-body mb-3"
-          style={{fontWeight:500, background:`rgba(${accentRgb},0.12)`, border:`1px solid rgba(${accentRgb},0.25)`, color:palette.accent}}>
+          style={{fontWeight:500, background:`rgba(${accentRgb},0.12)`, border:`1px solid rgba(${accentRgb},0.25)`, color:palette.accent}}
+          onClick={() => { ph('paywall_converted', { plan: 'trial' }); setStats(s => ({...s, isPremium:true, trialStartDate: new Date().toISOString()})); setShowPaywall(false); }}>
           {startTrialLabel}
         </button>
         <button className="w-full py-2 font-body" style={{fontSize:12, fontWeight:400, color:'var(--text-3)'}}
@@ -4633,12 +4638,13 @@ function App() {
         </div>
       )}
 
-      {/* Habit reminder prompt — show on home after 3+ sessions if no reminder set */}
+      {/* Habit reminder — show on home after 3+ sessions if no reminder set */}
       {stats.totalSessions >= 3 && !stats.reminderTime && (
         <div style={{padding:'14px 16px', marginBottom:16, borderRadius:10, background:'rgba(94,170,168,0.05)', border:'1px solid rgba(94,170,168,0.10)', fontSize:15, color:'rgba(220,225,235,0.6)', lineHeight:1.6}}>
           {t.buildHabit || 'Build a daily habit?'}
-          <div style={{display:'flex', gap:8, marginTop:10}}>
-            {[[t.habitMorning || 'Morning 8:00','morning'],[t.habitEvening || 'Evening 21:00','evening']].map(([label,val]) => (
+          <div style={{fontSize:12, color:'rgba(220,225,235,0.3)', marginTop:4, marginBottom:8}}>We'll greet you with a session when you open the app</div>
+          <div style={{display:'flex', gap:8}}>
+            {[['Morning','morning'],['Evening','evening']].map(([label,val]) => (
               <button key={val} onClick={() => setStats(s => ({...s, reminderTime: val}))}
                 style={{padding:'6px 14px', borderRadius:8, background:`rgba(${accentRgb},0.08)`, border:`1px solid rgba(${accentRgb},0.18)`, fontSize:12, fontWeight:500, color:palette.accent, cursor:'pointer'}}>
                 {label}
@@ -4963,7 +4969,7 @@ function App() {
     const moodAvgDelta = hasMoodChart ? (moodSessions.reduce((s,h) => s + (h.postMood - h.preMood), 0) / moodSessions.length).toFixed(1) : null;
     // SOS relief rate
     const sosSessions = (stats.history || []).filter(h => h.sosOutcome);
-    const sosBetter = sosSessions.filter(h => h.sosOutcome === 'better').length;
+    const sosBetter = sosSessions.filter(h => h.sosOutcome === 'resolved' || h.sosOutcome === 'partial' || h.sosOutcome === 'better').length;
     const sosReliefRate = sosSessions.length >= 3 ? Math.round((sosBetter / sosSessions.length) * 100) : null;
 
     return (
@@ -5222,8 +5228,8 @@ function App() {
                       </div>
                     )}
                     {h.sosOutcome && (
-                      <div className="font-body" style={{fontSize:12, fontWeight:400, color: h.sosOutcome === 'better' ? 'rgba(94,170,168,0.7)' : 'rgba(220,225,235,0.35)'}}>
-                        {h.sosOutcome === 'better' ? 'Better' : 'Cascaded'}
+                      <div className="font-body" style={{fontSize:12, fontWeight:400, color: (h.sosOutcome === 'resolved' || h.sosOutcome === 'partial' || h.sosOutcome === 'better') ? 'rgba(94,170,168,0.7)' : 'rgba(220,225,235,0.35)'}}>
+                        {h.sosOutcome === 'resolved' ? 'Much better' : h.sosOutcome === 'partial' ? 'A little better' : h.sosOutcome === 'better' ? 'Better' : 'Cascaded'}
                       </div>
                     )}
                     <div className="font-mono" style={{fontSize:11, fontWeight:300, color:'var(--text-3)'}}>
@@ -5486,10 +5492,7 @@ function App() {
             <div className="flex flex-col gap-3 items-center">
               <button className="px-8 py-3 rounded-full font-body w-full max-w-xs"
                 style={{fontWeight:500, background:`rgba(${accentRgb},0.12)`, border:`1px solid rgba(${accentRgb},0.25)`, color:palette.accent}}
-                onClick={() => {
-                  setShowRetestPrompt(false);
-                  setScreen('first_breath');
-                }}>
+                onClick={() => startBreathTest()}>
                 {t.retestNow}
               </button>
               <button className="px-8 py-3 rounded-full font-body w-full max-w-xs"
@@ -5546,7 +5549,8 @@ function App() {
           return (Date.now() - d.getTime()) < 7 * 86400000;
         }) || [];
         const weekMinutes = weekSessions.reduce((s, h) => s + Math.round((h.duration || 0) / 60), 0);
-        const weekDepth = formatDepth(stats.totalDepth);
+        const weekDepthRaw = weekSessions.reduce((s, h) => s + (h.depth || 0), 0);
+        const weekDepth = formatDepth(weekDepthRaw);
         // Most used technique from recent history
         const techCounts = {};
         (stats.history || []).slice(-20).forEach(h => {
