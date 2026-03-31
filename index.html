@@ -1425,6 +1425,54 @@ function getMasteryLevel(sessionCount) {
 }
 
 // ===== MILESTONES =====
+// ===== DIMA CALL MESSAGES =====
+const DIMA_MESSAGES = {
+  program_first_dive_complete:{subtitle:"You completed First Dive!",videoUrl:'',textMessage:"4 days. 4 techniques. You now have the foundation every freediver starts with. The ocean is waiting.",priority:10},
+  program_stress_shield_complete:{subtitle:"Stress Shield complete!",videoUrl:'',textMessage:"7 days of building your stress toolkit. You've trained your nervous system to respond, not react.",priority:10},
+  program_deep_focus_complete:{subtitle:"Deep Focus complete!",videoUrl:'',textMessage:"Your attention is sharper now. Every technique you learned trains the same skill freedivers master \u2014 control.",priority:10},
+  milestone_7_streak:{subtitle:"7-day streak!",videoUrl:'',textMessage:"One week straight. Most people never make it past day 3. You're building something real.",priority:8},
+  milestone_30_sessions:{subtitle:"30 dives",videoUrl:'',textMessage:"30 dives. Your breathing baseline has shifted. Can you feel it?",priority:8},
+  milestone_first_mastery:{subtitle:"Technique mastered",videoUrl:'',textMessage:"Deep Diver level. This technique is part of you now \u2014 your body knows it before your mind does.",priority:7},
+  comeback_3_days:{subtitle:"Haven't seen you in a while",videoUrl:'',textMessage:"Your breath is always there. Even one minute resets the system. Ready to dive?",priority:5},
+  comeback_7_days:{subtitle:"Your streak misses you",videoUrl:'',textMessage:"A freediver always comes back to the water. One dive. That's all it takes.",priority:6},
+  weekly_note_1:{subtitle:"Coach note",videoUrl:'',textMessage:"This week, try closing your eyes during a session. Your breath becomes louder. Everything else gets quieter.",priority:3},
+  weekly_note_2:{subtitle:"Coach note",videoUrl:'',textMessage:"Notice where you hold tension \u2014 jaw, shoulders, belly. Each exhale is a chance to let one of them go.",priority:3},
+  weekly_note_3:{subtitle:"Coach note",videoUrl:'',textMessage:"Real freedivers don't fight the urge to breathe. They notice it, accept it, and let it pass. That's the whole practice.",priority:3},
+};
+
+function checkDimaCall(stats) {
+  if (!stats.onboarded) return null;
+  const now = new Date();
+  const dismissed = stats.dimaDismissed || {};
+  const triggers = [];
+  // Program completion
+  ['first_dive','stress_shield','deep_focus'].forEach(prog => {
+    const key = 'program_'+prog+'_complete';
+    const pp = stats.programProgress?.[prog] || [];
+    const total = prog === 'stress_shield' ? 7 : 5;
+    if (pp.length >= total && !dismissed[key]) triggers.push({key, ...DIMA_MESSAGES[key]});
+  });
+  // Milestones
+  if ((stats.streak||0) >= 7 && !dismissed.milestone_7_streak) triggers.push({key:'milestone_7_streak',...DIMA_MESSAGES.milestone_7_streak});
+  if ((stats.totalSessions||0) >= 30 && !dismissed.milestone_30_sessions) triggers.push({key:'milestone_30_sessions',...DIMA_MESSAGES.milestone_30_sessions});
+  if (Object.values(stats.techniqueMastery||{}).some(t => t.level === 'deep_diver') && !dismissed.milestone_first_mastery) triggers.push({key:'milestone_first_mastery',...DIMA_MESSAGES.milestone_first_mastery});
+  // Re-engagement
+  if (stats.history?.length > 0) {
+    const last = new Date(stats.history[stats.history.length-1].date);
+    const days = (now-last)/(1000*60*60*24);
+    if (days >= 7 && !dismissed.comeback_7_days) triggers.push({key:'comeback_7_days',...DIMA_MESSAGES.comeback_7_days});
+    else if (days >= 3 && !dismissed.comeback_3_days) triggers.push({key:'comeback_3_days',...DIMA_MESSAGES.comeback_3_days});
+  }
+  // Weekly note
+  const lastNote = stats.lastDimaWeeklyNote ? new Date(stats.lastDimaWeeklyNote) : null;
+  if ((!lastNote || (now-lastNote)/(1000*60*60*24) >= 7) && (stats.totalSessions||0) >= 5) {
+    const idx = ((stats.dimaWeeklyNoteIdx||0) % 3) + 1;
+    triggers.push({key:'weekly_note_'+idx,...DIMA_MESSAGES['weekly_note_'+idx], _isWeekly:true, _noteIdx:idx});
+  }
+  triggers.sort((a,b) => (b.priority||0)-(a.priority||0));
+  return triggers[0] || null;
+}
+
 const MILESTONES = [
   { id:'sessions_3', condition: s => (s.totalSessions||0) >= 3, message:"3 dives in. Your body is learning to breathe differently." },
   { id:'streak_7', condition: s => (s.streak||0) >= 7, message:"7 days straight. You're building a real practice." },
@@ -2557,7 +2605,8 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
       }
       // WOW 3: Reactive ambient sound
       if (s.phase && s.segmentType === 'breathing') {
-        try { ambientRef.current?.updateForBreathing(s.phase, s.phaseProgress); } catch {}
+        // Ambient engine disabled for sessions
+        // try { ambientRef.current?.updateForBreathing(s.phase, s.phaseProgress); } catch {}
       }
 
       // === LOW FREQUENCY: React state (only when values actually change) ===
@@ -2862,12 +2911,10 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
               const newMuted = !sessionMuted;
               setSessionMuted(newMuted);
               if (newMuted) {
-                ambientRef.current?.duck(0.2);
                 voicePlayer.stop();
                 setVoiceOn(false);
                 setHapticOn(false);
               } else {
-                ambientRef.current?.unduck(0.5);
                 setVoiceOn(voiceEnabled);
                 setHapticOn(true);
               }
@@ -3719,6 +3766,8 @@ function App() {
   const [retestDays, setRetestDays] = useState(0);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
+  const [showDimaCall, setShowDimaCall] = useState(null); // {key, subtitle, videoUrl, textMessage}
+  const [dimaCallAnswered, setDimaCallAnswered] = useState(false);
   const [durationPickerScenario, setDurationPickerScenario] = useState(null);
   // showStressChoice removed — SOS is instant
   const [exploreCat, setExploreCat] = useState('focus');
@@ -3768,6 +3817,9 @@ function App() {
     }
     // Schedule browser notification if granted
     scheduleNextNotification(stats);
+    // Dima call check (1s delay after Home loads)
+    const dimaCall = checkDimaCall(stats);
+    if (dimaCall) { setTimeout(() => setShowDimaCall(dimaCall), 1500); }
     // PWA install banner check
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
     if (!isStandalone && stats.onboarded) {
@@ -3952,8 +4004,9 @@ function App() {
     ph('session_start', { scenario: meta?.scenario, technique: segments.find(s=>s.type==='breathing')?.technique, duration: segments.reduce((a,s)=>a+(s.duration||0),0), level: userLevel, session_type: meta?.isSOSSession ? 'sos' : meta?.isFirstSession ? 'onboarding' : meta?.programId ? 'program' : meta?.category === 'custom' ? 'custom' : meta?.category === 'breathe_now' ? 'breathe_now' : 'quick_dive' });
     setActiveSession({ segments: mergedSegs, meta });
     if (stats.soundEnabled) {
-      ambientRef.current.init(WORLDS[world].ambient);
-      ambientRef.current.fadeIn();
+      // Ambient engine DISABLED — sessions use silence between cues
+      // ambientRef.current.init(WORLDS[world].ambient);
+      // ambientRef.current.fadeIn();
       playSplashWithVariation(); // splash on dive start
       HAPTIC.sessionStart();
     }
@@ -4004,8 +4057,8 @@ function App() {
 
 
   const endSession = (completed = true, actualData = null) => {
-    ambientRef.current.fadeOut();
-    setTimeout(() => ambientRef.current.destroy(), 2500);
+    // Ambient engine disabled for sessions
+    try { ambientRef.current.fadeOut(); setTimeout(() => ambientRef.current.destroy(), 2500); } catch(e) {}
     if (completed && activeSession) {
       const segs = activeSession.segments;
       const totalDur = segs.reduce((s, seg) => s + seg.duration, 0);
@@ -5714,6 +5767,67 @@ function App() {
       {/* Stress SOS overlay removed — SOS is now instant from home button */}
 
       {showPaywall && <PaywallModal />}
+
+      {/* DimaCall overlay */}
+      {showDimaCall && (
+        <div style={{position:'fixed',inset:0,zIndex:200,background:'rgba(0,0,0,0.85)',backdropFilter:'blur(20px)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:20,padding:24,animation:'fade-in 400ms ease-out'}}>
+          {!dimaCallAnswered ? (
+            <>
+              {/* Avatar with pulse */}
+              <div style={{width:120,height:120,borderRadius:'50%',background:'rgba(94,170,168,0.15)',border:'2px solid rgba(94,170,168,0.3)',display:'flex',alignItems:'center',justifyContent:'center',position:'relative'}}>
+                <div style={{position:'absolute',inset:-8,borderRadius:'50%',border:'2px solid rgba(94,170,168,0.15)',animation:'pulse 3s ease-in-out infinite'}} />
+                <span style={{fontFamily:"'DM Sans',sans-serif",fontSize:48,fontWeight:200,color:'rgba(94,170,168,0.8)'}}>D</span>
+              </div>
+              <div className="font-body" style={{fontSize:24,fontWeight:300,color:'rgba(220,225,235,0.9)'}}>Dima</div>
+              <div className="font-body" style={{fontSize:14,fontWeight:300,color:'rgba(220,225,235,0.5)',textAlign:'center',maxWidth:260}}>{showDimaCall.subtitle}</div>
+              <div style={{display:'flex',gap:16,marginTop:16}}>
+                <button onClick={() => {
+                  try{ph('dima_call_answered',{key:showDimaCall.key});}catch(e){}
+                  setDimaCallAnswered(true);
+                }} style={{padding:'14px 40px',borderRadius:14,background:'rgba(94,170,168,0.2)',border:'1px solid rgba(94,170,168,0.4)',color:'rgba(94,170,168,0.9)',fontSize:17,fontWeight:500,cursor:'pointer'}}>Answer</button>
+                <button onClick={() => {
+                  try{ph('dima_call_dismissed',{key:showDimaCall.key});}catch(e){}
+                  const call = showDimaCall;
+                  setStats(s => {
+                    const dd = {...(s.dimaDismissed||{}), [call.key]:true};
+                    const upd = {...s, dimaDismissed:dd};
+                    if (call._isWeekly) { upd.lastDimaWeeklyNote = new Date().toISOString(); upd.dimaWeeklyNoteIdx = (s.dimaWeeklyNoteIdx||0)+1; }
+                    return upd;
+                  });
+                  setShowDimaCall(null); setDimaCallAnswered(false);
+                }} style={{padding:'14px 32px',borderRadius:14,background:'none',border:'1px solid rgba(220,225,235,0.15)',color:'rgba(220,225,235,0.3)',fontSize:15,cursor:'pointer'}}>Later</button>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Message view */}
+              {showDimaCall.videoUrl ? (
+                <div style={{width:'100%',maxWidth:340,aspectRatio:'9/16',borderRadius:20,overflow:'hidden'}}>
+                  <video autoPlay playsInline src={showDimaCall.videoUrl} style={{width:'100%',height:'100%',objectFit:'cover'}}
+                    onEnded={() => {}} />
+                </div>
+              ) : (
+                <div style={{maxWidth:300,textAlign:'center'}}>
+                  <div style={{width:60,height:60,borderRadius:'50%',background:'rgba(94,170,168,0.12)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 16px'}}>
+                    <span style={{fontSize:28,fontWeight:200,color:'rgba(94,170,168,0.7)'}}>D</span>
+                  </div>
+                  <div className="font-body" style={{fontSize:17,fontWeight:300,color:'rgba(220,225,235,0.8)',lineHeight:1.7}}>{showDimaCall.textMessage}</div>
+                </div>
+              )}
+              <button onClick={() => {
+                const call = showDimaCall;
+                setStats(s => {
+                  const dd = {...(s.dimaDismissed||{}), [call.key]:true};
+                  const upd = {...s, dimaDismissed:dd};
+                  if (call._isWeekly) { upd.lastDimaWeeklyNote = new Date().toISOString(); upd.dimaWeeklyNoteIdx = (s.dimaWeeklyNoteIdx||0)+1; }
+                  return upd;
+                });
+                setShowDimaCall(null); setDimaCallAnswered(false);
+              }} style={{marginTop:20,padding:'12px 32px',borderRadius:12,background:'rgba(94,170,168,0.12)',border:'1px solid rgba(94,170,168,0.25)',color:'rgba(94,170,168,0.8)',fontSize:15,cursor:'pointer'}}>Continue</button>
+            </>
+          )}
+        </div>
+      )}
 
       {/* Duration picker bottom sheet */}
       {durationPickerScenario && (() => {
