@@ -3047,7 +3047,7 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef, star
   const oceanBg = fbW.bgGradient;
 
   useEffect(() => {
-    const t = setTimeout(() => setShowSkip(true), 4000);
+    const t = setTimeout(() => setShowSkip(true), 5000);
     return () => clearTimeout(t);
   }, []);
 
@@ -3073,12 +3073,12 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef, star
       if (!running) return;
       const t = (performance.now() - startTime) / 1000;
       setCineTime(t);
-      // Haptic on Beat 3 words (4-7s)
-      if (t >= 4 && t < 4.05) vibrateOnce('w-prepare', 30);
-      if (t >= 5.2 && t < 5.25) vibrateOnce('w-breathe', 30);
-      if (t >= 6.4 && t < 6.45) vibrateOnce('w-dive', 30);
-      // Done at 27s → splash + holdTest
-      if (t >= 27) {
+      // Haptic on Beat 3 words (6.5-9.5s)
+      if (t >= 6.5 && t < 6.55) vibrateOnce('w-prepare', 30);
+      if (t >= 7.5 && t < 7.55) vibrateOnce('w-breathe', 30);
+      if (t >= 8.5 && t < 8.55) vibrateOnce('w-dive', 30);
+      // Done at 29.5s → splash + holdTest
+      if (t >= 29.5) {
         running = false;
         clearInterval(interval);
         // Play splash sound
@@ -3289,14 +3289,14 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef, star
         <div className="fixed inset-0 flex flex-col items-center justify-center px-8" style={{background:oceanBg}}>
           <Particles world={fbWorld} />
           <div className="screen-transition text-center z-10">
-            {/* Level 1: Hero number */}
-            <div className="font-mono mb-4" style={{fontSize:48, fontWeight:300, color:palette.accent}}>{formatDepth(holdDepth)}<span style={{fontSize:24}}>m</span></div>
-            {/* Level 2: Context line */}
-            <div className="font-body mb-4" style={{fontSize:16, fontWeight:300, color:'rgba(220,225,235,0.6)'}}>
+            {/* Level 1: Hero number — JetBrains Mono 38px teal */}
+            <div className="font-mono mb-4" style={{fontSize:38, fontWeight:600, color:'#5EAAA8'}}>{formatDepth(holdDepth)}m</div>
+            {/* Level 2: Context — system sans 15px */}
+            <div className="font-body mb-4" style={{fontSize:15, fontWeight:300, color:'rgba(220,225,235,0.6)'}}>
               {depthContext(holdDepth)}{isFirstTest ? ' \u00b7 Your baseline' : prevDepth !== null && improvement > 0 ? ` \u00b7 +${improvement}% from last` : ''}
             </div>
-            {/* Level 3: Science or projection */}
-            <div className="font-body mb-10" style={{fontSize:13, fontWeight:300, color:'rgba(220,225,235,0.35)', fontStyle:'italic'}}>
+            {/* Level 3: Science — system sans 13px italic */}
+            <div className="font-body mb-10" style={{fontSize:13, fontWeight:400, color:'rgba(220,225,235,0.35)', fontStyle:'italic'}}>
               {projection ? `At this rate, ${projection.depth}m by ${projection.date}` : 'CO\u2082 tolerance predicts how calm you stay under pressure.'}
             </div>
             <button className="px-10 py-3 rounded-full font-body"
@@ -3343,35 +3343,54 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef, star
   // ===== CINEMATIC V4 RENDER — computed from cineTime =====
   const ct = cineTime;
   // Text
-  // ===== CINEMATIC V5 RENDER — new timing: Beat1(0-2) Beat2(2-4) Beat3(4-7) Beat4(7-27) =====
+  // ===== CINEMATIC V6 RENDER — Beat1(0-3.5) Beat2(3.5-6.5) Beat3(6.5-9.5) Beat4(9.5-29.5) =====
   let centerText='', centerOp=0, centerSize=20, centerWeight='300', centerColor='rgba(255,255,255,0.8)', centerWrap=true;
-  if (ct < 2) { centerText='Freedivers train one thing above all \u2014 how to breathe.'; centerOp = ct<0.2?0:ct<1.5?Math.min(1,(ct-0.2)/0.6):Math.max(0,1-(ct-1.5)/0.5); }
-  else if (ct < 4) { centerText='5 minutes daily. One technique. Real change.'; centerOp = ct<2.2?0:ct<3.5?Math.min(1,(ct-2.2)/0.6):Math.max(0,1-(ct-3.5)/0.5); }
-  else if (ct < 7) { const bt=ct-4; centerSize=38; centerWeight='600'; centerWrap=false;
-    if (bt<0.9){centerText='Prepare.';centerColor='rgba(255,255,255,0.9)';centerOp=bt<0.08?0:bt<0.5?Math.min(1,bt/0.4):Math.max(0,1-(bt-0.5)/0.4);}
-    else if(bt<1.8){centerText='Breathe.';centerColor='rgba(255,255,255,0.9)';const b2=bt-0.9;centerOp=b2<0.08?0:b2<0.5?Math.min(1,b2/0.4):Math.max(0,1-(b2-0.5)/0.4);}
-    else{centerText='Dive.';centerColor='rgba(94,170,168,0.9)';const b3=bt-1.8;centerOp=b3<0.4?Math.min(1,b3/0.3):b3<1.0?1:Math.max(0,1-(b3-1.0)/0.3);}
+  // Word-by-word fade helper: returns array of {word, opacity} based on time
+  const wordFade = (text, startT, durPerWord) => {
+    const words = text.split(' ');
+    return words.map((w, i) => {
+      const wStart = startT + i * 0.15;
+      const op = ct < wStart ? 0 : ct < wStart + durPerWord ? Math.min(1, (ct - wStart) / 0.3) : 1;
+      return { word: w, opacity: op };
+    });
+  };
+  let wordByWord = null;
+  if (ct < 3.5) {
+    const fadeOutStart = 2.8;
+    const globalOp = ct > fadeOutStart ? Math.max(0, 1 - (ct - fadeOutStart) / 0.7) : 1;
+    wordByWord = wordFade('Freedivers train one thing above all \u2014 how to breathe.', 0.3, 0.8).map(w => ({...w, opacity: w.opacity * globalOp}));
   }
-  // Background: black → ocean at Beat 4 start
+  else if (ct < 6.5) {
+    const fadeOutStart = 5.8;
+    const globalOp = ct > fadeOutStart ? Math.max(0, 1 - (ct - fadeOutStart) / 0.7) : 1;
+    wordByWord = wordFade('5 minutes daily. One technique. Real change.', 3.7, 0.6).map(w => ({...w, opacity: w.opacity * globalOp}));
+  }
+  else if (ct < 9.5) { const bt=ct-6.5; centerSize=38; centerWeight='600'; centerWrap=false;
+    if (bt<1.0){centerText='Prepare.';centerColor='rgba(255,255,255,0.9)';centerOp=bt<0.08?0:bt<0.6?Math.min(1,bt/0.4):Math.max(0,1-(bt-0.6)/0.4);}
+    else if(bt<2.0){centerText='Breathe.';centerColor='rgba(255,255,255,0.9)';const b2=bt-1.0;centerOp=b2<0.08?0:b2<0.6?Math.min(1,b2/0.4):Math.max(0,1-(b2-0.6)/0.4);}
+    else{centerText='Dive.';centerColor='rgba(94,170,168,0.9)';const b3=bt-2.0;centerOp=b3<0.4?Math.min(1,b3/0.3):b3<1.2?1:Math.max(0,1-(b3-1.2)/0.3);}
+  }
+  // Background: black → ocean at Beat 4
   let cineBg = '#000';
-  if(ct>=6.5&&ct<7.5){const p=Math.min((ct-6.5)/1,1);cineBg=`linear-gradient(180deg,rgba(${Math.round(p*30)},${Math.round(p*58)},${Math.round(p*95)},${Math.max(0.01,0.9*p)}),rgba(${Math.round(p*13)},${Math.round(p*27)},${Math.round(p*42)},${Math.max(0.01,0.95*p)}))`;}
-  else if(ct>=7.5){cineBg=SESSION_BG;}
-  // Bubble: appears immediately at Beat 4 start (t=7), no birth animation
+  if(ct>=9&&ct<10){const p=Math.min((ct-9)/1,1);cineBg=`linear-gradient(180deg,rgba(${Math.round(p*30)},${Math.round(p*58)},${Math.round(p*95)},${Math.max(0.01,0.9*p)}),rgba(${Math.round(p*13)},${Math.round(p*27)},${Math.round(p*42)},${Math.max(0.01,0.95*p)}))`;}
+  else if(ct>=10){cineBg=SESSION_BG;}
+  // Bubble: appears at Beat 4 (t=9.5)
   let bubbleOp=0,bubbleScale=1,bubbleY='-50%';
-  if(ct>=7&&ct<27){
-    bubbleOp=Math.min(1,(ct-7)/0.5); // fade in over 0.5s
-    const breathTime=ct-7,cycleTime=breathTime%DEMO_CYCLE;let el=0;
+  if(ct>=9.5&&ct<29.5){
+    bubbleOp=Math.min(1,(ct-9.5)/0.5);
+    const breathTime=ct-9.5,cycleTime=breathTime%DEMO_CYCLE;let el=0;
     for(const p of DEMO_PHASES){if(cycleTime<el+p.dur){const pr=(cycleTime-el)/p.dur,ea=0.5-0.5*Math.cos(Math.min(pr,1)*Math.PI);if(p.name==='inhale1')bubbleScale=1+ea*0.3;else if(p.name==='inhale2')bubbleScale=1.3+ea*0.15;else bubbleScale=1.45-ea*0.45;break;}el+=p.dur;}
   }
-  // Phase label — ONLY during demo, clean (no counter, no hint)
+  // Phase label
   let phaseLabel='',phaseSub='';
-  if(ct>=7&&ct<27){const breathTime=ct-7,cycleTime=breathTime%DEMO_CYCLE;if(cycleTime<2)phaseLabel='INHALE';else if(cycleTime<3)phaseLabel='+ INHALE';else phaseLabel='EXHALE';phaseSub='Breathe with the bubble';}
+  if(ct>=9.5&&ct<29.5){const breathTime=ct-9.5,cycleTime=breathTime%DEMO_CYCLE;if(cycleTime<2)phaseLabel='INHALE';else if(cycleTime<3)phaseLabel='+ INHALE';else phaseLabel='EXHALE';phaseSub='Breathe with the bubble';}
 
   return (
     <div style={{position:'fixed',inset:0,zIndex:60,background:cineBg,display:'flex',alignItems:'center',justifyContent:'center'}}>
       {showSkip && <button onClick={()=>{clearInterval(rafRef.current);if(introAmbientRef.current){introAmbientRef.current.pause();introAmbientRef.current=null;}try{ph('onboarding_cinematic_skipped',{});}catch(e){}setBreathPhase('done');}} style={{position:'fixed',top:'calc(16px + env(safe-area-inset-top, 0px))',right:16,zIndex:100,background:'none',border:'none',fontFamily:"'DM Sans',sans-serif",fontWeight:400,fontSize:14,color:'rgba(255,255,255,0.4)',padding:'8px 16px',cursor:'pointer'}}>Skip</button>}
       {bubbleOp>0 && <div style={{position:'absolute',top:'42%',left:'50%',transform:`translate(-50%,${bubbleY}) scale(${bubbleScale})`,width:'min(75vw, 300px)',aspectRatio:'1',opacity:bubbleOp,pointerEvents:'none'}}><OceanBubble ref={bubbleGlowRef}/></div>}
-      {centerText&&centerOp>0.01 && <div style={{position:'absolute',top:'42%',left:'50%',transform:'translate(-50%,-50%)',fontFamily:"'DM Sans',sans-serif",fontWeight:centerWeight,fontSize:centerSize,color:centerColor,opacity:centerOp,textAlign:'center',zIndex:10,pointerEvents:'none',whiteSpace:centerWrap?'normal':'nowrap',maxWidth:centerWrap?280:'none'}}>{centerText}</div>}
+      {wordByWord && <div style={{position:'absolute',top:'42%',left:'50%',transform:'translate(-50%,-50%)',fontFamily:"'DM Sans',sans-serif",fontWeight:'300',fontSize:20,color:'rgba(255,255,255,0.8)',textAlign:'center',zIndex:10,pointerEvents:'none',maxWidth:280,lineHeight:1.6}}>{wordByWord.map((w,i) => <span key={i} style={{opacity:w.opacity,transition:'opacity 0.15s ease'}}>{w.word} </span>)}</div>}
+      {!wordByWord&&centerText&&centerOp>0.01 && <div style={{position:'absolute',top:'42%',left:'50%',transform:'translate(-50%,-50%)',fontFamily:"'DM Sans',sans-serif",fontWeight:centerWeight,fontSize:centerSize,color:centerColor,opacity:centerOp,textAlign:'center',zIndex:10,pointerEvents:'none',whiteSpace:centerWrap?'normal':'nowrap',maxWidth:centerWrap?280:'none'}}>{centerText}</div>}
       {phaseLabel && <div style={{position:'fixed',top:'calc(42% - min(37.5vw, 150px) - 36px)',left:0,right:0,textAlign:'center',zIndex:15,pointerEvents:'none'}}><div className="font-body" style={{fontWeight:600,fontSize:13,letterSpacing:'0.2em',textTransform:'uppercase',color:'rgba(220,225,235,0.55)'}}>{phaseLabel}</div></div>}
       {phaseSub && <div style={{position:'fixed',top:'calc(42% + min(37.5vw, 150px) + 20px)',left:0,right:0,textAlign:'center',zIndex:15,pointerEvents:'none'}}><div className="font-body" style={{fontSize:15,fontWeight:300,color:'rgba(220,225,235,0.35)'}}>{phaseSub}</div></div>}
     </div>
@@ -3715,7 +3734,7 @@ function App() {
         setAuthUser(session.user);
         setAuthLoading(false);
       }
-    });
+    }).catch(() => { setAuthLoading(false); });
 
     // Listen for auth state changes (catches redirects, magic links)
     const { data: { subscription } } = supabaseClient.auth.onAuthStateChange(
@@ -3746,6 +3765,8 @@ function App() {
   const [selectedCat, setSelectedCat] = useState(null);
   const [quickDiveCat, setQuickDiveCat] = useState('focus');
   const [launching, setLaunching] = useState(false);
+  const [showSOSPicker, setShowSOSPicker] = useState(false);
+  const [breatheTab, setBreatheTab] = useState('situation'); // 'situation' | 'technique'
 
 
   const [activeSession, setActiveSession] = useState(null);
@@ -4897,27 +4918,14 @@ function App() {
         </button>
       )}
 
-      {/* SOS + Breathe now — inline, not fixed */}
-      <div style={{
-        display:'flex', gap:8,
-        marginBottom:12,
+      {/* SOS button — opens time picker */}
+      <button className="breathe-now-btn" style={{margin:'0 0 12px', background:'rgba(94,170,168,0.18)', border:'1px solid rgba(94,170,168,0.35)', display:'flex', alignItems:'center', justifyContent:'center', gap:6}} onClick={() => {
+        try{ph('sos_time_shown',{});}catch(e){}
+        setShowSOSPicker(true);
       }}>
-        <button className="breathe-now-btn" style={{flex:1, margin:0, background:'rgba(94,170,168,0.18)', border:'1px solid rgba(94,170,168,0.35)', display:'flex', alignItems:'center', justifyContent:'center', gap:6}} onClick={() => {
-          setCurrentMood({pre: null, post: null});
-          setMoodDelta(null);
-          setLastSessionWasSOS(true);
-          setSosCascadeLevel(1);
-          ph('sos_started', {});
-          const segs = [{ type:'breathing', technique:'physiological_sigh', duration:90, params:{inhale1:2,inhale2:1,exhale:7} }];
-          actuallyStartSession(segs, {scenario:'stress_sos', category:'stress', isSOSSession:true});
-        }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-          Stressed?
-        </button>
-        <button className="breathe-now-btn" style={{flex:1, margin:0}} onClick={() => setScreen('breathe-choice')}>
-          Breathe now
-        </button>
-      </div>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        Stressed?
+      </button>
 
       {/* Daily insight */}
       {(() => {
@@ -4974,8 +4982,19 @@ function App() {
 
       {/* Quick Dives — category pills */}
       <div className="mb-8">
-        <div className="font-body mb-3" style={{fontSize:13, fontWeight:500, color:'rgba(220,225,235,0.28)', letterSpacing:'0.12em', textTransform:'uppercase'}}>{t.quickDives}</div>
-        <div className="flex gap-2 overflow-x-auto no-scrollbar mb-4">
+        <div className="font-body mb-3" style={{fontSize:13, fontWeight:500, color:'rgba(220,225,235,0.28)', letterSpacing:'0.12em', textTransform:'uppercase'}}>BREATHE NOW</div>
+        {/* Tabs: By situation / By technique */}
+        <div style={{display:'flex',gap:0,marginBottom:12}}>
+          {[['By situation','situation'],['By technique','technique']].map(([label,val]) => (
+            <button key={val} onClick={() => setBreatheTab(val)} style={{flex:1,padding:'8px 0',borderRadius:0,fontSize:14,fontWeight:500,cursor:'pointer',
+              background:breatheTab===val?'rgba(94,170,168,0.15)':'transparent',
+              borderBottom:breatheTab===val?'2px solid rgba(94,170,168,0.5)':'2px solid rgba(255,255,255,0.04)',
+              color:breatheTab===val?palette.accent:'rgba(220,225,235,0.4)',transition:'all 200ms ease'}}>
+              {label}
+            </button>
+          ))}
+        </div>
+        {breatheTab === 'situation' && <div className="flex gap-2 overflow-x-auto no-scrollbar mb-4">
           {Object.keys(CATEGORIES).map(catKey => (
             <button key={catKey} className="flex-shrink-0 font-body" style={{
               padding:'6px 16px', borderRadius:20, fontSize:15,
@@ -5012,6 +5031,43 @@ function App() {
             {!stats.isPremium && <span style={{color:'var(--text-3)', opacity:0.4}}><Icon name="lock" size={14}/></span>}
           </button>
         </div>
+        </div>}
+        {/* By technique tab */}
+        {breatheTab === 'technique' && (
+          <div className="space-y-2">
+            {[
+              ['physiological_sigh','Cyclic Sigh','Calm','Fastest stress relief (Balban 2023)'],
+              ['box','Box Breathing','Focus','Sharpens focus under pressure (Theobald 2023)'],
+              ['diaphragmatic','Diaphragmatic','Foundation','Lowers cortisol, deepens calm (Ma 2017)'],
+              ['segmented','Segmented','Energy','Builds breath awareness and lung capacity'],
+              ['ujjayi','Ocean Breath','Deep','Advanced focus via glottic resistance (Mason 2013)'],
+              ['tidal','Tidal','Calm','Natural rhythm, calming baseline (Fincham 2023)'],
+              ['recovery','Recovery','Recovery','Gentle return to baseline after exertion'],
+            ].map(([techId,name,cat,why]) => {
+              const locked = !isTechniqueFree(techId);
+              return (
+                <button key={techId} className="glass w-full text-left flex items-center gap-3 px-4 py-3" style={{position:'relative',opacity:locked?0.5:1}}
+                  onClick={() => {
+                    if (locked) { setShowPaywall(true); return; }
+                    const dur = stats.isPremium ? 300 : 120;
+                    const params = TECHNIQUES[techId]?.defaults || {inhale:4,exhale:8};
+                    const segs = [{type:'breathing',technique:techId,duration:dur,params}];
+                    startSession(segs, {scenario:'technique_'+techId,category:'breathe_now'});
+                  }}>
+                  <div style={{width:32,height:32,borderRadius:8,background:`rgba(${accentRgb},0.08)`,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                    <span style={{fontSize:10,fontWeight:600,color:palette.accent,opacity:0.7}}>{cat}</span>
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-body" style={{fontWeight:500,fontSize:15,color:'rgba(220,225,235,0.85)'}}>{name}</div>
+                    <div className="font-body" style={{fontSize:12,fontWeight:300,color:'rgba(220,225,235,0.35)',marginTop:2}}>{why}</div>
+                  </div>
+                  <div className="font-mono" style={{fontSize:11,color:'rgba(220,225,235,0.3)'}}>{stats.isPremium?'5':'2'} min</div>
+                  {locked && <span style={{color:'var(--text-3)',opacity:0.4}}><Icon name="lock" size={14}/></span>}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -5638,7 +5694,7 @@ function App() {
     }
   };
 
-  const showTabs = !['category','program_view','breathe-choice','custom-pattern','breath_test'].includes(screen);
+  const showTabs = !['category','program_view','custom-pattern','breath_test'].includes(screen);
 
   return (
     <div className="fixed inset-0" style={{background:bg}}>
@@ -5773,6 +5829,42 @@ function App() {
       {/* Stress SOS overlay removed — SOS is now instant from home button */}
 
       {showPaywall && <PaywallModal />}
+
+      {/* SOS time picker bottom sheet */}
+      {showSOSPicker && (
+        <div onClick={() => setShowSOSPicker(false)} style={{position:'fixed',inset:0,zIndex:200,background:'rgba(0,0,0,0.65)',display:'flex',alignItems:'flex-end',justifyContent:'center',animation:'fade-in 200ms ease-out'}}>
+          <div onClick={e => e.stopPropagation()} style={{width:'100%',maxWidth:400,background:'#070c15',borderRadius:'20px 20px 0 0',padding:'24px 20px calc(20px + env(safe-area-inset-bottom, 0px))',animation:'screenCrossfade 300ms ease-out'}}>
+            <div className="font-body" style={{fontSize:16,fontWeight:300,color:'rgba(220,225,235,0.7)',textAlign:'center',marginBottom:20}}>How much time do you have?</div>
+            <div style={{display:'flex',flexDirection:'column',gap:12}}>
+              {[
+                {label:'Quick',sub:'30 sec',duration:30,technique:'physiological_sigh',option:'quick'},
+                {label:'Short',sub:'2 min',duration:120,technique:'physiological_sigh',option:'short'},
+                {label:'Deep',sub:'5 min',duration:300,technique:'physiological_sigh',option:'deep'},
+              ].map(opt => (
+                <button key={opt.option} onClick={() => {
+                  setShowSOSPicker(false);
+                  try{ph('sos_time_selected',{option:opt.option});}catch(e){}
+                  setCurrentMood({pre:null,post:null}); setMoodDelta(null);
+                  setLastSessionWasSOS(true); setSosCascadeLevel(opt.option==='deep'?1:0);
+                  ph('sos_started',{});
+                  if (opt.option === 'deep') {
+                    // Deep = existing cascade: start with 90s cyclic sigh
+                    const segs = [{type:'breathing',technique:'physiological_sigh',duration:90,params:{inhale1:2,inhale2:1,exhale:7}}];
+                    actuallyStartSession(segs, {scenario:'stress_sos',category:'stress',isSOSSession:true});
+                  } else {
+                    const segs = [{type:'breathing',technique:opt.technique,duration:opt.duration,params:{inhale1:2,inhale2:1,exhale:7}}];
+                    actuallyStartSession(segs, {scenario:'stress_sos',category:'stress',isSOSSession:true});
+                  }
+                }} style={{height:56,borderRadius:12,background:'rgba(94,170,168,0.1)',border:'1px solid rgba(94,170,168,0.2)',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
+                  <span style={{fontSize:16,fontWeight:600,color:'rgba(220,225,235,0.85)'}}>{opt.label}</span>
+                  <span style={{fontSize:14,color:'rgba(220,225,235,0.5)'}}>{opt.sub}</span>
+                </button>
+              ))}
+            </div>
+            <button onClick={() => setShowSOSPicker(false)} style={{display:'block',width:'100%',marginTop:16,background:'none',border:'none',fontSize:14,color:'rgba(220,225,235,0.35)',cursor:'pointer',textAlign:'center'}}>Not now</button>
+          </div>
+        </div>
+      )}
 
       {/* DimaCall overlay */}
       {showDimaCall && (
