@@ -1435,6 +1435,7 @@ const DIMA_MESSAGES = {
   milestone_first_mastery:{subtitle:"Technique mastered",videoUrl:'',textMessage:"Deep Diver level. This technique is part of you now \u2014 your body knows it before your mind does.",priority:7},
   comeback_3_days:{subtitle:"Haven't seen you in a while",videoUrl:'',textMessage:"Your breath is always there. Even one minute resets the system. Ready to dive?",priority:5},
   comeback_7_days:{subtitle:"Your streak misses you",videoUrl:'',textMessage:"A freediver always comes back to the water. One dive. That's all it takes.",priority:6},
+  comeback_30_days:{subtitle:"It's been a while",videoUrl:'',textMessage:"A month away. Your breath didn't forget you. One dive. Start fresh.",priority:7},
   weekly_note_1:{subtitle:"Coach note",videoUrl:'',textMessage:"This week, try closing your eyes during a session. Your breath becomes louder. Everything else gets quieter.",priority:3},
   weekly_note_2:{subtitle:"Coach note",videoUrl:'',textMessage:"Notice where you hold tension \u2014 jaw, shoulders, belly. Each exhale is a chance to let one of them go.",priority:3},
   weekly_note_3:{subtitle:"Coach note",videoUrl:'',textMessage:"Real freedivers don't fight the urge to breathe. They notice it, accept it, and let it pass. That's the whole practice.",priority:3},
@@ -1460,7 +1461,8 @@ function checkDimaCall(stats) {
   if (stats.history?.length > 0) {
     const last = new Date(stats.history[stats.history.length-1].date);
     const days = (now-last)/(1000*60*60*24);
-    if (days >= 7 && !dismissed.comeback_7_days) triggers.push({key:'comeback_7_days',...DIMA_MESSAGES.comeback_7_days});
+    if (days >= 30 && !dismissed.comeback_30_days) triggers.push({key:'comeback_30_days',...DIMA_MESSAGES.comeback_30_days});
+    else if (days >= 7 && !dismissed.comeback_7_days) triggers.push({key:'comeback_7_days',...DIMA_MESSAGES.comeback_7_days});
     else if (days >= 3 && !dismissed.comeback_3_days) triggers.push({key:'comeback_3_days',...DIMA_MESSAGES.comeback_3_days});
   }
   // Weekly note
@@ -3743,6 +3745,7 @@ function App() {
   const [screen, setScreen] = useState(() => stats.onboarded ? 'entrance' : 'first_breath');
   const [selectedCat, setSelectedCat] = useState(null);
   const [quickDiveCat, setQuickDiveCat] = useState('focus');
+  const [launching, setLaunching] = useState(false);
 
 
   const [activeSession, setActiveSession] = useState(null);
@@ -4651,6 +4654,9 @@ function App() {
   };
 
   const launchScenario = (id, dur) => {
+    if (launching) return;
+    setLaunching(true);
+    setTimeout(() => setLaunching(false), 2000); // re-enable after 2s safety
     // Handle first session special case
     if (id === '_first_session') {
       startSession(FIRST_SESSION(t), {scenario:'first_session', category:'focus'});
