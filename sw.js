@@ -1,5 +1,5 @@
-const CACHE_NAME = 'dive-v2';
-const AUDIO_CACHE = 'dive-audio-v2';
+const CACHE_NAME = 'dive-v5';
+const AUDIO_CACHE = 'dive-audio-v5';
 
 const STATIC_ASSETS = [
   '/',
@@ -86,6 +86,7 @@ self.addEventListener('fetch', (event) => {
   // CDN resources: cache-first
   if (
     url.hostname === 'unpkg.com' ||
+    url.hostname === 'cdnjs.cloudflare.com' ||
     url.hostname === 'cdn.tailwindcss.com' ||
     url.hostname === 'cdn.jsdelivr.net' ||
     url.hostname === 'fonts.googleapis.com' ||

@@ -1,4 +1,4 @@
-<!-- DIVE v2.0 -->
+<!-- DIVE v2.0 deploy-v5 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -11,13 +11,23 @@
 <title>DIVE</title>
 <link rel="manifest" href="manifest.json">
 <script>
+window.onerror=function(m,u,l,c,e){
+  document.body.style.background='#111';
+  document.body.style.color='#0f0';
+  document.body.style.padding='20px';
+  document.body.style.fontFamily='monospace';
+  document.body.style.fontSize='12px';
+  document.body.innerHTML='<h2 style="color:#f55">JS Error</h2><pre>'+m+'\nFile: '+u+'\nLine:'+l+' Col:'+c+'\n'+(e&&e.stack||'')+'</pre>';
+};
+</script>
+<script>
 !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="capture identify alias people.set people.set_once set_config register register_once unregister opt_out_capturing has_opted_out_capturing opt_in_capturing reset isFeatureEnabled onFeatureFlags getFeatureFlag getFeatureFlagPayload reloadFeatureFlags group updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures getActiveMatchingSurveys getSurveys onSessionId".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
 posthog.init('phc_ikhnznxs5W5eX1ZjDV4fzzwO6iMl2wIjwo9BOn46fPG', {api_host: 'https://us.i.posthog.com', person_profiles: 'identified_only'});
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
+<script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.24.0/babel.min.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@200;300;400;500;600&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet">
 <style>
@@ -65,6 +75,16 @@ html,body,#root { width:100%; height:100%; overflow:hidden; font-family:'DM Sans
 @keyframes hold-counter-pulse { 0%,100% { transform:scale(1); } 50% { transform:scale(1.03); } }
 @keyframes tap-pulse { 0%,100% { opacity:0.3; } 50% { opacity:0.7; } }
 @keyframes bubbleRise { 0%{transform:translateY(0) scale(1);opacity:0} 10%{opacity:0.6} 90%{opacity:0.4} 100%{transform:translateY(-100vh) scale(0.6);opacity:0} }
+@keyframes bubbleWobble {
+  0%   { border-radius: 50% 48% 51% 49% / 49% 50% 48% 51%; }
+  12%  { border-radius: 48% 51% 49% 50% / 51% 48% 50% 49%; }
+  25%  { border-radius: 51% 49% 48% 52% / 48% 51% 49% 50%; }
+  37%  { border-radius: 49% 52% 50% 48% / 50% 49% 52% 48%; }
+  50%  { border-radius: 52% 48% 51% 49% / 49% 52% 48% 51%; }
+  62%  { border-radius: 48% 50% 52% 49% / 51% 48% 50% 52%; }
+  75%  { border-radius: 50% 49% 48% 51% / 52% 50% 49% 48%; }
+  100% { border-radius: 50% 48% 51% 49% / 49% 50% 48% 51%; }
+}
 @keyframes slowRotate { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
 @keyframes surfaceUp { 0%{transform:translateY(0);opacity:0.9} 60%{opacity:1} 100%{transform:translateY(-40px);opacity:0} }
 @keyframes pulse { 0%,100%{opacity:0.15;transform:scale(1)} 50%{opacity:0.4;transform:scale(1.5)} }
@@ -201,7 +221,7 @@ const LANG = {
     morningStart:'Morning start',
     beforeWorkout:'Before a workout',quickReset:'Quick reset',
     cantSleep:"Can't sleep",anxiousMorning:'Anxious morning',betweenMeetings:'Between meetings',
-    justRelax:'Just relax',deepDive:'Deep dive',
+    justRelax:'Just relax',deepDive:'Deep dive',afterArgument:'After an argument',publicSpeaking:'Before public speaking',
     min:'min',begin:'Begin',pause:'Pause',resume:'Resume',skip:'Skip',
     exitSession:'Exit session?',exitConfirm:'Session progress won\'t be saved.',exitYes:'Exit',exitNo:'Stay',
     inhale:'Inhale',exhale:'Exhale',hold:'Hold',holdPause:'Pause',belly:'Belly',ribs:'Ribs',chest:'Chest',inhale2:'+ Inhale',
@@ -290,6 +310,7 @@ const SCENARIO_LANG_KEY = {
   hard_day:'afterToughDay',insomnia:'cantSleep',between:'betweenMeetings',anxious_wake:'anxiousMorning',
   morning:'morningStart',pre_workout:'beforeWorkout',quick_reset:'quickReset',
   just_relax:'justRelax',deep_dive:'deepDive',
+  after_argument:'afterArgument',public_speaking:'publicSpeaking',
 };
 const CATEGORY_LANG_KEY = {focus:'focus',stress:'stress',energy:'energy',deep:'deep'};
 const TECHNIQUE_LANG_KEY = {
@@ -439,26 +460,56 @@ const WORLDS = {
 
 // ===== SCIENCE FACTS =====
 const SCIENCE_FACTS = [
-  "Stanford research: 5 min of cyclic sighing daily improves mood more than meditation (Balban et al., 2023)",
-  "Your diaphragm is the only skeletal muscle that works 24/7 \u2014 and you can control it consciously (Zaccaro 2018)",
-  "Slow breathing activates the vagus nerve, your body\u2019s built-in calm switch (Gerritsen & Band 2018)",
-  "Heart rate variability shifts within 90 seconds of slow breathing (Tabor 2022)",
-  "Extended exhales widen your vagal response window \u2014 the longer the exhale, the deeper the calm (De Couck 2019)",
-  "Freedivers train the same breathing patterns to reach 200m depths. You\u2019re using their toolkit (Alkan 2013)",
-  "Slow breathing at 6 breaths per minute disrupts the fight-or-flight loop directly (Zaccaro 2018)",
-  "Navy SEALs use box breathing before high-stakes missions \u2014 equal phases create neural balance (Theobald 2023)",
-  "Breathing at 5.5 breaths/min produces the largest measurable HRV response \u2014 your cardiovascular resonance frequency (Lin 2014)",
-  "A single cyclic sigh can reduce stress in under 60 seconds \u2014 the fastest evidence-based technique (Balban 2023)",
-  "Freedivers slow their heart rate from 80 to 30 bpm using the mammalian dive reflex \u2014 you activate it with every exhale",
-  "Breathing at resonance frequency produces Hedges\u2019 g=0.83 for stress reduction \u2014 the largest effect in breathwork research (Goessl 2017)",
-  "4 minutes of cyclic sighing reduced pain intensity in an orthopedic clinic (Hanley 2025)",
-  "Regular breathwork reduces anxiety with effect size g=\u22120.32 across 12 randomized trials (Fincham 2023, n=785)",
-  "The preBötzinger Complex \u2014 200 neurons in your brainstem \u2014 controls the sigh reflex that resets your breathing (Li 2016, Nature)",
-  "Diaphragmatic breathing for 8 weeks significantly reduced cortisol levels and improved sustained attention (Ma 2017)",
-  "Breath hold capacity improves 15.8% in 8 weeks of practice \u2014 even in non-divers (Apnea training 2024)",
-  "Coherence breathing synchronizes your heart rhythm with your breath \u2014 0\u00b0 phase delay, maximum efficiency (Lehrer & Gevirtz 2014)",
-  "2 minutes of extended exhale breathing improved decision-making accuracy by ~50% in a controlled study (De Couck 2019)",
-  "The largest breathwork study (n=400) found breathing + attention together produce the benefit \u2014 both matter (Daniel-Watanabe 2023)",
+  "The double inhale in cyclic sighing reopens collapsed air sacs in your lungs — you expel more CO\u2082 in a single exhale (Balban, Stanford 2023)",
+  "5 minutes of breathing daily improves mood more than 5 minutes of meditation — tested on 108 people (Balban, Stanford 2023)",
+  "The more consecutive days you practice, the stronger the effect — each day builds on the previous one (Balban, Stanford 2023)",
+  "One cyclic sigh is enough to relieve acute stress in under 30 seconds (Balban, Stanford 2023)",
+  "After 5 minutes of breathing, your breathing rate drops for the entire remaining day — visible on wearable sensors (Balban 2023, WHOOP data)",
+  "2 minutes of slow exhale breathing improved decision accuracy by ~50% in a controlled experiment (De Couck 2019, 56 participants)",
+  "Military units use box breathing before operations — it improves shooting accuracy (Theobald 2023, 100 cadets)",
+  "Police officers using tactical breathing perform significantly better in critical incident simulations (Collabra 2025, 96 cadets)",
+  "Heart rate variability starts changing within 90 seconds of slow breathing (Tabor 2022, 28 participants)",
+  "Breathing at 5.5 breaths per minute creates resonance with your cardiovascular system — your heart works at maximum efficiency (Lin 2014, 47 participants)",
+  "8 weeks of diaphragmatic breathing significantly reduces cortisol — the stress hormone (Ma 2017, 40 participants)",
+  "Slow nose breathing activates the vagus nerve — the longest nerve in your body, running from brain to gut",
+  "Freedivers slow their heart rate from 80 to 30 bpm using the same techniques you're practicing",
+  "Equal-phase breathing (inhale-hold-exhale-hold) creates a neural anchor for attention when thoughts scatter",
+  "Ujjayi (ocean breathing) reduces anxiety and improves cognitive test scores in just 8 minutes (JCDR 2022, 34 participants)",
+  "Closing your eyes during breathing increases alpha brain waves — the waves of relaxation (Barry 2007, 28 participants)",
+  "Nature sounds enhance parasympathetic response during breathing, especially for highly stressed people (Gould van Praag 2017)",
+  "8 weeks of breath-hold training increases lung capacity by 12% even in people who never dive (Apnea study 2024, 23 participants)",
+  "Maximum breath-hold time improves by 16% after 8 weeks of practice in ordinary people (Apnea study 2024)",
+  "Your CO\u2082 tolerance predicts how calmly you handle stress — the higher it is, the more resilient you are",
+  "200 neurons in your brainstem control your breathing rhythm and the sigh reflex — that's what you're training (Li 2016, Nature)",
+  "Coherence breathing at 5.5 breaths/min produced the largest stress reduction effect among all studied techniques (Goessl 2017, 24 studies)",
+  "Body scan combined with breathing works on two fronts: the scan targets depression, breathing targets anxiety (Colgan 2017, 102 veterans)",
+  "Visualizing nature reduces anxiety more effectively than abstract imagery (Nguyen 2018, 48 participants)",
+  "Slow breathing switches your brain from stress mode to rest mode — visible on EEG scans (Zaccaro 2018, 15 studies)",
+  "Breathing at your personal resonance frequency (usually 5-6.5 breaths/min) is more effective than any fixed rate (Steffen 2017)",
+  "4 minutes of cyclic sighing reduced pain perception in patients before surgery (Hanley 2025, pilot RCT)",
+  "Professional athletes use these exact techniques before competition — you're training the same system",
+  "The Bohr Effect: higher CO\u2082 tolerance improves oxygen delivery to your tissues — breathwork trains this directly",
+  "Haptic feedback (vibration) reduces breathing rate by 25% — your phone can be a coach even with your eyes closed (Choi 2021, MIT, 18 participants)",
+  "Music-guided breathing increases HRV and wellbeing through different channels: breathing changes physiology, music changes perception (Fuchs 2018, 60 participants)",
+  "The largest breathing study (400 participants) found that mindful breathing works better than mechanical — attention to the process amplifies the effect (Daniel-Watanabe 2023)",
+  "Regular slow breathing reduces inflammatory markers in blood — stress literally inflames your body, breathing reverses it",
+  "Blood pressure drops after just one session of slow breathing with extended exhale (Van Diest 2014)",
+  "Beginners get the maximum benefit from simple slow breathing — complex techniques work better once the basics are solid (Mason 2013)",
+  "Your diaphragm is the only skeletal muscle that works 24 hours a day. And you can consciously control it.",
+  "When breathing at resonance frequency, your heart rhythm and breath synchronize with zero delay — perfect efficiency (Sevoz-Couche 2022)",
+  "4 weeks of breathing training improves cognitive test scores and reduces perceived stress in young adults (Chaitanya 2022, RCT)",
+  "Freedivers can hold their breath for over 11 minutes. Their training starts with the same exercises you're doing right now.",
+  "Your nose isn't just an air intake. Nasal breathing triggers nitric oxide production, which widens blood vessels and improves gas exchange.",
+  "A slow exhale extends the vagus nerve's activity window in each breathing cycle — the longer the exhale, the deeper the calm (De Couck 2019)",
+  "A review of 58 studies (5,407 participants) found sessions shorter than 5 minutes often don't work — the 5-minute threshold is critical (Novaes 2023)",
+  "Stress isn't the enemy. Uncontrolled stress is. Breathing gives you the choice: react or respond.",
+  "People who regularly practice breathing techniques show higher resting heart rate variability — a sign of a healthy adaptive nervous system",
+  "Holding your breath activates the mammalian dive reflex — your pulse slows, blood redirects to brain and heart. An ancient survival mechanism.",
+  "Segmented breathing (belly \u2192 ribs \u2192 chest) maximizes the volume of each breath — this is how freedivers fill up before a dive",
+  "Box breathing works not because of the shape, but because of the hold. The pause is where your mind wants to rush — and you don't let it.",
+  "Even 2 minutes of breathing in the morning changes your stress response for the rest of the day — your nervous system remembers the state of calm",
+  "Breathing is the only body function that works automatically AND can be fully consciously controlled",
+  "The best time for breathing practice is when you think you don't need it. That's when you're training your baseline level of calm.",
 ];
 
 // ===== TECHNIQUE INFO (science annotations) =====
@@ -691,18 +742,20 @@ function mapPhaseToHaptic(phase) {
 
 // ===== SCENARIOS =====
 const SCENARIOS = {
-  meeting:      { cat:'focus', svgIcon:'meeting', free:true, durations:[5,10] },
-  presentation: { cat:'focus', svgIcon:'presentation', free:false, durations:[5,10] },
-  cant_focus:   { cat:'focus', svgIcon:'cant_focus', free:false, durations:[5] },
-  hard_day:     { cat:'stress', svgIcon:'hard_day', free:true, durations:[3,5,10] },
-  insomnia:     { cat:'stress', svgIcon:'insomnia', free:true, durations:[5,10] },
-  between:      { cat:'stress', svgIcon:'between', free:false, durations:[2,3] },
-  anxious_wake: { cat:'stress', svgIcon:'anxious_wake', free:false, durations:[3,5] },
-  morning:      { cat:'energy', svgIcon:'morning', free:true, durations:[2,3,5] },
-  pre_workout:  { cat:'energy', svgIcon:'pre_workout', free:false, durations:[5] },
-  quick_reset:  { cat:'energy', svgIcon:'quick_reset', free:false, durations:[2,3] },
-  just_relax:   { cat:'deep', svgIcon:'just_relax', free:true, durations:[5,10] },
-  deep_dive:    { cat:'deep', svgIcon:'deep_dive', free:false, durations:[10] },
+  meeting:      { cat:'focus', svgIcon:'meeting', free:true, durations:[5,10], mainTech:'Box', why:'Improves focus under pressure (Theobald 2023)' },
+  presentation: { cat:'focus', svgIcon:'presentation', free:false, durations:[5,10], mainTech:'Cyclic Sigh', why:'Tactical calm under pressure (Balban 2023)' },
+  cant_focus:   { cat:'focus', svgIcon:'cant_focus', free:false, durations:[5], mainTech:'Box', why:'Equal phases anchor scattered attention' },
+  hard_day:     { cat:'stress', svgIcon:'hard_day', free:true, durations:[3,5,10], mainTech:'Cyclic Sigh', why:'Fastest mood improvement (Balban 2023)' },
+  insomnia:     { cat:'stress', svgIcon:'insomnia', free:true, durations:[5,10], mainTech:'Diaphragmatic', why:'Extended exhale activates sleep-ready state (De Couck 2019)' },
+  between:      { cat:'stress', svgIcon:'between', free:false, durations:[2,3], mainTech:'Cyclic Sigh', why:'Resets stress accumulation between tasks' },
+  anxious_wake: { cat:'stress', svgIcon:'anxious_wake', free:false, durations:[3,5], mainTech:'Diaphragmatic', why:'Reduces morning cortisol (Ma 2017)' },
+  morning:      { cat:'energy', svgIcon:'morning', free:true, durations:[2,3,5], mainTech:'Segmented', why:'Sets nervous system baseline for the day' },
+  pre_workout:  { cat:'energy', svgIcon:'pre_workout', free:false, durations:[5], mainTech:'Segmented', why:'Optimizes arousal without anxiety' },
+  quick_reset:  { cat:'energy', svgIcon:'quick_reset', free:false, durations:[2,3], mainTech:'Cyclic Sigh', why:'One technique, immediate shift' },
+  just_relax:   { cat:'deep', svgIcon:'just_relax', free:true, durations:[5,10], mainTech:'Tidal', why:'Your body knows what it needs' },
+  deep_dive:    { cat:'deep', svgIcon:'deep_dive', free:false, durations:[10], mainTech:'Ujjayi', why:'Extended practice for deeper change' },
+  after_argument:   { cat:'stress', svgIcon:'hard_day', free:false, durations:[2,3], mainTech:'Cyclic Sigh', why:'Vagal brake activation (De Couck 2019)' },
+  public_speaking:  { cat:'focus', svgIcon:'presentation', free:false, durations:[3,5], mainTech:'Box', why:'Tactical calm under pressure (Theobald 2023)' },
 };
 
 const CATEGORIES = {
@@ -907,6 +960,35 @@ const getSessionContent = (t, world) => ({
       { type:'breathing', technique:'physiological_sigh', duration:122, params:{inhale1:2,inhale2:1,exhale:7} },
       { type:'bodyscan', duration:60, text:t.bodyScanFull, scanType:'full' },
       { type:'text', duration:5, text:t.openEyes, textKey:'openEyes' },
+    ]
+  },
+  after_argument: {
+    2: [
+      { type:'text', duration:5, text:t.relaxIntro, textKey:'relaxIntro' },
+      { type:'breathing', technique:'physiological_sigh', duration:60, params:{inhale1:2,inhale2:1,exhale:7} },
+      { type:'breathing', technique:'diaphragmatic', duration:50, params:{inhale:4,exhale:8} },
+      { type:'text', duration:5, text:t.openEyes, textKey:'openEyes' },
+    ],
+    3: [
+      { type:'text', duration:5, text:t.relaxIntro, textKey:'relaxIntro' },
+      { type:'breathing', technique:'physiological_sigh', duration:70, params:{inhale1:2,inhale2:1,exhale:7} },
+      { type:'breathing', technique:'diaphragmatic', duration:80, params:{inhale:4,exhale:8} },
+      { type:'text', duration:6, text:t.openEyes, textKey:'openEyes' },
+    ]
+  },
+  public_speaking: {
+    3: [
+      { type:'text', duration:5, text:t.speechIntro, textKey:'speechIntro' },
+      { type:'breathing', technique:'box', duration:96, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
+      { type:'breathing', technique:'diaphragmatic', duration:70, params:{inhale:4,exhale:8} },
+      { type:'text', duration:6, text:t.openEyes, textKey:'openEyes' },
+    ],
+    5: [
+      { type:'text', duration:5, text:t.speechIntro, textKey:'speechIntro' },
+      { type:'breathing', technique:'physiological_sigh', duration:60, params:{inhale1:2,inhale2:1,exhale:7} },
+      { type:'breathing', technique:'box', duration:120, params:{inhale:4,holdIn:4,exhale:4,holdOut:4} },
+      { type:'breathing', technique:'diaphragmatic', duration:100, params:{inhale:4,exhale:8} },
+      { type:'text', duration:8, text:t.openEyes, textKey:'openEyes' },
     ]
   },
 });
@@ -1299,6 +1381,7 @@ const defaultStats = () => ({
   bestHoldDepth: 0,
   introSeen:false,
   depthExplained:false,
+  researchConsent:false,
   techniqueMastery:{},
   shownMilestones:[],
   notificationsGranted:false,
@@ -1439,11 +1522,29 @@ const DIMA_MESSAGES = {
   weekly_note_1:{subtitle:"Coach note",videoUrl:'',textMessage:"This week, try closing your eyes during a session. Your breath becomes louder. Everything else gets quieter.",priority:3},
   weekly_note_2:{subtitle:"Coach note",videoUrl:'',textMessage:"Notice where you hold tension \u2014 jaw, shoulders, belly. Each exhale is a chance to let one of them go.",priority:3},
   weekly_note_3:{subtitle:"Coach note",videoUrl:'',textMessage:"Real freedivers don't fight the urge to breathe. They notice it, accept it, and let it pass. That's the whole practice.",priority:3},
+  weekly_note_4:{subtitle:"Coach note",videoUrl:'',textMessage:"Try breathing right after waking up — before your phone, before coffee. Your nervous system is most receptive then.",priority:3},
+  weekly_note_5:{subtitle:"Coach note",videoUrl:'',textMessage:"If a session feels hard, that's not failure. That's your body learning something new. Stay with it.",priority:3},
+  weekly_note_6:{subtitle:"Coach note",videoUrl:'',textMessage:"Count your exhale length this week. When it naturally gets longer than your inhale, your body is adapting.",priority:3},
+  weekly_note_7:{subtitle:"Coach note",videoUrl:'',textMessage:"Freedivers train on land more than in water. Every session here builds the same neural pathways they use at depth.",priority:3},
+  weekly_note_8:{subtitle:"Coach note",videoUrl:'',textMessage:"Your diaphragm is a muscle. Like any muscle, it gets stronger with use. You're training it right now.",priority:3},
+  weekly_note_9:{subtitle:"Coach note",videoUrl:'',textMessage:"Try one session this week with no visual — just sound and breath. Your proprioception sharpens when sight is removed.",priority:3},
+  weekly_note_10:{subtitle:"Coach note",videoUrl:'',textMessage:"The pause between exhale and inhale is where the magic happens. Don't rush it. Let your body decide when to breathe.",priority:3},
+  weekly_note_11:{subtitle:"Coach note",videoUrl:'',textMessage:"After a stressful moment today, take three cyclic sighs before responding. Notice what changes.",priority:3},
+  weekly_note_12:{subtitle:"Coach note",videoUrl:'',textMessage:"Your heart rate variability is improving with every session, even if you can't feel it yet. The data is clear on this.",priority:3},
+  weekly_note_13:{subtitle:"Coach note",videoUrl:'',textMessage:"Try breathing in a different position this week — lying down, standing, walking. Your body adapts to each one differently.",priority:3},
+  weekly_note_14:{subtitle:"Coach note",videoUrl:'',textMessage:"Consistency beats intensity. A 3-minute daily practice changes more than one long session per week.",priority:3},
+  weekly_note_15:{subtitle:"Coach note",videoUrl:'',textMessage:"You're not just breathing. You're training your vagus nerve, your prefrontal cortex, and your stress response. All at once.",priority:3},
 };
 
 function checkDimaCall(stats) {
   if (!stats.onboarded) return null;
   const now = new Date();
+  // Max 1 DimaCall per day, 3-day cooldown between any DimaCall
+  const lastCall = stats.lastDimaCallDate ? new Date(stats.lastDimaCallDate) : null;
+  if (lastCall) {
+    const daysSinceCall = (now - lastCall) / (1000 * 60 * 60 * 24);
+    if (daysSinceCall < 3) return null;
+  }
   const dismissed = stats.dimaDismissed || {};
   const triggers = [];
   // Program completion
@@ -1468,7 +1569,7 @@ function checkDimaCall(stats) {
   // Weekly note
   const lastNote = stats.lastDimaWeeklyNote ? new Date(stats.lastDimaWeeklyNote) : null;
   if ((!lastNote || (now-lastNote)/(1000*60*60*24) >= 7) && (stats.totalSessions||0) >= 5) {
-    const idx = ((stats.dimaWeeklyNoteIdx||0) % 3) + 1;
+    const idx = ((stats.dimaWeeklyNoteIdx||0) % 15) + 1;
     triggers.push({key:'weekly_note_'+idx,...DIMA_MESSAGES['weekly_note_'+idx], _isWeekly:true, _noteIdx:idx});
   }
   triggers.sort((a,b) => (b.priority||0)-(a.priority||0));
@@ -1901,7 +2002,7 @@ let _consecutiveSilences = 0;
 
 function resetVoiceState() { _lastSpokenKey = null; _consecutiveSilences = 0; }
 
-function playPhaseCue(technique, phase, cycleCount, phaseDuration, isEyesClosed) {
+function playPhaseCue(technique, phase, cycleCount, phaseDuration, isEyesClosed, isLastCycle) {
   if (!voicePlayer.enabled) return;
   const tech = technique === 'physiological_sigh' ? 'sigh' : technique;
 
@@ -1914,8 +2015,11 @@ function playPhaseCue(technique, phase, cycleCount, phaseDuration, isEyesClosed)
   const cueKey = PHASE_CUE_MAP[phase];
   if (!cueKey) return;
 
+  // RULE 0: Last cycle — ALWAYS speak (session arc: 100% voice cue probability)
+  let shouldSpeak = isLastCycle;
+
   // RULE 1: Cycles 0-1 — ALWAYS speak (teaching mode)
-  let shouldSpeak = cycleCount < 2;
+  if (!shouldSpeak) shouldSpeak = cycleCount < 2;
 
   if (!shouldSpeak) {
     // RULE 2: After 3+ consecutive silences → force speak
@@ -2061,12 +2165,22 @@ function Particles({ world, diveProgress = 0 }) {
 const OceanBubble = React.forwardRef((props, ref) => {
   return (
     <div ref={ref} style={{
-      width: '100%', height: '100%', borderRadius: '50%',
-      background: 'radial-gradient(circle at 45% 40%, rgba(94,170,168,0.25) 0%, rgba(94,170,168,0.12) 35%, rgba(94,170,168,0.04) 60%, transparent 75%)',
+      width: '100%', height: '100%',
+      animation: 'bubbleWobble 8s ease-in-out infinite',
+      background: 'transparent',
       border: '1px solid rgba(94,170,168,0.10)',
-      boxShadow: '0 0 40px rgba(94,170,168,0.15), 0 0 80px rgba(94,170,168,0.08), inset 0 -20px 40px rgba(94,170,168,0.08)',
+      boxShadow: '0 8px 30px rgba(94,170,168,0.15)',
       position: 'relative',
+      transition: 'box-shadow 0.5s ease',
+      willChange: 'box-shadow',
     }}>
+      {/* Inner light gradient — shifts with breathing via CSS transition */}
+      <div className="bubble-inner-light" style={{
+        position: 'absolute', inset: 0, borderRadius: 'inherit',
+        background: 'radial-gradient(circle at 50% 50%, rgba(94,170,168,0.25) 0%, rgba(94,170,168,0.12) 35%, rgba(94,170,168,0.04) 60%, transparent 75%)',
+        transition: 'background 0.8s ease',
+      }} />
+      {/* Specular highlight */}
       <div style={{
         position: 'absolute', top: '15%', left: '20%',
         width: '22%', height: '18%', borderRadius: '50%',
@@ -2147,11 +2261,57 @@ function SessionText({ text, texts, duration, bodyScanSentences, bodyScanIdx, vi
   );
 }
 
-// ===== HAPTIC ENGINE =====
-function hapticForPhase(phase, phaseDuration) {
+// ===== HAPTIC ENGINE (per-technique profiles) =====
+const TECHNIQUE_HAPTIC_PROFILES = {
+  // Cyclic sigh: soft long exhale fade
+  physiological_sigh: {
+    inhale1(d) { return [30, 100, 40]; },
+    inhale2(d) { return [50, 60, 50]; },
+    exhale(d) { const n=Math.max(3,Math.floor(d*1.5)); const p=[]; for(let i=0;i<n;i++){p.push(Math.round(50-40*i/n),Math.round(80+120*i/n));} return p; },
+  },
+  // Box: crisp taps, equal rhythm
+  box: {
+    inhale(d) { return [25, 200, 25, 200, 25]; },
+    holdIn(d) { return [10, 990]; },
+    exhale(d) { return [25, 200, 25, 200, 25]; },
+    holdOut(d) { return [10, 990]; },
+  },
+  // Diaphragmatic / extended exhale: short inhale tap, very long exhale fade
+  diaphragmatic: {
+    inhale(d) { return [30, 150, 20]; },
+    exhale(d) { const n=Math.max(4,Math.floor(d*2)); const p=[]; for(let i=0;i<n;i++){p.push(Math.round(60-50*i/n),Math.round(60+180*i/n));} return p; },
+  },
+  // Segmented: staccato fills per segment
+  segmented: {
+    belly(d) { return [40, 80, 40, 80, 40]; },
+    ribs(d) { return [30, 100, 30, 100, 30]; },
+    chest(d) { return [20, 120, 20, 120, 20]; },
+    exhale(d) { const n=Math.max(3,Math.floor(d*1.5)); const p=[]; for(let i=0;i<n;i++){p.push(Math.round(45-35*i/n),Math.round(70+100*i/n));} return p; },
+  },
+  // Ujjayi / ocean breath: wave-like rolling pulse
+  ujjayi: {
+    inhale(d) { const n=Math.max(3,Math.floor(d*1.5)); const p=[]; for(let i=0;i<n;i++){const t=i/n; p.push(Math.round(15+35*Math.sin(t*Math.PI)),Math.round(100+50*Math.cos(t*Math.PI)));} return p; },
+    exhale(d) { const n=Math.max(3,Math.floor(d*1.5)); const p=[]; for(let i=0;i<n;i++){const t=i/n; p.push(Math.round(40-25*Math.sin(t*Math.PI)),Math.round(80+80*t));} return p; },
+  },
+  // Tidal: gentle, barely-there pulse
+  tidal: {
+    inhale(d) { return [15, 300, 15]; },
+    exhale(d) { return [10, 400, 10]; },
+    pause(d) { return [0]; },
+  },
+  // Recovery: minimal, soft
+  recovery: {
+    inhale(d) { return [20, 200, 15]; },
+    holdIn(d) { return [8, 992]; },
+    exhale(d) { return [15, 250, 10]; },
+  },
+};
+
+let _currentSessionTechnique = null;
+
+function hapticForPhase(phase, phaseDuration, technique) {
   if (!navigator.vibrate && !isIOS) return null;
   if (isIOS) {
-    // Use audio ticks on iOS
     if (phase === 'inhale' || phase === 'inhale1') { playTick(40, 250); }
     else if (phase === 'inhale2') { playTick(40, 220); }
     else if (phase === 'exhale') { playTick(20, 120); }
@@ -2159,12 +2319,18 @@ function hapticForPhase(phase, phaseDuration) {
     return null;
   }
   try {
+    const tech = technique || _currentSessionTechnique;
+    const profile = tech && TECHNIQUE_HAPTIC_PROFILES[tech];
+    if (profile && profile[phase]) {
+      const pattern = profile[phase](phaseDuration);
+      if (pattern && pattern.length) { navigator.vibrate(pattern); return pattern; }
+    }
+    // Fallback: generic
     if (phase === 'inhale' || phase === 'inhale1') {
-      // ascending vibration: short bursts getting longer, 2 per second
       const count = Math.max(2, Math.floor(phaseDuration * 2));
       const pattern = [];
       for (let i = 0; i < count; i++) {
-        const dur = 10 + (30 * i / count); // 10ms -> 40ms
+        const dur = 10 + (30 * i / count);
         pattern.push(dur, Math.max(50, 500 / count - dur));
       }
       navigator.vibrate(pattern);
@@ -2176,17 +2342,15 @@ function hapticForPhase(phase, phaseDuration) {
       const count = Math.max(2, Math.floor(phaseDuration * 2));
       const pattern = [];
       for (let i = 0; i < count; i++) {
-        const dur = 40 - (30 * i / count); // 40ms -> 10ms
+        const dur = 40 - (30 * i / count);
         pattern.push(dur, Math.max(50, 500 / count - dur));
       }
       navigator.vibrate(pattern);
       return pattern;
     } else if (phase === 'holdIn' || phase === 'hold') {
-      // heartbeat pulse every 2 seconds
       navigator.vibrate([15, 1985]);
       return [15, 1985];
     } else {
-      // holdOut, pause: silence
       navigator.vibrate(0);
       return null;
     }
@@ -2534,16 +2698,47 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
     const engine = new SessionEngine(segments, world, currentLang, voiceEnabled);
     engineRef.current = engine;
 
+    // Track last phase to detect phase changes for CSS transition approach
+    let lastPhaseForBubble = '';
+
     engine.onUpdate = (s) => {
-      // === HIGH FREQUENCY: direct DOM manipulation (every frame, no React) ===
-      // Breathing object scale
-      if (wrapperRef.current) {
-        wrapperRef.current.style.transform = `translate(-50%, -50%) scale(${s.breathScale})`;
-      }
-      // Glow on the breathing object
-      if (glowTargetRef.current) {
-        const gi = s.glowIntensity;
-        glowTargetRef.current.style.boxShadow = `0 0 ${60+gi*200}px rgba(94,170,168,${gi}), 0 0 ${120+gi*300}px rgba(94,170,168,${gi*0.5}), inset 0 0 60px rgba(94,170,168,0.06)`;
+      // === BUBBLE: CSS transition-driven (set target ONCE per phase, browser interpolates) ===
+      if (s.phase && s.phase !== lastPhaseForBubble) {
+        lastPhaseForBubble = s.phase;
+        const dur = s.phaseDuration || 4;
+        // Set CSS transition duration to match phase, then set target scale
+        if (wrapperRef.current) {
+          wrapperRef.current.style.transition = `transform ${dur}s cubic-bezier(0.4, 0, 0.2, 1)`;
+          // Determine target scale for this phase
+          let targetScale = 1.0;
+          const p = s.phase;
+          if (p==='inhale') targetScale = 1.5;
+          else if (p==='inhale1') targetScale = 1.3;
+          else if (p==='inhale2') targetScale = 1.5;
+          else if (p==='belly') targetScale = 1.17;
+          else if (p==='ribs') targetScale = 1.33;
+          else if (p==='chest') targetScale = 1.5;
+          else if (p==='holdIn'||p==='hold') targetScale = 1.5;
+          else if (p==='exhale') targetScale = 1.0;
+          else if (p==='holdOut'||p==='pause') targetScale = 1.0;
+          wrapperRef.current.style.transform = `translate(-50%, -50%) scale(${targetScale})`;
+        }
+        // Set glow + inner light target ONCE per phase via CSS transition
+        if (glowTargetRef.current) {
+          const p = s.phase;
+          let blur, spread, alpha;
+          if (p==='inhale'||p==='inhale2'||p==='chest') { blur=50; spread=12; alpha=0.25; }
+          else if (p==='inhale1'||p==='belly'||p==='ribs') { blur=40; spread=10; alpha=0.20; }
+          else if (p==='holdIn'||p==='hold') { blur=50; spread=12; alpha=0.25; }
+          else { blur=30; spread=8; alpha=0.15; } // exhale, holdOut, pause
+          glowTargetRef.current.style.boxShadow = `0 ${spread}px ${blur}px rgba(94,170,168,${alpha})`;
+          // Inner light shift — find child via class
+          const lightY = (p==='exhale'||p==='holdOut'||p==='pause') ? 65 : 35;
+          const lightEl = glowTargetRef.current.querySelector('.bubble-inner-light');
+          if (lightEl) {
+            lightEl.style.background = `radial-gradient(circle at 50% ${lightY}%, rgba(94,170,168,0.25) 0%, rgba(94,170,168,0.12) 35%, rgba(94,170,168,0.04) 60%, transparent 75%)`;
+          }
+        }
       }
       // Phase label + sub (Zone 3) — crossfade on phase change
       if (s.phase && s.phase !== lastPhaseForCrossfadeRef.current) {
@@ -2651,7 +2846,8 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
                 if (pattern?.length) navigator.vibrate(pattern);
               }, 250);
             } else {
-              hapticForPhase(s.phase, s.phaseDuration);
+              const curBreathSeg = segments[s.segmentIndex];
+              hapticForPhase(s.phase, s.phaseDuration, curBreathSeg?.technique);
             }
           } catch {}
         }
@@ -2672,11 +2868,13 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
           HAPTIC.phaseChange();
         }
       }
-      // 2. Voice cue (randomized — sporadic after cycle 2)
+      // 2. Voice cue (randomized — sporadic after cycle 2; 100% on last cycle)
       if (voiceOn) {
         const seg = segments[engine.currentSegmentIndex];
         if (seg && seg.type === 'breathing') {
-          playPhaseCue(seg.technique, phase, cycleCount, phaseDuration, eyesClosedMode);
+          const progress = engine.totalDuration > 0 ? engine.totalElapsed / engine.totalDuration : 0;
+          const isLastCycle = progress >= 0.9;
+          playPhaseCue(seg.technique, phase, cycleCount, phaseDuration, eyesClosedMode, isLastCycle);
         }
       }
     };
@@ -2737,14 +2935,24 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
     recovery:'linear-gradient(180deg, rgba(14,61,92,0.9), rgba(2,10,16,0.95))',
   };
   const bgStyle = useMemo(() => {
-    const darken = diveProgress;
+    // Session arc: 0-50% darken 5%, 50-90% stay dark, 90-100% lighten 3-5%
+    const p = diveProgress; // 0..1
+    let arcDarken;
+    if (p <= 0.5) {
+      arcDarken = (p / 0.5) * 0.05; // 0 → 0.05
+    } else if (p <= 0.9) {
+      arcDarken = 0.05; // stay at 5% darker
+    } else {
+      const surfaceT = (p - 0.9) / 0.1; // 0→1
+      arcDarken = 0.05 - surfaceT * 0.05; // 0.05 → 0 (lighten back + slight extra)
+    }
     const mainTech = segments.find(s=>s.type==='breathing')?.technique;
     const techBg = mainTech && TECH_BG[mainTech];
     if (techBg) return { background: techBg };
     if (world === 'ocean') {
-      return { background: `linear-gradient(180deg, rgba(14,61,92,${1-darken*0.8}) 0%, rgba(2,10,16,${0.8+darken*0.2}) 100%)` };
+      return { background: `linear-gradient(180deg, rgba(${Math.round(14-arcDarken*80)},${Math.round(61-arcDarken*200)},${Math.round(92-arcDarken*300)},1) 0%, rgba(${Math.round(2-arcDarken*20)},${Math.round(10-arcDarken*60)},${Math.round(16-arcDarken*100)},1) 100%)` };
     }
-    return { background: `rgba(13,11,26,${0.7+darken*0.3})` };
+    return { background: `rgba(13,11,26,${0.7+arcDarken*0.3})` };
   }, [diveProgress, world, segments]);
 
   // techLabel is low-frequency (only changes on segment change)
@@ -2758,13 +2966,13 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
       case 'breathing':
         return (
           <div className="flex-1 flex flex-col items-center justify-center" style={{position:'relative'}}>
-            {/* Breathing object wrapper — NO transition, scaled directly by ref */}
+            {/* Breathing object wrapper — CSS transition driven, set target per phase */}
             <div ref={wrapperRef} style={{
               position: 'fixed', top: '42%', left: '50%',
               width: 'min(75vw, 300px)', aspectRatio: '1',
               margin: 0,
               willChange: 'transform',
-              transition: 'none',
+              transition: 'transform 4s cubic-bezier(0.4, 0, 0.2, 1)',
               transform: 'translate(-50%, -50%) scale(1)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               zIndex: 5,
@@ -3081,9 +3289,7 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef, star
       if (t >= 29.5) {
         running = false;
         clearInterval(interval);
-        // Play splash sound
-        try { const s = new Audio('/audio/dive_underwater.mp3'); s.volume = 0.5; s.play().catch(()=>{}); } catch(e) {}
-        HAPTIC.splash();
+        // No splash here — splash plays when user taps "Hold & Start"
         setBreathPhase('done');
       }
     }, 32);
@@ -3094,15 +3300,7 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef, star
   // Done → go directly to holdTest (not real session)
   useEffect(() => {
     if (breathPhase === 'done') {
-      // Start ocean ambient for holdTest
-      if (!introAmbientRef.current) {
-        try {
-          const a = new Audio('audio/dive_intro_ambient.mp3');
-          a.loop = true; a.volume = 0.08;
-          introAmbientRef.current = a;
-          a.play().catch(() => {});
-        } catch(e) {}
-      }
+      // Ocean ambient starts when user taps "Hold & Start", not here
       const t0 = setTimeout(() => setBreathPhase('holdTest'), 500);
       return () => clearTimeout(t0);
     }
@@ -3112,7 +3310,7 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef, star
   useEffect(() => {
     return () => {
       if (holdIntervalRef.current) { clearInterval(holdIntervalRef.current); holdIntervalRef.current = null; }
-      if (introAmbientRef.current) { try { introAmbientRef.current.pause(); introAmbientRef.current.src = ''; } catch {} introAmbientRef.current = null; }
+      if (introAmbientRef.current) { try { const ia = introAmbientRef.current; let vol = ia.volume; const fade = setInterval(() => { vol -= 0.008; if (vol <= 0) { clearInterval(fade); ia.pause(); ia.src = ''; } else { ia.volume = vol; } }, 50); } catch {} introAmbientRef.current = null; }
       if (diveAudioRef.current) { try { diveAudioRef.current.pause(); diveAudioRef.current.src = ''; } catch {} diveAudioRef.current = null; }
     };
   }, []);
@@ -3139,6 +3337,15 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef, star
     } catch {}
     // Vibrate splash
     HAPTIC.splash();
+    // Start ocean ambient after splash
+    if (!introAmbientRef.current) {
+      try {
+        const a = new Audio('audio/DIVE_ocean_deep_sea.mp3');
+        a.loop = true; a.volume = 0.08;
+        introAmbientRef.current = a;
+        a.play().catch(() => {});
+      } catch(e) {}
+    }
     // After 2 seconds, start actual timer
     setTimeout(() => {
       setHoldTestPhase('holding');
@@ -3623,11 +3830,13 @@ class ErrorBoundary extends React.Component {
     super(props);
     this.state = { hasError: false };
   }
-  static getDerivedStateFromError() {
-    return { hasError: true };
+  static getDerivedStateFromError(error) {
+    return { hasError: true, errorMessage: error?.message || 'Unknown error', errorStack: error?.stack || '' };
   }
   componentDidCatch(error, info) {
-    console.error('DIVE Error:', error, info);
+    console.error('DIVE CRASH:', error?.message, error?.stack);
+    console.error('DIVE CRASH component stack:', info?.componentStack);
+    try { window._diveCrashError = { message: error?.message, stack: error?.stack, componentStack: info?.componentStack }; } catch(e) {}
   }
   render() {
     if (this.state.hasError) {
@@ -3644,6 +3853,8 @@ class ErrorBoundary extends React.Component {
         }
       },
         React.createElement('p', { style: { fontSize: '18px', marginBottom: '16px' } }, 'Something went wrong'),
+        React.createElement('p', { style: { fontSize: '12px', marginBottom: '16px', color: 'rgba(220,225,235,0.4)', maxWidth: '320px', wordBreak: 'break-all', fontFamily: 'monospace' } }, this.state.errorMessage || ''),
+        React.createElement('p', { style: { fontSize: '10px', marginBottom: '16px', color: 'rgba(220,225,235,0.25)', maxWidth: '320px', wordBreak: 'break-all', fontFamily: 'monospace', maxHeight: '120px', overflow: 'auto' } }, (this.state.errorStack || '').split('\n').slice(0,5).join('\n')),
         React.createElement('button', {
           onClick: () => window.location.reload(),
           style: {
@@ -3802,6 +4013,17 @@ function App() {
   const [editingPattern, setEditingPattern] = useState(null);
   const [levelUpMessage, setLevelUpMessage] = useState(null);
   const ambientRef = useRef(new AmbientEngine());
+  const entranceTimerRef = useRef(false);
+  // Hooks that must be declared before any conditional returns (Rules of Hooks)
+  const [showPreMood, setShowPreMood] = useState(false);
+  const [pendingSessionData, setPendingSessionData] = useState(null);
+  const preMoodTimerRef = useRef(null);
+  const [onboardingPhase, setOnboardingPhase] = useState('cinematic');
+  const [onboardingPostMood, setOnboardingPostMood] = useState(null);
+  const [onboardingGoal, setOnboardingGoal] = useState(null);
+  const [softAuthEmail, setSoftAuthEmail] = useState('');
+  const [softAuthLoading, setSoftAuthLoading] = useState(false);
+  const [softAuthSent, setSoftAuthSent] = useState(false);
   const world = 'ocean'; // ocean only — space world removed
   const w = WORLDS[world];
   const palette = w.palette;
@@ -3843,7 +4065,7 @@ function App() {
     scheduleNextNotification(stats);
     // Dima call check (1s delay after Home loads)
     const dimaCall = checkDimaCall(stats);
-    if (dimaCall) { setTimeout(() => setShowDimaCall(dimaCall), 1500); }
+    if (dimaCall) { setTimeout(() => { try{ph('dima_call_shown',{key:dimaCall.key,has_video:!!dimaCall.videoUrl});}catch(e){} setShowDimaCall(dimaCall); }, 1500); }
     // PWA install banner check
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
     if (!isStandalone && stats.onboarded) {
@@ -4046,9 +4268,7 @@ function App() {
     }
   };
 
-  const [showPreMood, setShowPreMood] = useState(false);
-  const [pendingSessionData, setPendingSessionData] = useState(null);
-  const preMoodTimerRef = useRef(null);
+  // showPreMood, pendingSessionData, preMoodTimerRef declared at top of App (Rules of Hooks)
 
   const startSession = (segments, meta = {}, options = {}) => {
     setCurrentMood({pre: options.preMood != null ? options.preMood : null, post:null});
@@ -4201,30 +4421,18 @@ function App() {
 
 
   // ===== AUTH GATE =====
-  // Non-onboarded users bypass auth — go straight to cinematic
-  // Auth shown as soft prompt AFTER onboarding
-  if (!stats.onboarded) {
-    // First-time: skip auth entirely, go to cinematic
-    // (authUser may be null — that's fine for first_breath)
-  } else if (authLoading) {
-    return (<div style={{position:'fixed',inset:0,display:'flex',alignItems:'center',justifyContent:'center',background:'linear-gradient(180deg,#0e3d5c 0%,#020a10 100%)'}}>
-      <p style={{fontFamily:"'DM Sans',sans-serif",fontWeight:200,fontSize:'24px',letterSpacing:'0.2em',color:'rgba(94,170,168,0.5)'}}>DIVE</p>
-    </div>);
-  } else if (!authUser) {
-    return <AuthScreen onDemo={() => {
+  // Auth is ONLY shown as step 7 of onboarding (soft_auth phase).
+  // No login gate at app level — cinematic starts immediately for fresh users.
+  // For returning onboarded users who lost their session, silently enter demo mode.
+  useEffect(() => {
+    if (stats.onboarded && !authUser && !authLoading) {
       localStorage.setItem('dive-anonymous-user', 'true');
       setAuthUser({ id: 'demo', isDemo: true });
-    }} />;
-  }
+    }
+  }, [stats.onboarded, authUser, authLoading]);
 
   // ===== FIRST BREATH SCREEN =====
-  // New onboarding flow: cinematic → real session → completion (post-mood) → goal → soft auth → home
-  const [onboardingPhase, setOnboardingPhase] = useState('cinematic'); // 'cinematic' | 'session' | 'goal' | 'soft_auth'
-  const [onboardingPostMood, setOnboardingPostMood] = useState(null);
-  const [onboardingGoal, setOnboardingGoal] = useState(null);
-  const [softAuthEmail, setSoftAuthEmail] = useState('');
-  const [softAuthLoading, setSoftAuthLoading] = useState(false);
-  const [softAuthSent, setSoftAuthSent] = useState(false);
+  // onboardingPhase, onboardingPostMood, onboardingGoal, softAuth* declared at top of App (Rules of Hooks)
 
   // ===== RETURNING USER ENTRANCE =====
 
@@ -4250,11 +4458,44 @@ function App() {
             });
           }
           try { ph('onboarding_goal_selected', { goal }); } catch(e) {}
-          setOnboardingPhase('soft_auth');
+          setOnboardingPhase('research_consent');
         }} />;
     }
 
-    // Phase 2: Goal selector is now inside FirstBreathScreen (after holdTest)
+    // Phase 2: Research consent screen
+    if (onboardingPhase === 'research_consent') {
+      return (
+        <div className="fixed inset-0 flex flex-col items-center justify-center px-8 screen-transition" style={{background:WORLDS.ocean.bgGradient}}>
+          <Particles world="ocean" />
+          <div className="z-10 text-center" style={{maxWidth:320}}>
+            <div className="font-body" style={{fontSize:22,fontWeight:300,color:'rgba(220,225,235,0.95)',marginBottom:8}}>Join the DIVE Breathing Study</div>
+            <div className="font-body" style={{fontSize:14,fontWeight:300,color:'rgba(220,225,235,0.5)',lineHeight:1.7,marginBottom:24}}>
+              Help us understand how breathwork affects stress, focus, and well-being. Your anonymized session data contributes to published research. No personal info is shared.
+            </div>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:12,marginBottom:32}}>
+              <span className="font-body" style={{fontSize:15,fontWeight:400,color:'rgba(220,225,235,0.7)'}}>Contribute data</span>
+              <button onClick={() => setStats(s => ({...s, researchConsent: !s.researchConsent}))}
+                style={{width:48,height:28,borderRadius:14,padding:2,cursor:'pointer',border:'none',
+                  background: stats.researchConsent ? 'rgba(94,170,168,0.5)' : 'rgba(255,255,255,0.1)',
+                  transition:'background 200ms ease',display:'flex',alignItems:'center'}}>
+                <div style={{width:24,height:24,borderRadius:12,background:'#fff',
+                  transform: stats.researchConsent ? 'translateX(20px)' : 'translateX(0)',
+                  transition:'transform 200ms ease',boxShadow:'0 1px 3px rgba(0,0,0,0.3)'}} />
+              </button>
+            </div>
+            <button className="px-8 py-3 rounded-full font-body"
+              style={{fontWeight:500,background:`rgba(${accentRgb},0.12)`,border:`1px solid rgba(${accentRgb},0.25)`,color:palette.accent,fontSize:16}}
+              onClick={() => {
+                try { ph('research_consent', { opted_in: stats.researchConsent }); } catch(e) {}
+                setOnboardingPhase('soft_auth');
+              }}>Continue</button>
+            <div className="font-body" style={{fontSize:12,fontWeight:300,color:'rgba(220,225,235,0.25)',marginTop:12}}>
+              You can change this anytime in Settings
+            </div>
+          </div>
+        </div>
+      );
+    }
 
     // Phase 3: Soft auth (save progress)
     if (onboardingPhase === 'soft_auth') {
@@ -4390,7 +4631,7 @@ function App() {
   // Completion — inline overlay (no page change)
   if (showCompletion && completionData) {
     const earnedBadges = BADGES.filter(b => b.condition(stats));
-    const scienceFact = SCIENCE_FACTS[Math.floor(((stats.totalSessions || 0) * 7 + Date.now() % 10000) % SCIENCE_FACTS.length)];
+    const scienceFact = SCIENCE_FACTS[((stats.totalSessions || 0) * 7 + Math.floor(Date.now() / 86400000)) % 50];
     const isSOS = lastSessionWasSOS;
     const isFirstOnboarding = completionData._isFirstSession;
     const closeCompletion = () => {
@@ -4473,6 +4714,11 @@ function App() {
             <div style={{borderTop:'1px solid rgba(255,255,255,0.08)',paddingTop:12,marginTop:4,maxWidth:280,textAlign:'center'}}>
               <div className="font-body" style={{fontSize:13,fontWeight:300,color:'rgba(220,225,235,0.45)',lineHeight:1.7}}>{scienceFact}</div>
             </div>
+            {stats.researchConsent && (
+              <div className="font-body" style={{fontSize:11,fontWeight:400,color:'rgba(94,170,168,0.5)',marginTop:8,textAlign:'center',letterSpacing:'0.05em'}}>
+                Contributing to DIVE study
+              </div>
+            )}
             <div style={{borderTop:'1px solid rgba(255,255,255,0.08)',width:'100%',maxWidth:300,marginTop:4}} />
             </>
           )}
@@ -4740,51 +4986,51 @@ function App() {
   }
 
   const renderHome = () => {
+    console.log('RENDER HOME', { screen, statsExists: !!stats, onboarded: stats?.onboarded, totalSessions: stats?.totalSessions });
+    try {
     const rec = getDailyRecommendation(stats, t);
+    const depthMilestones = [{depth:5,label:'A swimming pool'},{depth:10,label:'The reef edge'},{depth:15,label:'A coral reef'},{depth:25,label:'Beginner freediver'},{depth:40,label:'Where sunlight fades'},{depth:60,label:'Advanced freediver'},{depth:100,label:'The twilight zone'}];
+    const nextDepth = depthMilestones.find(m => m.depth > stats.totalDepth) || depthMilestones[depthMilestones.length-1];
+    const prevDepthM = depthMilestones.filter(m => m.depth <= stats.totalDepth).pop() || {depth:0};
+    const depthProg = nextDepth.depth > prevDepthM.depth ? Math.min(1, (stats.totalDepth - prevDepthM.depth) / (nextDepth.depth - prevDepthM.depth)) : 1;
     return (
     <div className="screen-transition overflow-y-auto h-full no-scrollbar" style={{padding:'env(safe-area-inset-top, 48px) 24px 100px 24px'}}>
-      <div className="flex items-center justify-between mb-6">
+
+      {/* ===== ABOVE FOLD: 1. Header ===== */}
+      <div className="flex items-center justify-between mb-3">
         <div>
           <div className="font-body" style={{fontSize:24, fontWeight:200, color:'rgba(220,225,235,0.95)', letterSpacing:'0.25em', textTransform:'uppercase'}}>{t.appName}</div>
-          <div className="font-body" style={{fontSize:13, fontWeight:300, letterSpacing:'0.15em', color:'rgba(220,225,235,0.25)', marginTop:4}}>PREPARE &middot; BREATHE &middot; DIVE</div>
+          <div className="font-body" style={{fontSize:13, fontWeight:300, letterSpacing:'0.15em', color:'rgba(220,225,235,0.4)', marginTop:4}}>PREPARE &middot; BREATHE &middot; DIVE</div>
+        </div>
+        <div style={{textAlign:'right'}}>
+          <span className="font-body" style={{fontSize:12, fontWeight:400, color:'var(--text-3)'}}>
+            {stats.streak > 0 ? <><span className="font-mono">{stats.streak}</span> {t.dayStreak}</> : ''}
+          </span>
         </div>
       </div>
-
-      {/* Time-based greeting + streak */}
-      <div className="font-body mb-4" style={{fontSize:16, fontWeight:300, color:'var(--text-3)', textAlign:'left'}}>
-        {getGreeting(t)}{stats.streak > 0 && <span style={{marginLeft:8, color:'rgba(220,225,235,0.25)'}}>{stats.streak}-day streak</span>}
+      {/* Greeting */}
+      <div className="font-body mb-4" style={{fontSize:15, fontWeight:300, color:'rgba(220,225,235,0.7)'}}>
+        {getGreeting(t)}
       </div>
 
-      {/* Milestone card — first unshown milestone */}
+      {/* Milestone card — compact, only when relevant */}
       {(() => {
         const shown = stats.shownMilestones || [];
         const milestone = MILESTONES.find(m => m.condition(stats) && !shown.includes(m.id));
         if (!milestone) return null;
         return (
-          <div key={milestone.id} style={{marginBottom:12, padding:'14px 16px', borderRadius:12, background:'rgba(94,170,168,0.06)', border:'1px solid rgba(94,170,168,0.12)', display:'flex', alignItems:'center', gap:12}}>
-            <div className="font-body" style={{flex:1, fontSize:14, fontWeight:300, color:'rgba(220,225,235,0.7)', lineHeight:1.5}} ref={el => { if (el && !el._tracked) { el._tracked = true; try{ph('milestone_shown',{milestone_id:milestone.id});}catch(e){} } }}>{milestone.message}</div>
+          <div key={milestone.id} style={{marginBottom:12, padding:'12px 16px', borderRadius:12, background:'rgba(94,170,168,0.06)', border:'1px solid rgba(94,170,168,0.12)', display:'flex', alignItems:'center', gap:12}}>
+            <div className="font-body" style={{flex:1, fontSize:13, fontWeight:300, color:'rgba(220,225,235,0.7)', lineHeight:1.5}} ref={el => { if (el && !el._tracked) { el._tracked = true; try{ph('milestone_shown',{milestone_id:milestone.id});}catch(e){} } }}>{milestone.message}</div>
             <button onClick={() => setStats(s => ({...s, shownMilestones:[...(s.shownMilestones||[]), milestone.id]}))} style={{background:'none', border:'none', color:'rgba(220,225,235,0.3)', fontSize:18, cursor:'pointer', padding:'4px 8px', lineHeight:1, flexShrink:0}}>{'\u00D7'}</button>
           </div>
         );
       })()}
 
-      {/* Daily reminder banner (on-open system) */}
-      {stats.showDailyReminder && (
-        <div style={{marginBottom:12, padding:'14px 16px', borderRadius:12, background:'rgba(94,170,168,0.06)', border:'1px solid rgba(94,170,168,0.12)', display:'flex', alignItems:'center', gap:12}}>
-          <div className="font-body" style={{flex:1, fontSize:15, fontWeight:300, color:'rgba(220,225,235,0.75)', lineHeight:1.5}}>
-            {DAILY_REMINDER_TEXTS[Math.floor(Math.random() * DAILY_REMINDER_TEXTS.length)]}
-          </div>
-          <button onClick={() => { setStats(s => ({...s, showDailyReminder:false})); launchScenario(getDailyRecommendation(stats, t).scenario, getDailyRecommendation(stats, t).duration); }}
-            style={{padding:'6px 14px', borderRadius:8, background:`rgba(${accentRgb},0.12)`, border:`1px solid rgba(${accentRgb},0.25)`, color:palette.accent, fontSize:13, fontWeight:500, cursor:'pointer', flexShrink:0}}>Dive now</button>
-          <button onClick={() => setStats(s => ({...s, showDailyReminder:false}))} style={{background:'none', border:'none', color:'rgba(220,225,235,0.25)', fontSize:18, cursor:'pointer', padding:'2px 6px', lineHeight:1, flexShrink:0}}>{'\u00D7'}</button>
-        </div>
-      )}
-
-      {/* Streak warning banner */}
+      {/* Streak warning — inline, compact */}
       {stats.showStreakWarning && (stats.streak || 0) >= 3 && (
-        <div style={{marginBottom:12, padding:'14px 16px', borderRadius:12, background:'rgba(255,180,80,0.06)', border:'1px solid rgba(255,180,80,0.12)', display:'flex', alignItems:'center', gap:12}}>
-          <div className="font-body" style={{flex:1, fontSize:14, fontWeight:300, color:'rgba(220,225,235,0.7)', lineHeight:1.5}}>
-            Your {stats.streak}-day streak needs you. 1 minute to save it.
+        <div style={{marginBottom:12, padding:'12px 16px', borderRadius:12, background:'rgba(255,180,80,0.06)', border:'1px solid rgba(255,180,80,0.12)', display:'flex', alignItems:'center', gap:12}}>
+          <div className="font-body" style={{flex:1, fontSize:13, fontWeight:300, color:'rgba(220,225,235,0.7)', lineHeight:1.5}}>
+            Your {stats.streak}-day streak needs you.
           </div>
           <button onClick={() => {
             setStats(s => ({...s, showStreakWarning:false}));
@@ -4795,24 +5041,19 @@ function App() {
         </div>
       )}
 
-      {/* Daily recommendation card */}
-      <button className="w-full text-left mb-6" style={{
-        minHeight:'max(150px, 38vh)', maxHeight:'42vh', borderRadius:14, padding:'32px 24px', position:'relative', overflow:'hidden',
+      {/* ===== ABOVE FOLD: 2. Today's Dive ===== */}
+      <button className="w-full text-left mb-4" style={{
+        minHeight:'max(140px, 32vh)', maxHeight:'38vh', borderRadius:14, padding:'28px 24px', position:'relative', overflow:'hidden',
         background:'rgba(255,255,255,0.024)',
         border:'1px solid rgba(255,255,255,0.05)',
         display:'flex', flexDirection:'column', justifyContent:'space-between',
       }} onClick={() => { try{ph('daily_dive_tapped',{technique:rec.technique,scenario:rec.scenario});}catch(e){} launchScenario(rec.scenario, rec.duration); }}>
         <div>
           <div className="font-body mb-2" style={{fontSize:12, fontWeight:500, color:palette.accent, opacity:0.7, letterSpacing:'0.08em', textTransform:'uppercase'}}>{rec.isGoTo ? 'YOUR GO-TO' : t.todaysDiveLabel}</div>
-          <div className="font-body mb-3" style={{fontSize:22, fontWeight:400, color:'rgba(220,225,235,0.95)', letterSpacing:'0.04em'}}>{rec.title}</div>
-          <div className="font-body" style={{fontSize:16, fontWeight:300, color:'var(--text-2)'}}>{rec.sub}</div>
-          {rec.technique && (() => {
-            const WHY = {physiological_sigh:'Fastest stress relief \u2014 Stanford protocol (Balban 2023)',box:'Sharpens focus under pressure (Theobald 2023)',diaphragmatic:'Foundation technique \u2014 lowers cortisol (Ma 2017)',segmented:'Builds breath awareness and lung capacity',ujjayi:'Advanced focus via glottic resistance (Mason 2013)',tidal:'Natural rhythm \u2014 calming baseline (Fincham 2023)'};
-            const why = WHY[rec.technique];
-            return why ? <div className="font-body" style={{fontSize:12, fontWeight:300, color:'rgba(220,225,235,0.3)', marginTop:6}}>{why}</div> : null;
-          })()}
+          <div className="font-body mb-2" style={{fontSize:22, fontWeight:400, color:'rgba(220,225,235,0.95)', letterSpacing:'0.04em'}}>{rec.title}</div>
+          <div className="font-body" style={{fontSize:15, fontWeight:300, color:'var(--text-2)'}}>{rec.sub}</div>
         </div>
-        <div style={{textAlign:'center', marginTop:16}}>
+        <div style={{textAlign:'center', marginTop:14}}>
           <div className="inline-flex items-center justify-center font-body"
             style={{padding:'10px 28px', borderRadius:12, fontWeight:500, fontSize:16, background:`rgba(${accentRgb},0.12)`, border:`1px solid rgba(${accentRgb},0.25)`, color:'rgba(94,170,168,0.85)', letterSpacing:'0.04em'}}>
             {t.begin}
@@ -4820,43 +5061,25 @@ function App() {
         </div>
       </button>
 
-      {/* Streak + depth below card */}
-      <div className="flex gap-4 mb-6 justify-center items-center flex-wrap">
-        <div className="font-body" style={{fontSize:12, fontWeight:400, color:'var(--text-3)'}}>
-          {stats.streak > 0 ? <><span className="font-mono">{stats.streak}</span> {t.dayStreak}</> : t.streakStart}
-        </div>
-        <div className="font-body" style={{fontSize:12, fontWeight:400, color:'var(--text-3)'}}>
-          <span className="font-mono">{formatDepth(stats.totalDepth)}</span>{WORLDS[world].depthUnit} · {depthContext(stats.totalDepth)}
-        </div>
-        <span style={{
-          display:'inline-flex', alignItems:'center', gap:4,
-          background:'rgba(94,170,168,0.1)', border:'1px solid rgba(94,170,168,0.3)',
-          borderRadius:20, padding:'3px 10px',
-          fontSize:13, fontFamily:"'DM Sans',sans-serif", fontWeight:500,
-          color:'rgba(94,170,168,0.8)',
-        }}>
-          {LEVELS[stats.level || 'basic']?.name || getDifficultyLevel(stats.bestHoldDepth)?.label || 'Basic'}
-        </span>
-      </div>
+      {/* ===== ABOVE FOLD: 3. SOS ===== */}
+      <button className="breathe-now-btn" style={{margin:'0 0 10px', background:'rgba(94,170,168,0.18)', border:'1px solid rgba(94,170,168,0.35)', display:'flex', alignItems:'center', justifyContent:'center', gap:6}} onClick={() => {
+        try{ph('sos_time_shown',{});}catch(e){}
+        setShowSOSPicker(true);
+      }}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        Stressed?
+      </button>
 
-      {/* Depth progress bar to next milestone */}
-      {(() => {
-        const milestones = [{depth:5,label:'A swimming pool'},{depth:10,label:'The reef edge'},{depth:15,label:'A coral reef'},{depth:25,label:'Beginner freediver'},{depth:40,label:'Where sunlight fades'},{depth:60,label:'Advanced freediver'},{depth:100,label:'The twilight zone'}];
-        const next = milestones.find(m => m.depth > stats.totalDepth) || milestones[milestones.length-1];
-        const prev = milestones.filter(m => m.depth <= stats.totalDepth).pop() || {depth:0};
-        const prog = next.depth > prev.depth ? Math.min(1, (stats.totalDepth - prev.depth) / (next.depth - prev.depth)) : 1;
-        return (
-          <div style={{marginBottom:16, opacity:0.5}}>
-            <div style={{height:3, borderRadius:2, background:'rgba(255,255,255,0.04)', overflow:'hidden'}}>
-              <div style={{height:'100%', width:`${prog*100}%`, borderRadius:2, background:`rgba(${accentRgb},0.4)`, transition:'width 600ms ease'}} />
-            </div>
-            <div className="flex justify-between mt-1" style={{fontSize:12, color:'rgba(220,225,235,0.25)'}}>
-              <span className="font-mono">{formatDepth(stats.totalDepth)}m</span>
-              <span className="font-body">{formatDepth(next.depth)}m · {next.label}</span>
-            </div>
-          </div>
-        );
-      })()}
+      {/* ===== ABOVE FOLD: 4. Depth bar ===== */}
+      <div style={{marginBottom:20, opacity:0.5}}>
+        <div style={{height:3, borderRadius:2, background:'rgba(255,255,255,0.04)', overflow:'hidden'}}>
+          <div style={{height:'100%', width:`${depthProg*100}%`, borderRadius:2, background:`rgba(${accentRgb},0.4)`, transition:'width 600ms ease'}} />
+        </div>
+        <div className="flex justify-between mt-1" style={{fontSize:12, color:'rgba(220,225,235,0.25)'}}>
+          <span className="font-mono">{formatDepth(stats.totalDepth)}m</span>
+          <span className="font-body">{formatDepth(nextDepth.depth)}m · {nextDepth.label}</span>
+        </div>
+      </div>
 
       {/* FIX6: One-time depth explainer tooltip */}
       {stats.totalSessions === 1 && !stats.depthExplained && (
@@ -4869,121 +5092,9 @@ function App() {
         </div>
       )}
 
-      {/* Habit reminder — show on home after 3+ sessions if no reminder set */}
-      {stats.totalSessions >= 3 && !stats.reminderTime && (
-        <div style={{padding:'14px 16px', marginBottom:16, borderRadius:10, background:'rgba(94,170,168,0.05)', border:'1px solid rgba(94,170,168,0.10)', fontSize:15, color:'rgba(220,225,235,0.6)', lineHeight:1.6}}>
-          {t.buildHabit || 'Build a daily habit?'}
-          <div style={{fontSize:12, color:'rgba(220,225,235,0.3)', marginTop:4, marginBottom:8}}>
-            {typeof Notification !== 'undefined' ? "We'll send you a daily reminder" : "We'll remind you when you open the app"}
-          </div>
-          <div style={{display:'flex', gap:6, overflowX:'auto', paddingBottom:4}} className="no-scrollbar">
-            {[6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23].map(h => {
-              const label = h < 12 ? h + ' AM' : h === 12 ? '12 PM' : (h-12) + ' PM';
-              return (
-                <button key={h} onClick={async () => {
-                  let granted = false;
-                  if (typeof Notification !== 'undefined' && Notification.permission !== 'denied') {
-                    try { const perm = await Notification.requestPermission(); granted = perm === 'granted'; try{ph(granted?'notification_permission_granted':'notification_permission_denied',{});}catch(e){} } catch(e) {}
-                  }
-                  setStats(s => ({...s, reminderTime: String(h), reminderHour: h, notificationsGranted: granted}));
-                  if (granted) scheduleNextNotification({...stats, reminderTime: String(h), reminderHour: h, notificationsGranted: true});
-                }}
-                  style={{flexShrink:0, padding:'6px 12px', borderRadius:8, fontSize:11, fontWeight:500, cursor:'pointer',
-                    background: h === 9 ? `rgba(${accentRgb},0.15)` : `rgba(${accentRgb},0.04)`,
-                    border: h === 9 ? `1px solid rgba(${accentRgb},0.3)` : `1px solid rgba(${accentRgb},0.12)`,
-                    color: h === 9 ? palette.accent : 'rgba(220,225,235,0.5)'}}>
-                  {label}
-                </button>
-              );
-            })}
-          </div>
-          <div style={{display:'flex', justifyContent:'flex-end', marginTop:6}}>
-            <button onClick={() => setStats(s => ({...s, reminderTime: 'dismissed'}))}
-              style={{padding:'4px 10px', borderRadius:6, background:'none', border:'none', fontSize:11, color:'rgba(220,225,235,0.25)', cursor:'pointer'}}>
-              Not now
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Discovery card: breath hold test — appears after 3 sessions if no tests done */}
-      {(stats.totalSessions || 0) >= 3 && !(stats.breathTests || []).length && (
-        <button className="glass w-full text-left mb-4" style={{padding:'16px 20px', display:'flex', alignItems:'center', gap:12}}
-          onClick={() => { try{ph('discovery_card_tapped',{});}catch(e){} setScreen('breath_test'); }}>
-          <span style={{color:palette.accent, opacity:0.5}}><Icon name="deep" size={20}/></span>
-          <div>
-            <div className="font-body" style={{fontWeight:500, fontSize:15, color:'rgba(220,225,235,0.85)'}}>How deep can you go?</div>
-            <div className="font-body" style={{fontWeight:300, fontSize:13, color:'rgba(220,225,235,0.35)', marginTop:2}}>Test your breath hold</div>
-          </div>
-        </button>
-      )}
-
-      {/* SOS button — opens time picker */}
-      <button className="breathe-now-btn" style={{margin:'0 0 12px', background:'rgba(94,170,168,0.18)', border:'1px solid rgba(94,170,168,0.35)', display:'flex', alignItems:'center', justifyContent:'center', gap:6}} onClick={() => {
-        try{ph('sos_time_shown',{});}catch(e){}
-        setShowSOSPicker(true);
-      }}>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-        Stressed?
-      </button>
-
-      {/* Daily insight */}
-      {(() => {
-        const HOME_INSIGHTS = [
-          "Navy SEALs use box breathing to stay calm under fire",
-          "5 min of cyclic sighing reduces cortisol more than meditation",
-          "Freedivers slow their heart from 80 to 30 bpm with breath alone",
-          "Your diaphragm is the only skeletal muscle that works 24/7",
-          "Exhaling longer than inhaling activates your vagus nerve",
-          "3 physiological sighs can reset your nervous system in 90 seconds",
-          "Japanese pearl divers trained 7-minute breath holds",
-          "One deep breath triggers your vagus nerve in 0.2 seconds",
-          "The average person takes 22,000 breaths per day — most shallow",
-          "Slow breathing at 6/min optimizes heart rate variability",
-          "Deep breathing increases brain oxygen by up to 30%",
-          "Humming while exhaling amplifies vagus nerve stimulation 15x",
-          "3 min of controlled breathing drops blood pressure by 10 points",
-          "The mammalian dive reflex slows your heart in cold water",
-        ];
-        return (
-          <div style={{margin:'16px 0', padding:'14px 16px', borderRadius:12, background:'rgba(255,255,255,0.015)', border:'1px solid rgba(255,255,255,0.03)'}}>
-            <p className="font-body" style={{fontSize:15, fontWeight:300, color:'rgba(220,225,235,0.45)', lineHeight:1.5, margin:0}}>
-              {HOME_INSIGHTS[Math.floor(Date.now() / 86400000) % HOME_INSIGHTS.length]}
-            </p>
-          </div>
-        );
-      })()}
-
-      {/* Programs — horizontal scroll */}
+      {/* ===== SCROLL: 5. Breathe Now (merged — situation + technique tabs) ===== */}
       <div className="mb-6">
-        <div className="font-body mb-3" style={{fontSize:13, fontWeight:500, color:'rgba(220,225,235,0.28)', letterSpacing:'0.12em', textTransform:'uppercase'}}>{t.programs}</div>
-        <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
-          {Object.entries(PROGRAMS).map(([key, prog]) => {
-            const progress = (stats.programProgress?.[key] || []).length;
-            const nameKey = key === 'first_dive' ? 'firstDive' : key === 'stress_shield' ? 'stressShield' : 'deepFocus';
-            return (
-              <button key={key} className="glass flex-shrink-0 p-4 text-left" style={{width:150, minHeight:100}}
-                onClick={() => { setSelectedProgram(key); setScreen('program_view'); }}>
-                <span style={{color:palette.accent,opacity:0.5}}><Icon name={key === 'first_dive' ? 'prog_bubble' : key === 'stress_shield' ? 'prog_shield' : 'prog_target'} size={20}/></span>
-                <div className="font-body mt-2" style={{fontWeight:500, fontSize:15, color:'rgba(255,255,255,0.92)'}}>{t[nameKey]}</div>
-                <div className="flex gap-1 mt-2 flex-wrap">
-                  {key === 'first_dive' && <span style={{padding:'3px 10px', borderRadius:6, background:'rgba(94,170,168,0.08)', border:'1px solid rgba(94,170,168,0.15)', fontSize:13, color:'rgba(94,170,168,0.7)'}}>{t.day1Free}</span>}
-                  {key !== 'first_dive' && !stats.isPremium && <span style={{padding:'3px 10px', borderRadius:6, background:'rgba(94,170,168,0.06)', border:'1px solid rgba(94,170,168,0.12)', fontSize:13, color:'rgba(94,170,168,0.5)'}}>{t.premiumLabel}</span>}
-                </div>
-                <div className="mt-2" style={{height:2, borderRadius:1, background:'rgba(255,255,255,0.04)'}}>
-                  <div style={{height:'100%', borderRadius:1, width:`${progress/prog.days*100}%`, background:`rgba(${accentRgb},0.6)`}} />
-                </div>
-                <div className="font-mono mt-1" style={{fontSize:12, fontWeight:300, color:palette.accent, opacity:0.7}}>{progress}/{prog.days}</div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Quick Dives — category pills */}
-      <div className="mb-8">
         <div className="font-body mb-3" style={{fontSize:13, fontWeight:500, color:'rgba(220,225,235,0.28)', letterSpacing:'0.12em', textTransform:'uppercase'}}>BREATHE NOW</div>
-        {/* Tabs: By situation / By technique */}
         <div style={{display:'flex',gap:0,marginBottom:12}}>
           {[['By situation','situation'],['By technique','technique']].map(([label,val]) => (
             <button key={val} onClick={() => setBreatheTab(val)} style={{flex:1,padding:'8px 0',borderRadius:0,fontSize:14,fontWeight:500,cursor:'pointer',
@@ -4994,7 +5105,8 @@ function App() {
             </button>
           ))}
         </div>
-        {breatheTab === 'situation' && <div className="flex gap-2 overflow-x-auto no-scrollbar mb-4">
+        {breatheTab === 'situation' && <>
+        <div className="flex gap-2 overflow-x-auto no-scrollbar mb-4">
           {Object.keys(CATEGORIES).map(catKey => (
             <button key={catKey} className="flex-shrink-0 font-body" style={{
               padding:'6px 16px', borderRadius:20, fontSize:15,
@@ -5012,27 +5124,18 @@ function App() {
               onClick={() => handleScenarioTap(id)}>
               <span style={{color:palette.accent,opacity:0.5}}><Icon name={sc.svgIcon || id} size={18}/></span>
               <div className="flex-1">
-                <div className="font-body" style={{fontWeight:500, fontSize:15, color:'rgba(255,255,255,0.85)'}}>{t[SCENARIO_LANG_KEY[id]]}</div>
+                <div style={{display:'flex',alignItems:'center',gap:6}}>
+                  <div className="font-body" style={{fontWeight:500, fontSize:15, color:'rgba(255,255,255,0.85)'}}>{t[SCENARIO_LANG_KEY[id]]}</div>
+                  {sc.mainTech && <span style={{padding:'1px 6px',borderRadius:4,background:'rgba(94,170,168,0.15)',fontSize:11,fontWeight:500,color:'rgba(94,170,168,0.8)',whiteSpace:'nowrap'}}>{sc.mainTech}</span>}
+                </div>
                 <div className="font-mono mt-1" style={{fontSize:13, fontWeight:300, color:'rgba(255,255,255,0.35)'}}>{sc.durations.map(d => d + ' ' + t.min).join(' / ')}</div>
+                {sc.why && <div className="font-body" style={{fontSize:12, fontWeight:300, fontStyle:'italic', color:'rgba(220,225,235,0.35)', marginTop:3}}>{sc.why}</div>}
               </div>
               {!checkAccess(sc) && <span style={{color:'var(--text-3)', opacity:0.4}}><Icon name="lock" size={14}/></span>}
             </button>
           ))}
-          {/* Custom pattern card */}
-          <button className="glass w-full text-left flex items-center gap-3 px-4 py-3" style={{position:'relative'}}
-            onClick={() => { if (!stats.isPremium) { setShowPaywall(true); return; } setScreen('custom-pattern'); }}>
-            <span style={{color:'rgba(94,170,168,0.5)'}}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-            </span>
-            <div className="flex-1">
-              <div className="font-body" style={{fontWeight:500, fontSize:15, color:'rgba(255,255,255,0.85)'}}>Custom</div>
-              <div className="font-mono mt-1" style={{fontSize:13, fontWeight:300, color:'rgba(255,255,255,0.35)'}}>Build your own pattern</div>
-            </div>
-            {!stats.isPremium && <span style={{color:'var(--text-3)', opacity:0.4}}><Icon name="lock" size={14}/></span>}
-          </button>
         </div>
-        </div>}
-        {/* By technique tab */}
+        </>}
         {breatheTab === 'technique' && (
           <div className="space-y-2">
             {[
@@ -5069,8 +5172,56 @@ function App() {
           </div>
         )}
       </div>
+
+      {/* ===== SCROLL: 6. Programs ===== */}
+      <div className="mb-6">
+        <div className="font-body mb-3" style={{fontSize:13, fontWeight:500, color:'rgba(220,225,235,0.28)', letterSpacing:'0.12em', textTransform:'uppercase'}}>{t.programs}</div>
+        <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
+          {Object.entries(PROGRAMS).map(([key, prog]) => {
+            const progress = (stats.programProgress?.[key] || []).length;
+            const nameKey = key === 'first_dive' ? 'firstDive' : key === 'stress_shield' ? 'stressShield' : 'deepFocus';
+            return (
+              <button key={key} className="glass flex-shrink-0 p-4 text-left" style={{width:150, minHeight:100}}
+                onClick={() => { setSelectedProgram(key); setScreen('program_view'); }}>
+                <span style={{color:palette.accent,opacity:0.5}}><Icon name={key === 'first_dive' ? 'prog_bubble' : key === 'stress_shield' ? 'prog_shield' : 'prog_target'} size={20}/></span>
+                <div className="font-body mt-2" style={{fontWeight:500, fontSize:15, color:'rgba(255,255,255,0.92)'}}>{t[nameKey]}</div>
+                <div className="flex gap-1 mt-2 flex-wrap">
+                  {key === 'first_dive' && <span style={{padding:'3px 10px', borderRadius:6, background:'rgba(94,170,168,0.08)', border:'1px solid rgba(94,170,168,0.15)', fontSize:13, color:'rgba(94,170,168,0.7)'}}>{t.day1Free}</span>}
+                  {key !== 'first_dive' && !stats.isPremium && <span style={{padding:'3px 10px', borderRadius:6, background:'rgba(94,170,168,0.06)', border:'1px solid rgba(94,170,168,0.12)', fontSize:13, color:'rgba(94,170,168,0.5)'}}>{t.premiumLabel}</span>}
+                </div>
+                <div className="mt-2" style={{height:2, borderRadius:1, background:'rgba(255,255,255,0.04)'}}>
+                  <div style={{height:'100%', borderRadius:1, width:`${progress/prog.days*100}%`, background:`rgba(${accentRgb},0.6)`}} />
+                </div>
+                <div className="font-mono mt-1" style={{fontSize:12, fontWeight:300, color:palette.accent, opacity:0.7}}>{progress}/{prog.days}</div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ===== SCROLL: 7. Science insight ===== */}
+      <div style={{margin:'0 0 16px', padding:'14px 16px', borderRadius:12, background:'rgba(255,255,255,0.015)', border:'1px solid rgba(255,255,255,0.03)'}}>
+        <p className="font-body" style={{fontSize:14, fontWeight:300, color:'rgba(220,225,235,0.40)', lineHeight:1.6, margin:0}}>
+          {SCIENCE_FACTS[Math.floor(Date.now() / 86400000) % 50]}
+        </p>
+      </div>
+
+      {/* ===== SCROLL: 8. Custom ===== */}
+      <button className="glass w-full text-left flex items-center gap-3 px-4 py-3 mb-6" style={{position:'relative'}}
+        onClick={() => { if (!stats.isPremium) { setShowPaywall(true); return; } setScreen('custom-pattern'); }}>
+        <span style={{color:'rgba(94,170,168,0.5)'}}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        </span>
+        <div className="flex-1">
+          <div className="font-body" style={{fontWeight:500, fontSize:15, color:'rgba(255,255,255,0.85)'}}>Custom pattern</div>
+          <div className="font-mono mt-1" style={{fontSize:13, fontWeight:300, color:'rgba(255,255,255,0.35)'}}>Build your own breathing rhythm</div>
+        </div>
+        {!stats.isPremium && <span style={{color:'var(--text-3)', opacity:0.4}}><Icon name="lock" size={14}/></span>}
+      </button>
+
     </div>
   );
+  } catch(e) { return <div style={{color:'white',padding:20}}><pre>HOME CRASH: {e.message}{'\n'}{e.stack}</pre></div>; }
   };
 
   const renderCategory = () => {
@@ -5519,6 +5670,17 @@ function App() {
                 <div className="absolute rounded-full transition-all" style={{top:3, width:16, height:16, background: stats.voiceEnabled ? palette.accent : 'rgba(255,255,255,0.3)', left: stats.voiceEnabled ? 'calc(100% - 20px)' : '4px'}} />
               </button>
             </div>
+            {/* Research consent toggle */}
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="font-body" style={{fontSize:16, fontWeight:400, color:'rgba(220,225,235,0.75)'}}>DIVE Breathing Study</span>
+                <div className="font-body" style={{fontSize:11, fontWeight:300, color:'rgba(220,225,235,0.3)', marginTop:2}}>Anonymized data for research</div>
+              </div>
+              <button className="relative rounded-full" style={{width:44, height:24, background: stats.researchConsent ? `rgba(${accentRgb},0.25)` : 'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.06)', transition:'all 200ms ease'}}
+                onClick={() => { setStats(s => ({...s, researchConsent:!s.researchConsent})); try{ph('research_consent_toggled',{opted_in:!stats.researchConsent});}catch(e){} }}>
+                <div className="absolute rounded-full transition-all" style={{top:3, width:16, height:16, background: stats.researchConsent ? palette.accent : 'rgba(255,255,255,0.3)', left: stats.researchConsent ? 'calc(100% - 20px)' : '4px'}} />
+              </button>
+            </div>
           </div>
 
           {/* Daily reminder settings */}
@@ -5595,7 +5757,7 @@ function App() {
 
 
   // Entrance auto-advance (ref-based to avoid render-loop)
-  const entranceTimerRef = useRef(false);
+  // NOTE: entranceTimerRef is declared at top of App with other hooks
   if (screen === 'entrance' && !entranceTimerRef.current) {
     entranceTimerRef.current = true;
     setTimeout(() => { setScreen('home'); setTab('home'); }, 1500);
@@ -5608,8 +5770,8 @@ function App() {
       return (
         <div style={{position:'fixed',inset:0,zIndex:60,background:'#020408',display:'flex',alignItems:'center',justifyContent:'center'}}>
           <div style={{textAlign:'center',animation:'fade-in 400ms ease-out'}}>
-            <span style={{fontFamily:"'DM Sans',sans-serif",fontWeight:400,fontSize:26,letterSpacing:'0.12em',color:'rgba(255,255,255,0.85)'}}>Prepare. </span>
-            <span style={{fontFamily:"'DM Sans',sans-serif",fontWeight:400,fontSize:26,letterSpacing:'0.12em',color:'rgba(255,255,255,0.85)'}}>Breathe. </span>
+            <span style={{fontFamily:"'DM Sans',sans-serif",fontWeight:400,fontSize:26,letterSpacing:'0.12em',color:'rgba(220,225,235,0.85)'}}>Prepare. </span>
+            <span style={{fontFamily:"'DM Sans',sans-serif",fontWeight:400,fontSize:26,letterSpacing:'0.12em',color:'rgba(220,225,235,0.85)'}}>Breathe. </span>
             <span style={{fontFamily:"'DM Sans',sans-serif",fontWeight:400,fontSize:26,letterSpacing:'0.12em',color:'rgba(94,170,168,0.9)'}}>Dive.</span>
           </div>
         </div>
@@ -5658,33 +5820,6 @@ function App() {
     );
     if (screen === 'category') return renderCategory();
 
-    if (screen === 'breathe-choice') return (
-      <div style={{position:'fixed',inset:0,background:'linear-gradient(180deg,#0e3d5c 0%,#020a10 100%)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',zIndex:50,padding:'24px'}}>
-        <p style={{fontSize:'20px',fontWeight:300,color:'rgba(220,225,235,0.7)',marginBottom:'32px'}}>What do you need?</p>
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px',width:'100%',maxWidth:'320px'}}>
-          {[
-            {label:'Calm down', sub:'Cyclic sigh \u00b7 3 min', technique:'physiological_sigh', duration:180, methodLabel:'Stanford protocol'},
-            {label:'Get focused', sub:'Box breathing \u00b7 3 min', technique:'box', duration:180, methodLabel:'Military performance'},
-            {label:'Energy boost', sub:'Segmented \u00b7 3 min', technique:'segmented', duration:180, methodLabel:'Pranayama'},
-            {label:'Just breathe', sub:'Extended exhale \u00b7 3 min', technique:'diaphragmatic', duration:180, methodLabel:'Vagal stimulation'},
-          ].map(opt => {
-            const locked = !isTechniqueFree(opt.technique);
-            return (
-            <button key={opt.label} onClick={() => { if (locked) { setShowPaywall(true); return; } setScreen('home'); startBreatheNowChoice(opt); }} style={{padding:'20px 16px',borderRadius:'14px',background:'rgba(255,255,255,0.025)',border:'1px solid rgba(255,255,255,0.06)',cursor:'pointer',textAlign:'left',position:'relative',opacity:locked?0.6:1}}>
-              <div style={{fontSize:'17px',fontWeight:400,color:'rgba(220,225,235,0.8)'}}>{opt.label}</div>
-              <div style={{fontSize:'13px',fontWeight:300,color:'rgba(220,225,235,0.35)',marginTop:4}}>{opt.sub}</div>
-              <div style={{display:'flex',alignItems:'center',marginTop:6}}>
-                <span style={{fontFamily:"'DM Sans',sans-serif",fontSize:10,fontWeight:400,color:'rgba(94,170,168,0.5)',letterSpacing:'0.03em'}}>{opt.methodLabel}</span>
-                <InfoButton techniqueId={opt.technique} />
-              </div>
-              {locked && <div style={{position:'absolute',top:8,right:8,fontSize:10,color:'rgba(220,225,235,0.4)'}}>Premium</div>}
-            </button>
-            );
-          })}
-        </div>
-        <button onClick={() => setScreen('home')} style={{marginTop:32,fontSize:15,color:'rgba(220,225,235,0.3)',background:'none',border:'none',cursor:'pointer'}}>Cancel</button>
-      </div>
-    );
 
     if (screen === 'program_view') return renderProgramView();
     switch (tab) {
@@ -5888,7 +6023,7 @@ function App() {
                   const call = showDimaCall;
                   setStats(s => {
                     const dd = {...(s.dimaDismissed||{}), [call.key]:true};
-                    const upd = {...s, dimaDismissed:dd};
+                    const upd = {...s, dimaDismissed:dd, lastDimaCallDate: new Date().toISOString()};
                     if (call._isWeekly) { upd.lastDimaWeeklyNote = new Date().toISOString(); upd.dimaWeeklyNoteIdx = (s.dimaWeeklyNoteIdx||0)+1; }
                     return upd;
                   });
@@ -5916,7 +6051,7 @@ function App() {
                 const call = showDimaCall;
                 setStats(s => {
                   const dd = {...(s.dimaDismissed||{}), [call.key]:true};
-                  const upd = {...s, dimaDismissed:dd};
+                  const upd = {...s, dimaDismissed:dd, lastDimaCallDate: new Date().toISOString()};
                   if (call._isWeekly) { upd.lastDimaWeeklyNote = new Date().toISOString(); upd.dimaWeeklyNoteIdx = (s.dimaWeeklyNoteIdx||0)+1; }
                   return upd;
                 });
