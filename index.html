@@ -4488,7 +4488,6 @@ function App() {
   };
 
   const actuallyStartSession = (segments, meta = {}) => {
-    alert('[actuallyStartSession] called DIRECTLY for scenario="'+meta?.scenario+'" — if this fires BEFORE [startSession] alert, pre-mood is BYPASSED');
     resetVoiceState(); // Reset randomization state for new session
     // Apply adaptive difficulty level timings to breathing segments
     const userLevel = stats.level || 'basic';
@@ -4525,7 +4524,6 @@ function App() {
   // showPreMood, pendingSessionData, preMoodTimerRef declared at top of App (Rules of Hooks)
 
   const startSession = (segments, meta = {}, options = {}) => {
-    alert('[startSession] called scenario="'+meta?.scenario+'" skipPreMood='+options.skipPreMood+' — will setShowPreMood(true)');
     console.log('[DIVE] startSession called', { skipPreMood: options.skipPreMood, scenario: meta?.scenario });
     setCurrentMood({pre: options.preMood != null ? options.preMood : null, post:null});
     setMoodDelta(null);
@@ -5184,8 +5182,7 @@ function App() {
   };
 
   const launchScenario = (id, dur) => {
-    alert('[launchScenario] called with id="'+id+'" dur='+dur);
-    if (launching) { alert('[launchScenario] BLOCKED: launching flag is true'); return; }
+    if (launching) return;
     setLaunching(true);
     setTimeout(() => setLaunching(false), 2000); // re-enable after 2s safety
     // Handle first session special case
@@ -5311,7 +5308,7 @@ function App() {
         background:'rgba(255,255,255,0.024)',
         border:'1px solid rgba(255,255,255,0.05)',
         display:'flex', flexDirection:'column', justifyContent:'space-between',
-      }} onClick={() => { alert('[BEGIN] clicked — will call launchScenario("'+rec.scenario+'", '+rec.duration+')'); try{ph('daily_dive_tapped',{technique:rec.technique,scenario:rec.scenario});}catch(e){} launchScenario(rec.scenario, rec.duration); }}>
+      }} onClick={() => { try{ph('daily_dive_tapped',{technique:rec.technique,scenario:rec.scenario});}catch(e){} launchScenario(rec.scenario, rec.duration); }}>
         <div>
           <div className="font-body mb-2" style={{fontSize:12, fontWeight:500, color:palette.accent, opacity:0.7, letterSpacing:'0.08em', textTransform:'uppercase'}}>{rec.isGoTo ? 'YOUR GO-TO' : t.todaysDiveLabel}</div>
           <div className="font-body mb-2" style={{fontSize:22, fontWeight:400, color:'rgba(220,225,235,0.95)', letterSpacing:'0.04em'}}>{rec.title}</div>
