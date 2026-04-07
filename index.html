@@ -8,7 +8,7 @@
 <link rel="apple-touch-icon" href="/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>DIVE</title>
+<title>DIVE.</title>
 <link rel="manifest" href="manifest.json">
 <script>
 window.onerror=function(m,u,l,c,e){
@@ -34,7 +34,8 @@ posthog.init('phc_ikhnznxs5W5eX1ZjDV4fzzwO6iMl2wIjwo9BOn46fPG', {api_host: 'http
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 html,body { background: #020a10 !important; min-height: 100vh; min-height: 100dvh; margin: 0; padding: 0; }
 #root { background: linear-gradient(180deg, #0e3d5c 0%, #041520 50%, #020a10 100%) !important; min-height: 100vh; min-height: 100dvh; }
-html,body,#root { width:100%; height:100%; overflow:hidden; font-family:'DM Sans',sans-serif; }
+html,body,#root { width:100%; max-width:100vw; height:100%; overflow:hidden; overflow-x:hidden; font-family:'DM Sans',sans-serif; box-sizing:border-box; }
+*, *::before, *::after { box-sizing: border-box; }
 :root {
   --bg-1:#070c15; --bg-2:#0c1322; --bg-3:#111b2e; --bg-4:#182640;
   --bg-start:#0c1322; --bg-mid:#0a1628; --bg-end:#070c15;
@@ -92,6 +93,13 @@ html,body,#root { width:100%; height:100%; overflow:hidden; font-family:'DM Sans
 @keyframes completionFadeIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
 @keyframes checkPop { from{transform:scale(0.5);opacity:0} to{transform:scale(1);opacity:1} }
 .intro-title { font-family:'DM Sans',sans-serif; font-weight:200; font-size:42px; letter-spacing:0.3em; text-transform:uppercase; color:rgba(94,170,168,0.9); }
+.dive-logo {
+  background: linear-gradient(180deg, rgba(220,225,235,0.95), rgba(94,170,168,0.9));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+}
 .intro-phrase { font-family:'DM Sans',sans-serif; font-weight:300; font-size:20px; line-height:1.6; color:rgba(220,225,235,0.70); }
 .intro-tagline { font-family:'DM Sans',sans-serif; font-weight:400; font-size:24px; color:rgba(220,225,235,0.80); }
 .intro-tagline-accent { font-family:'DM Sans',sans-serif; font-weight:400; font-size:24px; color:rgba(94,170,168,0.9); }
@@ -170,6 +178,11 @@ button:active, [role="button"]:active { transform: scale(0.97); transition: tran
   line-height: 1.8;
   color: rgba(220, 225, 235, 0.88);
   letter-spacing: 0.01em;
+  max-width: 100%;
+  text-align: center;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
 }
 .circle-hidden { opacity: 0; transform: scale(0.7); transition: opacity 500ms ease, transform 500ms ease; }
 .circle-visible { opacity: 1; transform: scale(1); transition: opacity 500ms ease, transform 500ms ease; transition-delay: 300ms; }
@@ -178,6 +191,15 @@ button:active, [role="button"]:active { transform: scale(0.97); transition: tran
   position: fixed; top: 0; left: 0; right: 0; bottom: 0;
   display: flex; align-items: center; justify-content: center;
   z-index: 20; pointer-events: none;
+  padding: 0 24px;
+  box-sizing: border-box;
+  max-width: 100vw;
+}
+/* Safety net: when breathing segment is active, force-hide any lingering session text */
+[data-seg-type="breathing"] .session-text-container { display: none !important; }
+.session-text-segment {
+  max-width: 100%;
+  text-align: center;
 }
 .bodyscan-crossfade {
   transition: opacity 400ms ease;
@@ -211,7 +233,7 @@ const ph = (event, props) => {
 // ===== LANG =====
 const LANG = {
   en: {
-    appName:'DIVE',tagline:'Prepare. Breathe. Dive.',chooseLanguage:'Choose language',chooseWorld:'Choose your world',
+    appName:'DIVE.',tagline:'Prepare. Breathe. Dive.',chooseLanguage:'Choose language',chooseWorld:'Choose your world',
     ocean:'Ocean',
     home:'Home',explore:'Explore',programs:'Programs',profile:'Me',settings:'Settings',
     todaysDive:"Today's dive",quickDives:'Quick Dives',myPrograms:'My Programs',seeAll:'See all',
@@ -256,7 +278,7 @@ const LANG = {
     history:'History',resetProgress:'Reset progress',resetConfirm:'Reset all progress?',
     language:'Language',world:'World',voiceNarration:'Voice narration',
     streakStart:'Start a streak',streakDays:'day streak',next:'Next',
-    onb1title:'DIVE',onb1sub:'Breathe like a freediver',onb1desc:'Anti-stress techniques from people who dive 130 meters on a single breath.',
+    onb1title:'DIVE.',onb1sub:'Breathe like a freediver',onb1desc:'Anti-stress techniques from people who dive 130 meters on a single breath.',
     onb2title:'7 techniques',onb2sub:'Proven by science and depth',onb2desc:'Diaphragmatic, box, ujjayi, physiological sigh — and three more.',
     onb3title:'14 scenarios',onb3sub:'For every occasion',onb3desc:'Before a meeting, after a tough day, insomnia, morning anxiety — find the right one.',
     onb4title:'3 programs',onb4sub:'Step-by-step learning',onb4desc:'First Dive. Stress Shield. Deep Focus. Guided progression.',
@@ -511,6 +533,99 @@ const SCIENCE_FACTS = [
   "Breathing is the only body function that works automatically AND can be fully consciously controlled",
   "The best time for breathing practice is when you think you don't need it. That's when you're training your baseline level of calm.",
 ];
+
+// ===== LEGAL DOCUMENTS =====
+const PRIVACY_POLICY = `DIVE Privacy Policy
+Last updated: April 2026
+
+What we collect
+- Email address (for account)
+- Breathing session data: technique, duration, pre/post mood scores
+- Device info: browser type, screen size
+- If research consent given: anonymized session data via SHA-256 hash
+
+How we use it
+- Personalize your breathing recommendations
+- Track your progress and streaks
+- If you opted in: contribute anonymized data to the DIVE Breathing Study
+- Improve the app
+
+What we don't do
+- We never sell your data
+- We never share personal info with advertisers
+- We never make medical claims about breathing outcomes
+
+Third parties
+- Supabase (database, EU servers)
+- PostHog (anonymous analytics)
+- Vercel (hosting)
+
+Your rights
+- Access: see all your data in the Me tab
+- Delete: tap "Reset progress" in Settings to remove all data
+- Export: contact us for a data export
+- Withdraw research consent: toggle off in Settings anytime
+
+Research data
+- Only collected if you opted in ("Join the DIVE Breathing Study")
+- Anonymized via SHA-256 hash — we cannot identify you from research data
+- Used to improve breathing recommendations and contribute to published research
+- You can withdraw anytime in Settings
+
+Children
+- DIVE is not intended for users under 16
+
+Contact
+- privacy@diveapp.com
+
+Changes
+- We'll notify you in the app if this policy changes
+- 30-day notice before significant changes take effect`;
+
+const TERMS_OF_SERVICE = `DIVE Terms of Service
+Last updated: April 2026
+
+What DIVE is
+- DIVE is a breathing exercise tool for wellness purposes
+- DIVE is NOT a medical device, therapy, or diagnostic tool
+- Consult your doctor before starting breathing practice if you have cardiovascular or respiratory conditions
+
+Your account
+- You can use DIVE without an account (limited features)
+- Account requires email + password
+- You're responsible for keeping your password secure
+- One account per person
+
+Subscriptions
+- Free tier: 3 techniques, 2-minute sessions, SOS (unlimited), mood tracking
+- Premium: $5.99/month or $39.99/year (save 44%)
+- 7-day free trial for new subscribers
+- Auto-renews until cancelled
+- Cancel anytime — access continues until end of billing period
+
+Content ownership
+- All breathing techniques, programs, and research data: owned by DIVE
+- Your mood data and session history: yours, deletable anytime
+- If you opted into research: you grant DIVE license to use anonymized data
+
+Limitations
+- We don't guarantee specific health outcomes
+- Breathing exercises may not be suitable for everyone
+- If you feel dizzy, stop immediately
+- DIVE is not a substitute for professional medical advice
+
+Account termination
+- You can delete your account anytime (Settings → Reset progress)
+- We may terminate accounts that violate these terms
+
+Age requirement
+- You must be 16 or older to use DIVE
+
+Governing law
+- These terms are governed by applicable law in your jurisdiction
+
+Contact
+- legal@diveapp.com`;
 
 // ===== TECHNIQUE INFO (science annotations) =====
 const TECHNIQUE_INFO = {
@@ -1345,6 +1460,65 @@ async function cloudLoadProfile(userId) {
   return null;
 }
 
+// ===== RESEARCH DATA SYNC (anonymized) =====
+async function getUserHash(email) {
+  try {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(email + 'dive_salt_2026');
+    const hash = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2,'0')).join('');
+  } catch { return null; }
+}
+
+async function syncResearchSession(sessionData, stats, authUser) {
+  if (!stats.researchConsent || !supabaseClient) return;
+  const email = authUser?.email;
+  if (!email) return;
+  const userHash = await getUserHash(email);
+  if (!userHash) return;
+  const hour = new Date().getHours();
+  const timeOfDay = hour < 6 ? 'night' : hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening';
+  try {
+    await supabaseClient.from('dive_sessions').insert({
+      user_hash: userHash,
+      technique: sessionData.mainTechnique || null,
+      scenario: sessionData.scenario || null,
+      duration_seconds: sessionData.duration || 0,
+      pre_mood: sessionData.preMood != null ? sessionData.preMood : null,
+      post_mood: sessionData.postMood != null ? sessionData.postMood : null,
+      mood_delta: (sessionData.preMood != null && sessionData.postMood != null) ? sessionData.preMood - sessionData.postMood : null,
+      session_type: sessionData.sessionType || 'quick',
+      program_id: sessionData.programId || null,
+      program_day: sessionData.programDay != null ? sessionData.programDay : null,
+      sos_option: sessionData.sosOption || null,
+      sos_outcome: sessionData.sosOutcome || null,
+      completed: true,
+      time_of_day: timeOfDay,
+    });
+  } catch(e) { console.warn('Research session sync failed:', e); }
+}
+
+async function syncResearchProfile(stats, authUser) {
+  if (!stats.researchConsent || !supabaseClient) return;
+  const email = authUser?.email;
+  if (!email) return;
+  const userHash = await getUserHash(email);
+  if (!userHash) return;
+  try {
+    await supabaseClient.from('dive_profiles').upsert({
+      user_hash: userHash,
+      total_sessions: stats.totalSessions || 0,
+      total_depth: stats.totalDepth || 0,
+      streak: stats.streak || 0,
+      research_consent: true,
+      consent_date: stats.consentDate || new Date().toISOString(),
+      goal: stats.userGoal || null,
+      first_breath_hold: stats.breathTests?.[0]?.holdTime || null,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_hash' });
+  } catch(e) { console.warn('Research profile sync failed:', e); }
+}
+
 async function flushPendingSync(userId) {
   if (!supabaseClient || isDemo({ id: userId })) return;
   try {
@@ -1705,7 +1879,7 @@ function scheduleNextNotification(stats) {
     const today = new Date().toDateString();
     const todaySessions = (stats.history || []).filter(h => new Date(h.date).toDateString() === today);
     if (todaySessions.length === 0 && Notification.permission === 'granted') {
-      try { new Notification('DIVE', { body:'Your 5-minute dive is waiting.', icon:'/icon-192.png' }); } catch(e) {}
+      try { new Notification('DIVE.', { body:'Your 5-minute dive is waiting.', icon:'/icon-192.png' }); } catch(e) {}
     }
     scheduleNextNotification(stats);
   }, Math.min(ms, 86400000)); // cap at 24h to avoid overflow
@@ -2162,6 +2336,10 @@ function Particles({ world, diveProgress = 0 }) {
 
 
 // ===== BREATHING OBJECTS (static — scaled by parent wrapper via JS) =====
+// ===== UNIFIED BREATHING BUBBLE (single source of truth, used everywhere) =====
+// Scale animation: CSS transitions only. On phase change, update transitionDuration + transform via ref.
+// Wobble: independent CSS keyframes. Glow/inner-light: CSS transitions per phase.
+// Opacity: always 1 after mount (no flicker, no fade during session).
 const OceanBubble = React.forwardRef((props, ref) => {
   return (
     <div ref={ref} style={{
@@ -2171,8 +2349,10 @@ const OceanBubble = React.forwardRef((props, ref) => {
       border: '1px solid rgba(94,170,168,0.10)',
       boxShadow: '0 8px 30px rgba(94,170,168,0.15)',
       position: 'relative',
-      transition: 'box-shadow 0.5s ease',
-      willChange: 'box-shadow',
+      transform: 'scale(1)',
+      transition: 'transform 4s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.5s ease',
+      willChange: 'transform, box-shadow',
+      opacity: 1,
     }}>
       {/* Inner light gradient — shifts with breathing via CSS transition */}
       <div className="bubble-inner-light" style={{
@@ -2189,6 +2369,27 @@ const OceanBubble = React.forwardRef((props, ref) => {
     </div>
   );
 });
+
+// Helper: apply phase-driven scale via CSS transition (used by Session + Cinematic)
+// Sets ONLY: transition-duration + transform. Browser interpolates.
+function setBubblePhase(el, phaseType, phaseDurationSec) {
+  if (!el) return;
+  // Two-state scale model: 1.15 for inhale/hold-after-inhale, 1.0 for exhale/hold-after-exhale
+  const isInhale = phaseType === 'inhale' || phaseType === 'inhale1' || phaseType === 'inhale2' ||
+                    phaseType === 'belly' || phaseType === 'ribs' || phaseType === 'chest';
+  const isExhale = phaseType === 'exhale';
+  const isHoldIn = phaseType === 'holdIn' || phaseType === 'hold';
+  const isHoldOut = phaseType === 'holdOut' || phaseType === 'pause';
+  let targetScale;
+  if (isInhale) targetScale = 1.15;
+  else if (isExhale) targetScale = 1.0;
+  else if (isHoldIn) targetScale = 1.15; // hold after inhale stays big
+  else if (isHoldOut) targetScale = 1.0; // hold after exhale stays small
+  else return; // unknown phase, do nothing
+  const dur = Math.max(0.1, phaseDurationSec || 4);
+  el.style.transition = `transform ${dur}s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.5s ease`;
+  el.style.transform = `scale(${targetScale})`;
+}
 
 // PulsarObject removed (space world deleted)
 // MemoryOrb removed (memory world deleted)
@@ -2615,16 +2816,11 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
     return () => { if (controlFadeRef.current) clearTimeout(controlFadeRef.current); };
   }, [segType, paused]);
 
-  // Bubble wrapper + Zone 3 fade: hide during text/bodyscan/visualization segments
+  // Bubble is ONE living organism: mounted once, always opacity 1, never dimmed or hidden.
+  // Text segments overlay ON TOP of bubble; bubble continues breathing underneath.
   useEffect(() => {
     if (wrapperRef.current) {
-      if (['text','bodyscan','visualization'].includes(segType)) {
-        wrapperRef.current.style.transition = 'opacity 400ms ease';
-        wrapperRef.current.style.opacity = '0';
-      } else {
-        wrapperRef.current.style.transition = 'opacity 400ms ease';
-        wrapperRef.current.style.opacity = '1';
-      }
+      wrapperRef.current.style.opacity = '1';
     }
   }, [segType]);
 
@@ -2698,41 +2894,26 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
     const engine = new SessionEngine(segments, world, currentLang, voiceEnabled);
     engineRef.current = engine;
 
-    // Track last phase to detect phase changes for CSS transition approach
+    // Track last phase for glow/light updates
     let lastPhaseForBubble = '';
 
     engine.onUpdate = (s) => {
-      // === BUBBLE: CSS transition-driven (set target ONCE per phase, browser interpolates) ===
+      // === UNIFIED BUBBLE: CSS transitions only. Set ONCE per phase. ===
       if (s.phase && s.phase !== lastPhaseForBubble) {
         lastPhaseForBubble = s.phase;
-        const dur = s.phaseDuration || 4;
-        // Set CSS transition duration to match phase, then set target scale
-        if (wrapperRef.current) {
-          wrapperRef.current.style.transition = `transform ${dur}s cubic-bezier(0.4, 0, 0.2, 1)`;
-          // Determine target scale for this phase
-          let targetScale = 1.0;
-          const p = s.phase;
-          if (p==='inhale') targetScale = 1.5;
-          else if (p==='inhale1') targetScale = 1.3;
-          else if (p==='inhale2') targetScale = 1.5;
-          else if (p==='belly') targetScale = 1.17;
-          else if (p==='ribs') targetScale = 1.33;
-          else if (p==='chest') targetScale = 1.5;
-          else if (p==='holdIn'||p==='hold') targetScale = 1.5;
-          else if (p==='exhale') targetScale = 1.0;
-          else if (p==='holdOut'||p==='pause') targetScale = 1.0;
-          wrapperRef.current.style.transform = `translate(-50%, -50%) scale(${targetScale})`;
-        }
-        // Set glow + inner light target ONCE per phase via CSS transition
         if (glowTargetRef.current) {
+          // Scale: via CSS transition
+          setBubblePhase(glowTargetRef.current, s.phase, s.phaseDuration || 4);
+          // Glow (box-shadow)
           const p = s.phase;
           let blur, spread, alpha;
           if (p==='inhale'||p==='inhale2'||p==='chest') { blur=50; spread=12; alpha=0.25; }
           else if (p==='inhale1'||p==='belly'||p==='ribs') { blur=40; spread=10; alpha=0.20; }
           else if (p==='holdIn'||p==='hold') { blur=50; spread=12; alpha=0.25; }
           else { blur=30; spread=8; alpha=0.15; } // exhale, holdOut, pause
+          // setBubblePhase sets transition; preserve box-shadow transition by writing boxShadow AFTER
           glowTargetRef.current.style.boxShadow = `0 ${spread}px ${blur}px rgba(94,170,168,${alpha})`;
-          // Inner light shift — find child via class
+          // Inner light shift
           const lightY = (p==='exhale'||p==='holdOut'||p==='pause') ? 65 : 35;
           const lightEl = glowTargetRef.current.querySelector('.bubble-inner-light');
           if (lightEl) {
@@ -2894,6 +3075,11 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
       handleSegmentTransition(0, firstSeg);
     }
 
+    // Initialize bubble at rest scale (CSS transition baseline)
+    if (glowTargetRef.current) {
+      glowTargetRef.current.style.transform = 'scale(1)';
+    }
+
     engine.start();
 
     // WakeLock: keep screen on during session
@@ -2962,132 +3148,139 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
 
   const renderSegment = () => {
     if (!seg) return null;
-    switch (seg.type) {
-      case 'breathing':
+    // Video segment — special case, doesn't use bubble layout
+    if (seg.type === 'video') {
+      const hasVideoSrc = seg.src && seg.src.length > 0;
+      if (hasVideoSrc) {
+        const smoothVideoEnd = () => {
+          const videoEl = document.querySelector('.dima-video');
+          if (videoEl) {
+            videoEl.style.transition = 'transform 500ms ease, opacity 300ms ease 500ms';
+            videoEl.style.transform = 'translate(-50%,-50%) scale(0.3)';
+            videoEl.style.opacity = '0';
+            setTimeout(() => { if (engineRef.current) engineRef.current.skip(); }, 1200);
+          } else {
+            if (engineRef.current) engineRef.current.skip();
+          }
+        };
         return (
-          <div className="flex-1 flex flex-col items-center justify-center" style={{position:'relative'}}>
-            {/* Breathing object wrapper — CSS transition driven, set target per phase */}
-            <div ref={wrapperRef} style={{
-              position: 'fixed', top: '42%', left: '50%',
-              width: 'min(75vw, 300px)', aspectRatio: '1',
-              margin: 0,
-              willChange: 'transform',
-              transition: 'transform 4s cubic-bezier(0.4, 0, 0.2, 1)',
-              transform: 'translate(-50%, -50%) scale(1)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              zIndex: 5,
-            }}>
-              <OceanBubble ref={glowTargetRef} />
-              {/* Countdown inside bubble — large but ghosted */}
-              <div ref={bubbleTimerRef} style={{
-                position:'absolute', top:'50%', left:'50%',
-                transform:'translate(-50%,-50%)',
-                fontFamily:"'JetBrains Mono',monospace",
-                fontSize:48, fontWeight:200, fontVariantNumeric:'tabular-nums',
-                color:'rgba(220,225,235,0.20)',
-                pointerEvents:'none', userSelect:'none', zIndex:6,
-              }} />
-            </div>
-            {/* Phase label — ABOVE bubble */}
-            <div style={{position:'fixed', top:'calc(42% - min(37.5vw, 150px) - 36px)', left:0, right:0, textAlign:'center', zIndex:15, pointerEvents:'none'}}>
-              <div ref={phaseLabelRef} className="font-body" style={{
-                fontWeight:600, fontSize:13, letterSpacing:'0.2em', textTransform:'uppercase',
-                color:'rgba(220,225,235,0.55)', minHeight:18,
-                transition:'opacity 0.15s ease',
-              }} />
-            </div>
-            {/* Sub-instruction + counter — BELOW bubble */}
-            <div style={{position:'fixed', top:'calc(42% + min(37.5vw, 150px) + 20px)', left:0, right:0, textAlign:'center', zIndex:15, pointerEvents:'none', padding:'0 24px'}}>
-              <div ref={phaseSubRef} className="font-body" style={{
-                fontSize:15, fontWeight:300, color:'rgba(220,225,235,0.35)',
-                lineHeight:1.5, maxWidth:260, margin:'0 auto', minHeight:24,
-                transition:'opacity 0.15s ease',
-              }} />
-              <div ref={cycleCounterRef} className="font-mono" style={{fontSize:12, color:'rgba(220,225,235,0.15)', marginTop:8, fontVariantNumeric:'tabular-nums'}} />
-              <div style={{pointerEvents:'auto', marginTop:12}}>
-                <button onClick={() => setEyesClosedMode(true)} style={{
-                  background:'none', border:'none',
-                  fontSize:12, color:'rgba(220,225,235,0.25)',
-                  letterSpacing:'0.1em', cursor:'pointer', fontFamily:"'DM Sans',sans-serif",
-                }}>
-                  Set your phone down
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      case 'text':
-        return <SessionText text={seg.text} texts={seg.texts} duration={seg.duration} visible={true} />;
-      case 'bodyscan':
-        return <SessionText bodyScanSentences={bodyScanSentences} bodyScanIdx={bodyScanIdx} visible={true} />;
-      case 'visualization': {
-        const vText = seg.texts?.[world] || seg.texts?.ocean || '';
-        return <SessionText text={vText} visible={true} />;
-      }
-      case 'video': {
-        const hasVideoSrc = seg.src && seg.src.length > 0;
-        if (hasVideoSrc) {
-          const smoothVideoEnd = () => {
-            // Cinematic transition: video shrinks → fades → pause → skip to breathing
-            const videoEl = document.querySelector('.dima-video');
-            if (videoEl) {
-              videoEl.style.transition = 'transform 500ms ease, opacity 300ms ease 500ms';
-              videoEl.style.transform = 'translate(-50%,-50%) scale(0.3)';
-              videoEl.style.opacity = '0';
-              setTimeout(() => { if (engineRef.current) engineRef.current.skip(); }, 1200);
-            } else {
-              if (engineRef.current) engineRef.current.skip();
-            }
-          };
-          return (
-            <div className="flex-1 flex flex-col items-center justify-center">
-              <div className="dima-video" style={{transition:'transform 500ms ease, opacity 300ms ease'}}>
-                <video
-                  autoPlay
-                  playsInline
-                  onEnded={smoothVideoEnd}
-                  onError={() => { if (engineRef.current) engineRef.current.skip(); }}
-                >
-                  <source src={seg.src} type="video/mp4" />
-                </video>
-              </div>
-            </div>
-          );
-        }
-        return (
-          <div className="flex-1 flex flex-col items-center justify-center px-6">
-            <div className="screen-transition w-full" style={{maxWidth:340}}>
-              <div style={{
-                width:'100%', aspectRatio:'9/16', maxHeight:'50vh', borderRadius:20,
-                background:'rgba(255,255,255,0.025)', border:'1px solid rgba(255,255,255,0.06)',
-                display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
-                marginBottom:20, position:'relative', overflow:'hidden',
-              }}>
-                <svg width="48" height="48" viewBox="0 0 48 48" fill="none" style={{opacity:0.3, marginBottom:12}}>
-                  <circle cx="24" cy="24" r="23" stroke={palette.accent} strokeWidth="1.5"/>
-                  <path d="M20 16l12 8-12 8V16z" fill={palette.accent} opacity="0.6"/>
-                </svg>
-                <div className="font-body" style={{fontWeight:400, fontSize:15, color:'var(--text-3)', textAlign:'center', padding:'0 24px', lineHeight:1.5}}>
-                  Video from coach — coming soon
-                </div>
-              </div>
-              <div style={{textAlign:'center'}}>
-                <button className="px-8 py-3 rounded-full font-body"
-                  style={{fontWeight:500, fontSize:16, background:`rgba(${accentRgb},0.12)`, border:`1px solid rgba(${accentRgb},0.25)`, color:palette.accent}}
-                  onClick={() => { if (engineRef.current) engineRef.current.skip(); }}>
-                  {t.continueText}
-                </button>
-              </div>
+          <div className="flex-1 flex flex-col items-center justify-center">
+            <div className="dima-video" style={{transition:'transform 500ms ease, opacity 300ms ease'}}>
+              <video autoPlay playsInline onEnded={smoothVideoEnd} onError={() => { if (engineRef.current) engineRef.current.skip(); }}>
+                <source src={seg.src} type="video/mp4" />
+              </video>
             </div>
           </div>
         );
       }
-      default: return null;
+      return (
+        <div className="flex-1 flex flex-col items-center justify-center px-6">
+          <div className="screen-transition w-full" style={{maxWidth:340}}>
+            <div style={{width:'100%', aspectRatio:'9/16', maxHeight:'50vh', borderRadius:20, background:'rgba(255,255,255,0.025)', border:'1px solid rgba(255,255,255,0.06)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', marginBottom:20, position:'relative', overflow:'hidden'}}>
+              <svg width="48" height="48" viewBox="0 0 48 48" fill="none" style={{opacity:0.3, marginBottom:12}}>
+                <circle cx="24" cy="24" r="23" stroke={palette.accent} strokeWidth="1.5"/>
+                <path d="M20 16l12 8-12 8V16z" fill={palette.accent} opacity="0.6"/>
+              </svg>
+              <div className="font-body" style={{fontWeight:400, fontSize:15, color:'var(--text-3)', textAlign:'center', padding:'0 24px', lineHeight:1.5}}>
+                Video from coach — coming soon
+              </div>
+            </div>
+            <div style={{textAlign:'center'}}>
+              <button className="px-8 py-3 rounded-full font-body" style={{fontWeight:500, fontSize:16, background:`rgba(${accentRgb},0.12)`, border:`1px solid rgba(${accentRgb},0.25)`, color:palette.accent}} onClick={() => { if (engineRef.current) engineRef.current.skip(); }}>
+                {t.continueText}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
     }
+    const isBreathing = seg.type === 'breathing';
+    const isText = seg.type === 'text';
+    const isBodyScan = seg.type === 'bodyscan';
+    const isVisualization = seg.type === 'visualization';
+    // All segments render bubble + controls as siblings, visibility via display:none.
+    // This guarantees the bubble NEVER unmounts mid-session and text overlays correctly.
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center" style={{position:'relative', width:'100%', maxWidth:'100vw', overflow:'hidden', boxSizing:'border-box'}}>
+        {/* Bubble — ALWAYS mounted, always visible (opacity 1) */}
+        <div ref={wrapperRef} style={{
+          position: 'fixed', top: '42%', left: '50%',
+          width: 'min(75vw, 300px)', aspectRatio: '1',
+          margin: 0,
+          transform: 'translate(-50%, -50%)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 1,
+          opacity: 1,
+          pointerEvents: 'none',
+        }}>
+          <OceanBubble ref={glowTargetRef} />
+          {/* Countdown inside bubble — only visible during breathing */}
+          <div ref={bubbleTimerRef} style={{
+            position:'absolute', top:'50%', left:'50%',
+            transform:'translate(-50%,-50%)',
+            fontFamily:"'JetBrains Mono',monospace",
+            fontSize:48, fontWeight:200, fontVariantNumeric:'tabular-nums',
+            color:'rgba(220,225,235,0.20)',
+            pointerEvents:'none', userSelect:'none',
+            display: isBreathing ? 'block' : 'none',
+          }} />
+        </div>
+
+        {/* Phase label — ABOVE bubble (only during breathing) */}
+        <div style={{
+          position:'fixed',
+          top:'calc(42% - min(37.5vw, 150px) - 36px)',
+          left:0, right:0,
+          padding:'0 24px',
+          boxSizing:'border-box',
+          maxWidth:'100vw',
+          textAlign:'center',
+          zIndex: 2,
+          pointerEvents:'none',
+          display: isBreathing ? 'block' : 'none',
+          overflow:'hidden',
+        }}>
+          <div ref={phaseLabelRef} className="font-body" style={{
+            fontWeight:600, fontSize:13, letterSpacing:'0.2em', textTransform:'uppercase',
+            color:'rgba(220,225,235,0.55)', minHeight:18,
+            transition:'opacity 0.15s ease',
+            overflowWrap:'break-word', wordWrap:'break-word',
+          }} />
+        </div>
+
+        {/* Sub-instruction + cycle counter — BELOW bubble (only during breathing) */}
+        <div style={{
+          position:'fixed',
+          top:'calc(42% + min(37.5vw, 150px) + 20px)',
+          left:0, right:0,
+          padding:'0 24px',
+          boxSizing:'border-box',
+          maxWidth:'100vw',
+          textAlign:'center',
+          zIndex: 2,
+          pointerEvents:'none',
+          display: isBreathing ? 'block' : 'none',
+          overflow:'hidden',
+        }}>
+          <div ref={phaseSubRef} className="font-body" style={{
+            fontSize:15, fontWeight:300, color:'rgba(220,225,235,0.35)',
+            lineHeight:1.5, maxWidth:280, margin:'0 auto', minHeight:24,
+            transition:'opacity 0.15s ease',
+            overflowWrap:'break-word', wordWrap:'break-word',
+          }} />
+          <div ref={cycleCounterRef} className="font-mono" style={{fontSize:12, color:'rgba(220,225,235,0.15)', marginTop:8, fontVariantNumeric:'tabular-nums'}} />
+        </div>
+
+        {/* Intro text (TEXT segment) — overlays on top of bubble, only during text segments */}
+        {isText && <SessionText text={seg.text} texts={seg.texts} duration={seg.duration} visible={true} />}
+        {isBodyScan && <SessionText bodyScanSentences={bodyScanSentences} bodyScanIdx={bodyScanIdx} visible={true} />}
+        {isVisualization && <SessionText text={seg.texts?.[world] || seg.texts?.ocean || ''} visible={true} />}
+      </div>
+    );
   };
 
   return (
-    <div className="fixed inset-0 flex flex-col z-50" style={{...bgStyle, transition:'background 2s ease'}}
+    <div className="fixed inset-0 flex flex-col z-50" data-seg-type={segType} style={{...bgStyle, transition:'background 2s ease'}}
       onTouchStart={() => { setControlOpacity(1); if (controlFadeRef.current) clearTimeout(controlFadeRef.current); if (segType === 'breathing' && !paused) controlFadeRef.current = setTimeout(() => setControlOpacity(0.15), 3000); }}
       onClick={() => { setControlOpacity(1); if (controlFadeRef.current) clearTimeout(controlFadeRef.current); if (segType === 'breathing' && !paused) controlFadeRef.current = setTimeout(() => setControlOpacity(0.15), 3000); }}>
       <Particles world={world} diveProgress={diveProgress} />
@@ -3249,6 +3442,7 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef, star
   const rafRef = useRef(null);
   const vibratedRef = useRef({});
   const bubbleGlowRef = useRef(null);
+  const lastCinePhaseRef = useRef('');
 
   const fbWorld = 'ocean';
   const fbW = WORLDS.ocean;
@@ -3581,12 +3775,27 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef, star
   let cineBg = '#000';
   if(ct>=9&&ct<10){const p=Math.min((ct-9)/1,1);cineBg=`linear-gradient(180deg,rgba(${Math.round(p*30)},${Math.round(p*58)},${Math.round(p*95)},${Math.max(0.01,0.9*p)}),rgba(${Math.round(p*13)},${Math.round(p*27)},${Math.round(p*42)},${Math.max(0.01,0.95*p)}))`;}
   else if(ct>=10){cineBg=SESSION_BG;}
-  // Bubble: appears at Beat 4 (t=9.5)
-  let bubbleOp=0,bubbleScale=1,bubbleY='-50%';
-  if(ct>=9.5&&ct<29.5){
-    bubbleOp=Math.min(1,(ct-9.5)/0.5);
-    const breathTime=ct-9.5,cycleTime=breathTime%DEMO_CYCLE;let el=0;
-    for(const p of DEMO_PHASES){if(cycleTime<el+p.dur){const pr=(cycleTime-el)/p.dur,ea=0.5-0.5*Math.cos(Math.min(pr,1)*Math.PI);if(p.name==='inhale1')bubbleScale=1+ea*0.3;else if(p.name==='inhale2')bubbleScale=1.3+ea*0.15;else bubbleScale=1.45-ea*0.45;break;}el+=p.dur;}
+  // Bubble: appears at Beat 4 (t=9.5). Scale is driven by CSS transitions via setBubblePhase on phase change.
+  const bubbleVisible = ct >= 9.5 && ct < 29.5;
+  if (!bubbleVisible && lastCinePhaseRef.current !== '') lastCinePhaseRef.current = '';
+  let currentCinePhase = '', currentCinePhaseDur = 0;
+  if (bubbleVisible) {
+    const breathTime = ct - 9.5;
+    const cycleTime = breathTime % DEMO_CYCLE;
+    let el = 0;
+    for (const p of DEMO_PHASES) {
+      if (cycleTime < el + p.dur) {
+        currentCinePhase = p.name;
+        currentCinePhaseDur = p.dur;
+        break;
+      }
+      el += p.dur;
+    }
+    // On phase change, imperatively set scale/transition via setBubblePhase (inline effect pattern)
+    if (currentCinePhase && currentCinePhase !== lastCinePhaseRef.current) {
+      lastCinePhaseRef.current = currentCinePhase;
+      if (bubbleGlowRef.current) setBubblePhase(bubbleGlowRef.current, currentCinePhase, currentCinePhaseDur);
+    }
   }
   // Phase label
   let phaseLabel='',phaseSub='';
@@ -3595,7 +3804,7 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef, star
   return (
     <div style={{position:'fixed',inset:0,zIndex:60,background:cineBg,display:'flex',alignItems:'center',justifyContent:'center'}}>
       {showSkip && <button onClick={()=>{clearInterval(rafRef.current);if(introAmbientRef.current){introAmbientRef.current.pause();introAmbientRef.current=null;}try{ph('onboarding_cinematic_skipped',{});}catch(e){}setBreathPhase('done');}} style={{position:'fixed',top:'calc(16px + env(safe-area-inset-top, 0px))',right:16,zIndex:100,background:'none',border:'none',fontFamily:"'DM Sans',sans-serif",fontWeight:400,fontSize:14,color:'rgba(255,255,255,0.4)',padding:'8px 16px',cursor:'pointer'}}>Skip</button>}
-      {bubbleOp>0 && <div style={{position:'absolute',top:'42%',left:'50%',transform:`translate(-50%,${bubbleY}) scale(${bubbleScale})`,width:'min(75vw, 300px)',aspectRatio:'1',opacity:bubbleOp,pointerEvents:'none'}}><OceanBubble ref={bubbleGlowRef}/></div>}
+      {bubbleVisible && <div style={{position:'absolute',top:'42%',left:'50%',transform:'translate(-50%,-50%)',width:'min(75vw, 300px)',aspectRatio:'1',pointerEvents:'none',animation:'fade-in 500ms ease-out'}}><OceanBubble ref={bubbleGlowRef}/></div>}
       {wordByWord && <div style={{position:'absolute',top:'42%',left:'50%',transform:'translate(-50%,-50%)',fontFamily:"'DM Sans',sans-serif",fontWeight:'300',fontSize:20,color:'rgba(255,255,255,0.8)',textAlign:'center',zIndex:10,pointerEvents:'none',maxWidth:280,lineHeight:1.6}}>{wordByWord.map((w,i) => <span key={i} style={{opacity:w.opacity,transition:'opacity 0.15s ease'}}>{w.word} </span>)}</div>}
       {!wordByWord&&centerText&&centerOp>0.01 && <div style={{position:'absolute',top:'42%',left:'50%',transform:'translate(-50%,-50%)',fontFamily:"'DM Sans',sans-serif",fontWeight:centerWeight,fontSize:centerSize,color:centerColor,opacity:centerOp,textAlign:'center',zIndex:10,pointerEvents:'none',whiteSpace:centerWrap?'normal':'nowrap',maxWidth:centerWrap?280:'none'}}>{centerText}</div>}
       {phaseLabel && <div style={{position:'fixed',top:'calc(42% - min(37.5vw, 150px) - 36px)',left:0,right:0,textAlign:'center',zIndex:15,pointerEvents:'none'}}><div className="font-body" style={{fontWeight:600,fontSize:13,letterSpacing:'0.2em',textTransform:'uppercase',color:'rgba(220,225,235,0.55)'}}>{phaseLabel}</div></div>}
@@ -3871,44 +4080,87 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-// ===== AUTH SCREEN =====
+// ===== AUTH SCREEN (email + password) =====
 function AuthScreen({ onDemo }) {
   const [email, setEmail] = React.useState('');
+  const [password, setPassword] = React.useState('');
   const [loading, setLoading] = React.useState(false);
-  const [sent, setSent] = React.useState(false);
+  const [error, setError] = React.useState('');
+  const [mode, setMode] = React.useState('login'); // 'login' | 'register' | 'forgot'
+  const [resetSent, setResetSent] = React.useState(false);
 
-  async function handleEmailLogin() {
-    if (!email || !supabaseClient) return;
-    setLoading(true);
-    const { error } = await supabaseClient.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: window.location.origin }
-    });
+  const inputStyle = {width:'100%',maxWidth:'300px',padding:'14px 16px',borderRadius:'12px',background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.06)',color:'rgba(220,225,235,0.85)',fontFamily:"'DM Sans',sans-serif",fontSize:'17px',outline:'none',marginBottom:'12px',boxSizing:'border-box'};
+  const btnStyle = {width:'100%',maxWidth:'300px',padding:'14px 20px',borderRadius:'12px',background:'rgba(94,170,168,0.12)',border:'1px solid rgba(94,170,168,0.25)',color:'rgba(94,170,168,0.9)',fontFamily:"'DM Sans',sans-serif",fontSize:'17px',fontWeight:500,cursor:'pointer'};
+
+  async function handleLogin() {
+    if (!email || !password || !supabaseClient) return;
+    setLoading(true); setError('');
+    const { error: err } = await supabaseClient.auth.signInWithPassword({ email, password });
     setLoading(false);
-    if (!error) setSent(true);
+    if (err) setError('Wrong email or password');
   }
 
-  if (sent) {
+  async function handleRegister() {
+    if (!email || !password || !supabaseClient) return;
+    if (password.length < 6) { setError('Password must be at least 6 characters'); return; }
+    setLoading(true); setError('');
+    const { error: err } = await supabaseClient.auth.signUp({ email, password });
+    setLoading(false);
+    if (err) setError(err.message || 'Registration failed');
+  }
+
+  async function handleForgotPassword() {
+    if (!email || !supabaseClient) return;
+    setLoading(true); setError('');
+    const { error: err } = await supabaseClient.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
+    setLoading(false);
+    if (err) setError(err.message || 'Failed to send reset email');
+    else setResetSent(true);
+  }
+
+  if (mode === 'forgot') {
     return (
       <div style={{position:'fixed',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',background:'linear-gradient(180deg,#0e3d5c 0%,#020a10 100%)',padding:'0 32px'}}>
-        <p style={{fontFamily:"'DM Sans',sans-serif",fontWeight:300,fontSize:'18px',color:'rgba(220,225,235,0.8)'}}>Check your email</p>
-        <p style={{fontFamily:"'DM Sans',sans-serif",fontSize:'14px',color:'rgba(220,225,235,0.45)',marginTop:'8px'}}>We sent a magic link to {email}</p>
-        <button onClick={() => setSent(false)} style={{marginTop:'24px',background:'none',border:'none',fontSize:'15px',color:'rgba(220,225,235,0.3)',cursor:'pointer'}}>Back</button>
+        <p className="dive-logo" style={{fontFamily:"'DM Sans',sans-serif",fontWeight:200,fontSize:'28px',letterSpacing:'0.2em',marginBottom:'8px'}}>DIVE.</p>
+        <p style={{fontFamily:"'DM Sans',sans-serif",fontWeight:300,fontSize:'18px',color:'rgba(220,225,235,0.85)',marginBottom:'32px'}}>Reset password</p>
+        {resetSent ? (
+          <div style={{textAlign:'center'}}>
+            <p style={{fontFamily:"'DM Sans',sans-serif",fontSize:'15px',color:'rgba(220,225,235,0.6)'}}>Check your email for a reset link</p>
+            <button onClick={() => { setMode('login'); setResetSent(false); }} style={{marginTop:'24px',background:'none',border:'none',fontSize:'15px',color:'rgba(94,170,168,0.7)',cursor:'pointer'}}>Back to login</button>
+          </div>
+        ) : (
+          <div style={{width:'100%',maxWidth:'300px'}}>
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email address" style={inputStyle} />
+            <button onClick={handleForgotPassword} disabled={loading || !email} style={{...btnStyle, opacity:loading||!email?0.4:1}}>
+              {loading ? 'Sending...' : 'Send reset link'}
+            </button>
+            {error && <p style={{fontSize:'13px',color:'rgba(252,129,129,0.7)',marginTop:'12px',textAlign:'center'}}>{error}</p>}
+            <button onClick={() => { setMode('login'); setError(''); }} style={{marginTop:'20px',background:'none',border:'none',fontSize:'14px',color:'rgba(220,225,235,0.3)',cursor:'pointer',display:'block',width:'100%',textAlign:'center'}}>Back to login</button>
+          </div>
+        )}
       </div>
     );
   }
 
   return (
     <div style={{position:'fixed',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',background:'linear-gradient(180deg,#0e3d5c 0%,#020a10 100%)',padding:'0 32px'}}>
-      <p style={{fontFamily:"'DM Sans',sans-serif",fontWeight:200,fontSize:'42px',letterSpacing:'0.3em',textTransform:'uppercase',color:'rgba(94,170,168,0.9)',marginBottom:'8px'}}>DIVE</p>
-      <p style={{fontFamily:"'DM Sans',sans-serif",fontWeight:300,fontSize:'15px',color:'rgba(220,225,235,0.35)',letterSpacing:'0.1em',marginBottom:'48px'}}>PREPARE · BREATHE · DIVE</p>
-      <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email address" onKeyDown={e => e.key === 'Enter' && handleEmailLogin()} style={{width:'100%',maxWidth:'300px',padding:'14px 16px',borderRadius:'12px',background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.06)',color:'rgba(220,225,235,0.85)',fontFamily:"'DM Sans',sans-serif",fontSize:'17px',outline:'none',marginBottom:'12px',boxSizing:'border-box'}} />
-      <button onClick={handleEmailLogin} disabled={loading || !email} style={{width:'100%',maxWidth:'300px',padding:'14px 20px',borderRadius:'12px',background:'rgba(94,170,168,0.10)',border:'1px solid rgba(94,170,168,0.22)',color:'rgba(94,170,168,0.9)',fontFamily:"'DM Sans',sans-serif",fontSize:'17px',fontWeight:400,cursor:'pointer',opacity:loading||!email?0.4:1}}>
-        {loading ? 'Sending...' : 'Continue with email'}
+      <p className="dive-logo" style={{fontFamily:"'DM Sans',sans-serif",fontWeight:200,fontSize:'42px',letterSpacing:'0.3em',marginBottom:'8px'}}>DIVE.</p>
+      <p style={{fontFamily:"'DM Sans',sans-serif",fontWeight:300,fontSize:'15px',color:'rgba(220,225,235,0.35)',letterSpacing:'0.1em',marginBottom:'36px'}}>{mode === 'register' ? 'Create your account' : 'Log in to DIVE'}</p>
+      <input type="email" value={email} onChange={e => { setEmail(e.target.value); setError(''); }} placeholder="Email address" style={inputStyle} />
+      <input type="password" value={password} onChange={e => { setPassword(e.target.value); setError(''); }} placeholder="Password" onKeyDown={e => e.key === 'Enter' && (mode === 'register' ? handleRegister() : handleLogin())} style={inputStyle} />
+      {error && <p style={{fontSize:'13px',color:'rgba(252,129,129,0.7)',marginBottom:'12px',textAlign:'center',maxWidth:'300px'}}>{error}</p>}
+      <button onClick={mode === 'register' ? handleRegister : handleLogin} disabled={loading || !email || !password} style={{...btnStyle, opacity:loading||!email||!password?0.4:1}}>
+        {loading ? 'Please wait...' : mode === 'register' ? 'Create account' : 'Log in'}
       </button>
-      <button onClick={onDemo} style={{marginTop:'24px',padding:'12px 24px',borderRadius:'12px',background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.08)',fontFamily:"'DM Sans',sans-serif",fontSize:'16px',fontWeight:400,color:'rgba(220,225,235,0.55)',cursor:'pointer'}}>Start breathing</button>
-      <p style={{fontSize:'12px',color:'rgba(220,225,235,0.2)',marginTop:'8px'}}>No account needed</p>
-      <p style={{fontSize:'13px',color:'rgba(220,225,235,0.15)',marginTop:'32px',textAlign:'center',maxWidth:'260px',lineHeight:'1.5'}}>By continuing, you agree to our Terms of Service and Privacy Policy</p>
+      {mode === 'login' && (
+        <button onClick={() => { setMode('forgot'); setError(''); }} style={{marginTop:'16px',background:'none',border:'none',fontSize:'14px',color:'rgba(220,225,235,0.3)',cursor:'pointer'}}>Forgot password?</button>
+      )}
+      <button onClick={() => { setMode(mode === 'register' ? 'login' : 'register'); setError(''); }} style={{marginTop:'12px',background:'none',border:'none',fontSize:'14px',color:'rgba(220,225,235,0.4)',cursor:'pointer'}}>
+        {mode === 'register' ? 'Already have an account? Log in' : "Don't have an account? Create one"}
+      </button>
+      <div style={{marginTop:'24px',borderTop:'1px solid rgba(255,255,255,0.04)',paddingTop:'20px',width:'100%',maxWidth:'300px',textAlign:'center'}}>
+        <button onClick={onDemo} style={{background:'none',border:'none',fontFamily:"'DM Sans',sans-serif",fontSize:'15px',color:'rgba(220,225,235,0.35)',cursor:'pointer'}}>Continue without account</button>
+      </div>
     </div>
   );
 }
@@ -3947,7 +4199,7 @@ function App() {
       }
     }).catch(() => { setAuthLoading(false); });
 
-    // Listen for auth state changes (catches redirects, magic links)
+    // Listen for auth state changes (catches sign-in, sign-up, password reset)
     const { data: { subscription } } = supabaseClient.auth.onAuthStateChange(
       (event, session) => {
         if (event === 'SIGNED_OUT') {
@@ -4017,13 +4269,14 @@ function App() {
   // Hooks that must be declared before any conditional returns (Rules of Hooks)
   const [showPreMood, setShowPreMood] = useState(false);
   const [pendingSessionData, setPendingSessionData] = useState(null);
-  const preMoodTimerRef = useRef(null);
+  const preMoodTimerRef = useRef(null); // unused — kept for hook count stability
   const [onboardingPhase, setOnboardingPhase] = useState('cinematic');
   const [onboardingPostMood, setOnboardingPostMood] = useState(null);
   const [onboardingGoal, setOnboardingGoal] = useState(null);
   const [softAuthEmail, setSoftAuthEmail] = useState('');
+  const [softAuthPassword, setSoftAuthPassword] = useState('');
   const [softAuthLoading, setSoftAuthLoading] = useState(false);
-  const [softAuthSent, setSoftAuthSent] = useState(false);
+  const [softAuthError, setSoftAuthError] = useState('');
   const world = 'ocean'; // ocean only — space world removed
   const w = WORLDS[world];
   const palette = w.palette;
@@ -4235,6 +4488,7 @@ function App() {
   };
 
   const actuallyStartSession = (segments, meta = {}) => {
+    alert('[actuallyStartSession] called DIRECTLY for scenario="'+meta?.scenario+'" — if this fires BEFORE [startSession] alert, pre-mood is BYPASSED');
     resetVoiceState(); // Reset randomization state for new session
     // Apply adaptive difficulty level timings to breathing segments
     const userLevel = stats.level || 'basic';
@@ -4261,7 +4515,7 @@ function App() {
       try {
         navigator.mediaSession.metadata = new window.MediaMetadata({
           title: 'DIVE — Breathing Session',
-          artist: 'DIVE',
+          artist: 'DIVE.',
         });
         navigator.mediaSession.setActionHandler('pause', () => {});
       } catch(e) {}
@@ -4271,33 +4525,23 @@ function App() {
   // showPreMood, pendingSessionData, preMoodTimerRef declared at top of App (Rules of Hooks)
 
   const startSession = (segments, meta = {}, options = {}) => {
+    alert('[startSession] called scenario="'+meta?.scenario+'" skipPreMood='+options.skipPreMood+' — will setShowPreMood(true)');
+    console.log('[DIVE] startSession called', { skipPreMood: options.skipPreMood, scenario: meta?.scenario });
     setCurrentMood({pre: options.preMood != null ? options.preMood : null, post:null});
     setMoodDelta(null);
     if (options.skipPreMood) {
       // Skip pre-mood screen entirely (e.g. SOS flow already asked)
       actuallyStartSession(segments, meta);
     } else {
+      // Show pre-mood 1-5 BEFORE every non-SOS session
       setPendingSessionData({ segments, meta });
       setShowPreMood(true);
+      console.log('[DIVE] pre-mood shown, awaiting user tap');
     }
   };
 
-  // Fade out pre-mood then start session
-  const dismissPreMood = () => {
-    const el = document.querySelector('.pre-mood-fade');
-    if (el) { el.style.opacity = '0'; el.style.transition = 'opacity 0.3s ease'; }
-    setTimeout(() => {
-      setShowPreMood(false);
-      if (pendingSessionData) { actuallyStartSession(pendingSessionData.segments, pendingSessionData.meta); setPendingSessionData(null); }
-    }, 300);
-  };
-  // Auto-dismiss pre-mood after 5 seconds
-  useEffect(() => {
-    if (showPreMood && pendingSessionData) {
-      preMoodTimerRef.current = setTimeout(dismissPreMood, 5000);
-      return () => clearTimeout(preMoodTimerRef.current);
-    }
-  }, [showPreMood, pendingSessionData]);
+  // Pre-mood: NO auto-dismiss. User must tap a number 1-5 OR Skip button.
+  // This is critical for research data — without pre-mood we have no baseline.
 
 
   const endSession = (completed = true, actualData = null) => {
@@ -4335,6 +4579,15 @@ function App() {
       ph('session_complete', { scenario: activeSession.meta?.scenario, technique: mainTech, duration: actualDur, depth: cData.depth, preMood: currentMood.pre, postMood: currentMood.post, mood_delta: (currentMood.pre != null && currentMood.post != null) ? currentMood.pre - currentMood.post : null, session_type: activeSession.meta?.isSOSSession ? 'sos' : activeSession.meta?.isFirstSession ? 'onboarding' : activeSession.meta?.programId ? 'program' : 'quick_dive' });
       // Update user properties
       try { ph('$set', { total_sessions: (stats.totalSessions||0)+1, streak: stats.streak, is_premium: stats.isPremium, techniques_tried: Object.keys(stats.techniqueStats||{}).length, total_depth: stats.totalDepth, goal: stats.userGoal }); } catch(e) {}
+      // Research data sync (if consented)
+      syncResearchSession({
+        mainTechnique: mainTech, scenario: activeSession.meta?.scenario, duration: actualDur,
+        preMood: currentMood.pre, postMood: currentMood.post,
+        sessionType: activeSession.meta?.isSOSSession ? 'sos' : activeSession.meta?.isFirstSession ? 'onboarding' : activeSession.meta?.programId ? 'program' : 'quick',
+        programId: activeSession.meta?.programId, programDay: activeSession.meta?.day,
+        sosOption: activeSession.meta?.sosOption, sosOutcome: null,
+      }, stats, authUser);
+      syncResearchProfile(stats, authUser);
       setActiveSession(null);
       setShowSurfacing(true);
       HAPTIC.celebrate();
@@ -4434,6 +4687,49 @@ function App() {
   // ===== FIRST BREATH SCREEN =====
   // onboardingPhase, onboardingPostMood, onboardingGoal, softAuth* declared at top of App (Rules of Hooks)
 
+  // ===== PRE-MOOD OVERLAY (HIGHEST PRIORITY — must show before any session starts) =====
+  console.log('[DIVE] App render: showPreMood=', showPreMood, 'pendingSessionData=', !!pendingSessionData, 'activeSession=', !!activeSession, 'screen=', screen);
+  if (showPreMood && pendingSessionData) {
+    console.log('[DIVE] >>> RENDERING PRE-MOOD (top-priority)');
+    const bgEarly = getDepthBackground(stats.totalDepth);
+    return (
+      <div className="fixed inset-0 flex flex-col items-center justify-center pre-mood-fade" style={{background:bgEarly, zIndex:9999, transition:'opacity 0.3s ease'}}>
+        <Particles world={world} />
+        <div className="z-10 text-center">
+          <p className="font-body" style={{fontWeight:300, fontSize:20, color:'var(--text)', marginBottom:32}}>How are you feeling?</p>
+          <div style={{display:'flex', gap:16, justifyContent:'center'}}>
+            {[1,2,3,4,5].map(n => (
+              <button key={n} onClick={() => {
+                console.log('[DIVE] pre-mood selected:', n);
+                setCurrentMood(m => ({...m, pre:n}));
+                const data = pendingSessionData;
+                setShowPreMood(false);
+                setPendingSessionData(null);
+                if (data) actuallyStartSession(data.segments, data.meta);
+              }} style={{
+                width:48, height:48, borderRadius:'50%',
+                border:'1px solid rgba(255,255,255,0.08)', background:'transparent',
+                fontFamily:"'JetBrains Mono',monospace", fontWeight:300, fontSize:18,
+                color:'var(--text-2)', display:'flex', alignItems:'center', justifyContent:'center',
+                cursor:'pointer',
+              }}>{n}</button>
+            ))}
+          </div>
+          <div style={{display:'flex', justifyContent:'space-between', width:280, margin:'12px auto 0'}}>
+            <span style={{fontSize:13, color:'var(--text-3)'}}>calm</span>
+            <span style={{fontSize:13, color:'var(--text-3)'}}>stressed</span>
+          </div>
+          <button onClick={() => {
+            const data = pendingSessionData;
+            setShowPreMood(false);
+            setPendingSessionData(null);
+            if (data) actuallyStartSession(data.segments, data.meta);
+          }} style={{marginTop:32, fontSize:15, color:'var(--text-3)', background:'none', border:'none', cursor:'pointer'}}>Skip</button>
+        </div>
+      </div>
+    );
+  }
+
   // ===== RETURNING USER ENTRANCE =====
 
   if (screen === 'first_breath') {
@@ -4474,7 +4770,7 @@ function App() {
             </div>
             <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:12,marginBottom:32}}>
               <span className="font-body" style={{fontSize:15,fontWeight:400,color:'rgba(220,225,235,0.7)'}}>Contribute data</span>
-              <button onClick={() => setStats(s => ({...s, researchConsent: !s.researchConsent}))}
+              <button onClick={() => setStats(s => ({...s, researchConsent: !s.researchConsent, consentDate: !s.researchConsent ? new Date().toISOString() : s.consentDate}))}
                 style={{width:48,height:28,borderRadius:14,padding:2,cursor:'pointer',border:'none',
                   background: stats.researchConsent ? 'rgba(94,170,168,0.5)' : 'rgba(255,255,255,0.1)',
                   transition:'background 200ms ease',display:'flex',alignItems:'center'}}>
@@ -4511,7 +4807,7 @@ function App() {
         }));
         ph('onboarding_complete', { goal: onboardingGoal, method });
         setOnboardingPhase('cinematic');
-        setSoftAuthEmail(''); setSoftAuthLoading(false); setSoftAuthSent(false);
+        setSoftAuthEmail(''); setSoftAuthPassword(''); setSoftAuthLoading(false); setSoftAuthError('');
         setScreen('home'); setTab('home');
       };
       return (
@@ -4520,29 +4816,33 @@ function App() {
           <div className="text-center z-10" style={{width:'100%', maxWidth:300}}>
             <div className="font-body mb-2" style={{fontSize:22, fontWeight:300, color:'rgba(220,225,235,0.95)', letterSpacing:'0.06em'}}>Save your progress</div>
             <div className="font-body mb-8" style={{fontSize:14, fontWeight:300, color:'rgba(220,225,235,0.35)'}}>Get your data back on any device</div>
-            {softAuthSent ? (
-              <div>
-                <p className="font-body" style={{fontSize:16, color:'rgba(220,225,235,0.7)'}}>Check your email for a magic link</p>
-                <button onClick={() => finishOnboarding('email')} className="font-body mt-6" style={{fontSize:14, color:'rgba(220,225,235,0.3)', background:'none', border:'none', cursor:'pointer'}}>Continue</button>
-              </div>
-            ) : (
-              <div>
-                <input type="email" value={softAuthEmail} onChange={e => setSoftAuthEmail(e.target.value)}
+            <div>
+                <input type="email" value={softAuthEmail} onChange={e => { setSoftAuthEmail(e.target.value); setSoftAuthError(''); }}
                   placeholder="Email address" style={{width:'100%',padding:'14px 16px',borderRadius:12,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.06)',color:'rgba(220,225,235,0.85)',fontFamily:"'DM Sans',sans-serif",fontSize:17,outline:'none',marginBottom:12,boxSizing:'border-box'}} />
-                <button disabled={softAuthLoading || !softAuthEmail} onClick={async () => {
-                  if (!softAuthEmail || !supabaseClient) return;
-                  setSoftAuthLoading(true);
-                  const { error } = await supabaseClient.auth.signInWithOtp({ email: softAuthEmail, options: { emailRedirectTo: window.location.origin } });
+                <input type="password" value={softAuthPassword} onChange={e => { setSoftAuthPassword(e.target.value); setSoftAuthError(''); }}
+                  placeholder="Password (6+ characters)" style={{width:'100%',padding:'14px 16px',borderRadius:12,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.06)',color:'rgba(220,225,235,0.85)',fontFamily:"'DM Sans',sans-serif",fontSize:17,outline:'none',marginBottom:12,boxSizing:'border-box'}} />
+                {softAuthError && <p className="font-body" style={{fontSize:13,color:'rgba(252,129,129,0.7)',marginBottom:12,textAlign:'center'}}>{softAuthError}</p>}
+                <button disabled={softAuthLoading || !softAuthEmail || !softAuthPassword} onClick={async () => {
+                  if (!softAuthEmail || !softAuthPassword || !supabaseClient) return;
+                  if (softAuthPassword.length < 6) { setSoftAuthError('Password must be at least 6 characters'); return; }
+                  setSoftAuthLoading(true); setSoftAuthError('');
+                  const { error } = await supabaseClient.auth.signUp({ email: softAuthEmail, password: softAuthPassword });
                   setSoftAuthLoading(false);
-                  if (!error) setSoftAuthSent(true);
-                }} style={{width:'100%',padding:'14px',borderRadius:12,background:'rgba(94,170,168,0.10)',border:'1px solid rgba(94,170,168,0.22)',color:'rgba(94,170,168,0.9)',fontFamily:"'DM Sans',sans-serif",fontSize:17,cursor:'pointer',opacity:softAuthLoading||!softAuthEmail?0.4:1}}>
-                  {softAuthLoading ? 'Sending...' : 'Save with email'}
+                  if (error) { setSoftAuthError(error.message || 'Registration failed'); }
+                  else { finishOnboarding('email'); }
+                }} style={{width:'100%',padding:'14px',borderRadius:12,background:'rgba(94,170,168,0.12)',border:'1px solid rgba(94,170,168,0.25)',color:'rgba(94,170,168,0.9)',fontFamily:"'DM Sans',sans-serif",fontSize:17,fontWeight:500,cursor:'pointer',opacity:softAuthLoading||!softAuthEmail||!softAuthPassword?0.4:1}}>
+                  {softAuthLoading ? 'Creating...' : 'Create account'}
                 </button>
                 <button onClick={() => finishOnboarding('anonymous')} className="font-body" style={{marginTop:20,fontSize:15,color:'rgba(220,225,235,0.3)',background:'none',border:'none',cursor:'pointer',display:'block',width:'100%'}}>
                   Skip for now
                 </button>
+                <p className="font-body" style={{fontSize:12,color:'rgba(220,225,235,0.25)',marginTop:20,textAlign:'center',lineHeight:1.5}}>
+                  By creating an account, you agree to our{' '}
+                  <span onClick={() => setScreen('terms')} style={{color:'rgba(94,170,168,0.7)',cursor:'pointer',textDecoration:'underline'}}>Terms of Service</span>
+                  {' '}and{' '}
+                  <span onClick={() => setScreen('privacy')} style={{color:'rgba(94,170,168,0.7)',cursor:'pointer',textDecoration:'underline'}}>Privacy Policy</span>
+                </p>
               </div>
-            )}
           </div>
         </div>
       );
@@ -4572,44 +4872,7 @@ function App() {
     );
   }
 
-  // Pre-mood overlay
-  if (showPreMood && pendingSessionData) {
-    return (
-      <div className="fixed inset-0 flex flex-col items-center justify-center pre-mood-fade" style={{background:bg, zIndex:50, transition:'opacity 0.3s ease'}}>
-        <Particles world={world} />
-        <div className="z-10 text-center">
-          <p className="font-body" style={{fontWeight:300, fontSize:20, color:'var(--text)', marginBottom:32}}>How are you feeling?</p>
-          <div style={{display:'flex', gap:16, justifyContent:'center'}}>
-            {[1,2,3,4,5].map(n => (
-              <button key={n} onClick={() => {
-                if (preMoodTimerRef.current) clearTimeout(preMoodTimerRef.current);
-                setCurrentMood(m => ({...m, pre:n}));
-                dismissPreMood();
-                actuallyStartSession(pendingSessionData.segments, pendingSessionData.meta);
-                setPendingSessionData(null);
-              }} style={{
-                width:48, height:48, borderRadius:'50%',
-                border:'1px solid rgba(255,255,255,0.08)', background:'transparent',
-                fontFamily:"'JetBrains Mono',monospace", fontWeight:300, fontSize:18,
-                color:'var(--text-2)', display:'flex', alignItems:'center', justifyContent:'center',
-                cursor:'pointer',
-              }}>{n}</button>
-            ))}
-          </div>
-          <div style={{display:'flex', justifyContent:'space-between', width:280, margin:'12px auto 0'}}>
-            <span style={{fontSize:13, color:'var(--text-3)'}}>calm</span>
-            <span style={{fontSize:13, color:'var(--text-3)'}}>stressed</span>
-          </div>
-          <button onClick={() => {
-            if (preMoodTimerRef.current) clearTimeout(preMoodTimerRef.current);
-            setShowPreMood(false);
-            actuallyStartSession(pendingSessionData.segments, pendingSessionData.meta);
-            setPendingSessionData(null);
-          }} style={{marginTop:32, fontSize:15, color:'var(--text-3)', background:'none', border:'none', cursor:'pointer'}}>Skip</button>
-        </div>
-      </div>
-    );
-  }
+  // Pre-mood overlay: handled at top of render (highest priority)
 
   // Active session
   if (activeSession) {
@@ -4921,7 +5184,8 @@ function App() {
   };
 
   const launchScenario = (id, dur) => {
-    if (launching) return;
+    alert('[launchScenario] called with id="'+id+'" dur='+dur);
+    if (launching) { alert('[launchScenario] BLOCKED: launching flag is true'); return; }
     setLaunching(true);
     setTimeout(() => setLaunching(false), 2000); // re-enable after 2s safety
     // Handle first session special case
@@ -4999,7 +5263,7 @@ function App() {
       {/* ===== ABOVE FOLD: 1. Header ===== */}
       <div className="flex items-center justify-between mb-3">
         <div>
-          <div className="font-body" style={{fontSize:24, fontWeight:200, color:'rgba(220,225,235,0.95)', letterSpacing:'0.25em', textTransform:'uppercase'}}>{t.appName}</div>
+          <div className="font-body dive-logo" style={{fontSize:24, fontWeight:200, letterSpacing:'0.25em', textTransform:'uppercase'}}>{t.appName}</div>
           <div className="font-body" style={{fontSize:13, fontWeight:300, letterSpacing:'0.15em', color:'rgba(220,225,235,0.4)', marginTop:4}}>PREPARE &middot; BREATHE &middot; DIVE</div>
         </div>
         <div style={{textAlign:'right'}}>
@@ -5047,7 +5311,7 @@ function App() {
         background:'rgba(255,255,255,0.024)',
         border:'1px solid rgba(255,255,255,0.05)',
         display:'flex', flexDirection:'column', justifyContent:'space-between',
-      }} onClick={() => { try{ph('daily_dive_tapped',{technique:rec.technique,scenario:rec.scenario});}catch(e){} launchScenario(rec.scenario, rec.duration); }}>
+      }} onClick={() => { alert('[BEGIN] clicked — will call launchScenario("'+rec.scenario+'", '+rec.duration+')'); try{ph('daily_dive_tapped',{technique:rec.technique,scenario:rec.scenario});}catch(e){} launchScenario(rec.scenario, rec.duration); }}>
         <div>
           <div className="font-body mb-2" style={{fontSize:12, fontWeight:500, color:palette.accent, opacity:0.7, letterSpacing:'0.08em', textTransform:'uppercase'}}>{rec.isGoTo ? 'YOUR GO-TO' : t.todaysDiveLabel}</div>
           <div className="font-body mb-2" style={{fontSize:22, fontWeight:400, color:'rgba(220,225,235,0.95)', letterSpacing:'0.04em'}}>{rec.title}</div>
@@ -5095,11 +5359,10 @@ function App() {
       {/* ===== SCROLL: 5. Breathe Now (merged — situation + technique tabs) ===== */}
       <div className="mb-6">
         <div className="font-body mb-3" style={{fontSize:13, fontWeight:500, color:'rgba(220,225,235,0.28)', letterSpacing:'0.12em', textTransform:'uppercase'}}>BREATHE NOW</div>
-        <div style={{display:'flex',gap:0,marginBottom:12}}>
+        <div style={{display:'flex',gap:4,marginBottom:12,background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.05)',borderRadius:12,padding:4,overflow:'hidden'}}>
           {[['By situation','situation'],['By technique','technique']].map(([label,val]) => (
-            <button key={val} onClick={() => setBreatheTab(val)} style={{flex:1,padding:'8px 0',borderRadius:0,fontSize:14,fontWeight:500,cursor:'pointer',
-              background:breatheTab===val?'rgba(94,170,168,0.15)':'transparent',
-              borderBottom:breatheTab===val?'2px solid rgba(94,170,168,0.5)':'2px solid rgba(255,255,255,0.04)',
+            <button key={val} onClick={() => setBreatheTab(val)} style={{flex:1,padding:'10px 0',borderRadius:12,fontSize:14,fontWeight:500,cursor:'pointer',border:'none',
+              background:breatheTab===val?'rgba(94,170,168,0.18)':'transparent',
               color:breatheTab===val?palette.accent:'rgba(220,225,235,0.4)',transition:'all 200ms ease'}}>
               {label}
             </button>
@@ -5683,34 +5946,47 @@ function App() {
             </div>
           </div>
 
-          {/* Daily reminder settings */}
-          {stats.reminderTime && stats.reminderTime !== 'dismissed' && (
+          {/* Daily reminder settings — always visible */}
+          {(() => {
+            const reminderEnabled = !!stats.reminderTime && stats.reminderTime !== 'dismissed';
+            return (
             <div className="glass p-5 mt-3 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="font-body" style={{fontSize:16, fontWeight:400, color:'rgba(220,225,235,0.75)'}}>Daily reminder</span>
-                <button className="relative rounded-full" style={{width:44, height:24, background:`rgba(${accentRgb},0.25)`, border:'1px solid rgba(255,255,255,0.06)', transition:'all 200ms ease'}}
-                  onClick={() => setStats(s => ({...s, reminderTime: null}))}>
-                  <div className="absolute rounded-full transition-all" style={{top:3, width:16, height:16, background:palette.accent, left:'calc(100% - 20px)'}} />
+                <button className="relative rounded-full" style={{width:44, height:24, background: reminderEnabled ? `rgba(${accentRgb},0.25)` : 'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.06)', transition:'all 200ms ease'}}
+                  onClick={() => setStats(s => ({...s, reminderTime: reminderEnabled ? null : String(s.reminderHour || 9), reminderHour: s.reminderHour || 9}))}>
+                  <div className="absolute rounded-full transition-all" style={{top:3, width:16, height:16, background: reminderEnabled ? palette.accent : 'rgba(255,255,255,0.3)', left: reminderEnabled ? 'calc(100% - 20px)' : '4px'}} />
                 </button>
               </div>
-              <div style={{display:'flex', gap:4, overflowX:'auto', paddingBottom:4}} className="no-scrollbar">
-                {[6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23].map(h => {
-                  const lbl = h < 12 ? h + ' AM' : h === 12 ? '12 PM' : (h-12) + ' PM';
-                  const active = (stats.reminderHour || 9) === h;
-                  return (
-                  <button key={h} onClick={() => setStats(s => ({...s, reminderTime: String(h), reminderHour: h}))}
-                    style={{flexShrink:0, padding:'6px 10px', borderRadius:8, fontSize:11,
-                      background: active ? `rgba(${accentRgb},0.15)` : 'rgba(255,255,255,0.03)',
-                      border: active ? `1px solid rgba(${accentRgb},0.3)` : '1px solid rgba(255,255,255,0.06)',
-                      color: active ? palette.accent : 'rgba(220,225,235,0.4)', cursor:'pointer'}}>
-                    {lbl}
-                  </button>
-                  );
-                })}
-              </div>
-              {stats.notificationsGranted && <div className="font-body" style={{fontSize:11, color:'rgba(94,170,168,0.5)'}}>Browser notifications active</div>}
+              {reminderEnabled && (
+                <>
+                  <div style={{display:'flex', gap:4, overflowX:'auto', paddingBottom:4}} className="no-scrollbar">
+                    {[6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23].map(h => {
+                      const lbl = h < 12 ? h + ' AM' : h === 12 ? '12 PM' : (h-12) + ' PM';
+                      const active = (stats.reminderHour || 9) === h;
+                      return (
+                      <button key={h} onClick={() => setStats(s => ({...s, reminderTime: String(h), reminderHour: h}))}
+                        style={{flexShrink:0, padding:'6px 10px', borderRadius:8, fontSize:11,
+                          background: active ? `rgba(${accentRgb},0.15)` : 'rgba(255,255,255,0.03)',
+                          border: active ? `1px solid rgba(${accentRgb},0.3)` : '1px solid rgba(255,255,255,0.06)',
+                          color: active ? palette.accent : 'rgba(220,225,235,0.4)', cursor:'pointer'}}>
+                        {lbl}
+                      </button>
+                      );
+                    })}
+                  </div>
+                  {stats.notificationsGranted && <div className="font-body" style={{fontSize:11, color:'rgba(94,170,168,0.5)'}}>Browser notifications active</div>}
+                </>
+              )}
             </div>
-          )}
+            );
+          })()}
+
+          {/* Privacy + Terms links */}
+          <div style={{display:'flex',justifyContent:'center',gap:24,marginTop:20,marginBottom:8}}>
+            <button onClick={() => setScreen('privacy')} className="font-body" style={{fontSize:13,color:'rgba(94,170,168,0.7)',background:'none',border:'none',cursor:'pointer',textDecoration:'underline'}}>Privacy Policy</button>
+            <button onClick={() => setScreen('terms')} className="font-body" style={{fontSize:13,color:'rgba(94,170,168,0.7)',background:'none',border:'none',cursor:'pointer',textDecoration:'underline'}}>Terms of Service</button>
+          </div>
 
           {/* Replay intro + Reset */}
           <button className="w-full py-3 font-body rounded-full mb-3" style={{fontSize:15, fontWeight:400, color:'var(--text-2)', border:'1px solid rgba(255,255,255,0.07)', marginTop:16}}
@@ -5820,6 +6096,35 @@ function App() {
     );
     if (screen === 'category') return renderCategory();
 
+    // Privacy Policy + Terms screens
+    if (screen === 'privacy' || screen === 'terms') {
+      const isPrivacy = screen === 'privacy';
+      const text = isPrivacy ? PRIVACY_POLICY : TERMS_OF_SERVICE;
+      const lines = text.split('\n');
+      return (
+        <div className="screen-transition" style={{position:'fixed',inset:0,background:'#070C15',overflowY:'auto',zIndex:50}}>
+          <div style={{maxWidth:640,margin:'0 auto',padding:'env(safe-area-inset-top, 48px) 24px 80px 24px',boxSizing:'border-box'}}>
+            <button onClick={() => { setScreen('home'); setTab('profile'); }}
+              className="flex items-center gap-2 mb-6" style={{color:'rgba(220,225,235,0.5)',background:'none',border:'none',cursor:'pointer',padding:0}}>
+              <Icon name="back" size={16}/><span className="font-body" style={{fontSize:15,fontWeight:400}}>Back</span>
+            </button>
+            {lines.map((line, i) => {
+              if (!line.trim()) return <div key={i} style={{height:8}} />;
+              // First line of each block (no leading dash, ends without period) is a heading
+              const isFirstLine = i === 0;
+              const isHeading = !line.startsWith('-') && !line.startsWith(' ') && line.length < 60 && !line.endsWith('.') && i > 0 && lines[i-1].trim() === '';
+              if (isFirstLine) {
+                return <h1 key={i} className="font-body" style={{fontSize:24,fontWeight:300,color:'rgba(220,225,235,0.95)',marginBottom:4,letterSpacing:'0.03em'}}>{line}</h1>;
+              }
+              if (isHeading) {
+                return <h2 key={i} className="font-body" style={{fontSize:18,fontWeight:500,color:'rgba(220,225,235,0.85)',marginTop:24,marginBottom:8}}>{line}</h2>;
+              }
+              return <p key={i} className="font-body" style={{fontSize:14,fontWeight:300,color:'rgba(220,225,235,0.7)',lineHeight:1.7,marginBottom:4}}>{line}</p>;
+            })}
+          </div>
+        </div>
+      );
+    }
 
     if (screen === 'program_view') return renderProgramView();
     switch (tab) {
@@ -5829,7 +6134,7 @@ function App() {
     }
   };
 
-  const showTabs = !['category','program_view','custom-pattern','breath_test'].includes(screen);
+  const showTabs = !['category','program_view','custom-pattern','breath_test','privacy','terms'].includes(screen);
 
   return (
     <div className="fixed inset-0" style={{background:bg}}>
