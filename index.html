@@ -3551,6 +3551,19 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef, star
     return () => clearTimeout(t);
   }, []);
 
+  // Apply unified breath animation to cinematic bubble when it appears at t=9.5s
+  useEffect(() => {
+    const visible = cineTime >= 9.5 && cineTime < 29.5;
+    if (visible && lastCinePhaseRef.current === '' && bubbleGlowRef.current) {
+      lastCinePhaseRef.current = 'started';
+      const lightEl = bubbleGlowRef.current.querySelector('.bubble-light-spot');
+      // Cyclic sigh demo: matches DEMO_PHASES (inhale1=2, inhale2=1, exhale=7)
+      applyBreathAnimation(bubbleGlowRef.current, lightEl, 'physiological_sigh', { inhale1: 2, inhale2: 1, exhale: 7 });
+    } else if (!visible && lastCinePhaseRef.current !== '') {
+      lastCinePhaseRef.current = '';
+    }
+  }, [cineTime >= 9.5 && cineTime < 29.5]);
+
   function vibrateOnce(key, pattern) {
     if (!vibratedRef.current[key]) {
       vibratedRef.current[key] = true;
@@ -3873,28 +3886,8 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef, star
   let cineBg = '#000';
   if(ct>=9&&ct<10){const p=Math.min((ct-9)/1,1);cineBg=`linear-gradient(180deg,rgba(${Math.round(p*30)},${Math.round(p*58)},${Math.round(p*95)},${Math.max(0.01,0.9*p)}),rgba(${Math.round(p*13)},${Math.round(p*27)},${Math.round(p*42)},${Math.max(0.01,0.95*p)}))`;}
   else if(ct>=10){cineBg=SESSION_BG;}
-  // Bubble: appears at Beat 4 (t=9.5). Scale is driven by CSS transitions via setBubblePhase on phase change.
+  // Bubble: appears at Beat 4 (t=9.5). Uses unified applyBreathAnimation (same as session).
   const bubbleVisible = ct >= 9.5 && ct < 29.5;
-  if (!bubbleVisible && lastCinePhaseRef.current !== '') lastCinePhaseRef.current = '';
-  let currentCinePhase = '', currentCinePhaseDur = 0;
-  if (bubbleVisible) {
-    const breathTime = ct - 9.5;
-    const cycleTime = breathTime % DEMO_CYCLE;
-    let el = 0;
-    for (const p of DEMO_PHASES) {
-      if (cycleTime < el + p.dur) {
-        currentCinePhase = p.name;
-        currentCinePhaseDur = p.dur;
-        break;
-      }
-      el += p.dur;
-    }
-    // On phase change, imperatively set scale/transition via setBubblePhase (inline effect pattern)
-    if (currentCinePhase && currentCinePhase !== lastCinePhaseRef.current) {
-      lastCinePhaseRef.current = currentCinePhase;
-      if (bubbleGlowRef.current) setBubblePhase(bubbleGlowRef.current, currentCinePhase, currentCinePhaseDur);
-    }
-  }
   // Phase label
   let phaseLabel='',phaseSub='';
   if(ct>=9.5&&ct<29.5){const breathTime=ct-9.5,cycleTime=breathTime%DEMO_CYCLE;if(cycleTime<2)phaseLabel='INHALE';else if(cycleTime<3)phaseLabel='+ INHALE';else phaseLabel='EXHALE';phaseSub='Breathe with the bubble';}
