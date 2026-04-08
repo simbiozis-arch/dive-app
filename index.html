@@ -77,14 +77,33 @@ html,body,#root { width:100%; max-width:100vw; height:100%; overflow:hidden; ove
 @keyframes tap-pulse { 0%,100% { opacity:0.3; } 50% { opacity:0.7; } }
 @keyframes bubbleRise { 0%{transform:translateY(0) scale(1);opacity:0} 10%{opacity:0.6} 90%{opacity:0.4} 100%{transform:translateY(-100vh) scale(0.6);opacity:0} }
 @keyframes bubbleWobble {
-  0%   { border-radius: 50% 48% 51% 49% / 49% 50% 48% 51%; }
-  12%  { border-radius: 48% 51% 49% 50% / 51% 48% 50% 49%; }
-  25%  { border-radius: 51% 49% 48% 52% / 48% 51% 49% 50%; }
-  37%  { border-radius: 49% 52% 50% 48% / 50% 49% 52% 48%; }
-  50%  { border-radius: 52% 48% 51% 49% / 49% 52% 48% 51%; }
-  62%  { border-radius: 48% 50% 52% 49% / 51% 48% 50% 52%; }
-  75%  { border-radius: 50% 49% 48% 51% / 52% 50% 49% 48%; }
-  100% { border-radius: 50% 48% 51% 49% / 49% 50% 48% 51%; }
+  0%   { border-radius: 47% 53% 49% 51% / 51% 49% 53% 47%; }
+  15%  { border-radius: 51% 49% 52% 48% / 48% 52% 49% 51%; }
+  30%  { border-radius: 49% 51% 47% 53% / 53% 47% 51% 49%; }
+  45%  { border-radius: 52% 48% 51% 49% / 49% 51% 48% 52%; }
+  60%  { border-radius: 48% 52% 50% 50% / 50% 50% 52% 48%; }
+  75%  { border-radius: 50% 50% 48% 52% / 52% 48% 50% 50%; }
+  90%  { border-radius: 53% 47% 50% 50% / 50% 50% 47% 53%; }
+  100% { border-radius: 47% 53% 49% 51% / 51% 49% 53% 47%; }
+}
+@keyframes bubblePressure {
+  0%   { filter: blur(0px); }
+  25%  { filter: blur(0.3px); }
+  50%  { filter: blur(0px); }
+  75%  { filter: blur(0.2px); }
+  100% { filter: blur(0px); }
+}
+@keyframes bubbleJitter {
+  0%, 100% { margin-left: 0; margin-top: 0; }
+  20% { margin-left: 1px; margin-top: -1px; }
+  40% { margin-left: -1px; margin-top: 0px; }
+  60% { margin-left: 0px; margin-top: 1px; }
+  80% { margin-left: 1px; margin-top: 0px; }
+}
+@keyframes lightShift {
+  0%   { top: 55%; left: 42%; opacity: 0.08; }
+  50%  { top: 28%; left: 35%; opacity: 0.18; }
+  100% { top: 55%; left: 42%; opacity: 0.08; }
 }
 @keyframes slowRotate { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
 @keyframes surfaceUp { 0%{transform:translateY(0);opacity:0.9} 60%{opacity:1} 100%{transform:translateY(-40px);opacity:0} }
@@ -2335,60 +2354,157 @@ function Particles({ world, diveProgress = 0 }) {
 }
 
 
-// ===== BREATHING OBJECTS (static — scaled by parent wrapper via JS) =====
 // ===== UNIFIED BREATHING BUBBLE (single source of truth, used everywhere) =====
-// Scale animation: CSS transitions only. On phase change, update transitionDuration + transform via ref.
-// Wobble: independent CSS keyframes. Glow/inner-light: CSS transitions per phase.
+// Scale animation: dynamic CSS @keyframes synced to cycle duration.
+// Wobble + pressure + jitter: independent infinite CSS animations.
+// Light: CSS keyframes synced to breath cycle (no JS per-frame).
 // Opacity: always 1 after mount (no flicker, no fade during session).
 const OceanBubble = React.forwardRef((props, ref) => {
   return (
     <div ref={ref} style={{
       width: '100%', height: '100%',
-      animation: 'bubbleWobble 8s ease-in-out infinite',
-      background: 'transparent',
-      border: '1px solid rgba(94,170,168,0.10)',
-      boxShadow: '0 8px 30px rgba(94,170,168,0.15)',
+      // Default: just wobble + pressure + jitter. Breath animation gets prepended on segment start.
+      animation: 'bubbleWobble 7s ease-in-out infinite, bubblePressure 3s ease-in-out infinite, bubbleJitter 11s ease-in-out infinite',
+      background: 'radial-gradient(circle at 45% 45%, rgba(94,170,168,0.18) 0%, rgba(94,170,168,0.08) 40%, rgba(94,170,168,0.02) 70%, transparent 100%)',
+      border: '1px solid rgba(94,170,168,0.12)',
+      boxShadow: '0 8px 40px rgba(94,170,168,0.18)',
       position: 'relative',
       transform: 'scale(1)',
-      transition: 'transform 4s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.5s ease',
+      transition: 'box-shadow 0.5s ease',
       willChange: 'transform, box-shadow',
       opacity: 1,
     }}>
-      {/* Inner light gradient — shifts with breathing via CSS transition */}
-      <div className="bubble-inner-light" style={{
-        position: 'absolute', inset: 0, borderRadius: 'inherit',
-        background: 'radial-gradient(circle at 50% 50%, rgba(94,170,168,0.25) 0%, rgba(94,170,168,0.12) 35%, rgba(94,170,168,0.04) 60%, transparent 75%)',
-        transition: 'background 0.8s ease',
+      {/* Light spot — animated via CSS keyframes synced to breath cycle */}
+      <div className="bubble-light-spot" style={{
+        position: 'absolute',
+        width: '40%', height: '30%',
+        borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(220,225,235,0.18) 0%, rgba(220,225,235,0.06) 40%, transparent 70%)',
+        filter: 'blur(15px)',
+        top: '55%', left: '42%',
+        transform: 'translate(-50%, -50%)',
+        pointerEvents: 'none',
       }} />
-      {/* Specular highlight */}
+      {/* Specular highlight (small static) */}
       <div style={{
         position: 'absolute', top: '15%', left: '20%',
         width: '22%', height: '18%', borderRadius: '50%',
-        background: 'rgba(255,255,255,0.15)', filter: 'blur(10px)',
+        background: 'rgba(255,255,255,0.12)', filter: 'blur(10px)',
       }} />
     </div>
   );
 });
 
-// Helper: apply phase-driven scale via CSS transition (used by Session + Cinematic)
-// Sets ONLY: transition-duration + transform. Browser interpolates.
+// Build keyframes name for a given technique
+const TECH_KEYFRAME_NAME = {
+  physiological_sigh: 'breathCyclicSigh',
+  box: 'breathBox',
+  diaphragmatic: 'breathDiaphragmatic',
+  ujjayi: 'breathUjjayi',
+  segmented: 'breathSegmented',
+  tidal: 'breathDiaphragmatic',
+  recovery: 'breathDiaphragmatic',
+  custom: 'breathDiaphragmatic',
+};
+
+// Apply breathing animation to bubble: ONE @keyframes animation synced to cycle duration.
+// Also restarts the wobble/pressure/jitter so they begin in sync.
+function applyBreathAnimation(bubbleEl, lightEl, technique, params) {
+  if (!bubbleEl) return;
+  const total = params ? Object.values(params).reduce((a,b) => (typeof b === 'number' ? a + b : a), 0) : 0;
+  if (total <= 0) {
+    bubbleEl.style.animation = 'bubbleWobble 7s ease-in-out infinite, bubblePressure 3s ease-in-out infinite, bubbleJitter 11s ease-in-out infinite';
+    if (lightEl) lightEl.style.animation = 'none';
+    return;
+  }
+  const cycleMs = Math.round(total * 1000);
+  // Generate keyframes from technique + params for accurate sync
+  const pct = (t) => (t / total * 100).toFixed(2);
+  let frames;
+  if (technique === 'physiological_sigh') {
+    let acc = 0;
+    const f = ['0% { transform: scale(0.6); }'];
+    acc += params.inhale1 || 0; f.push(`${pct(acc)}% { transform: scale(1.3); }`);
+    acc += params.inhale2 || 0; f.push(`${pct(acc)}% { transform: scale(1.7); }`);
+    f.push('100% { transform: scale(0.6); }');
+    frames = f.join(' ');
+  } else if (technique === 'box') {
+    let acc = 0;
+    const f = ['0% { transform: scale(0.6); }'];
+    acc += params.inhale || 0;  f.push(`${pct(acc)}% { transform: scale(1.5); }`);
+    acc += params.holdIn || 0;  f.push(`${pct(acc)}% { transform: scale(1.5); }`);
+    acc += params.exhale || 0;  f.push(`${pct(acc)}% { transform: scale(0.6); }`);
+    f.push('100% { transform: scale(0.6); }');
+    frames = f.join(' ');
+  } else if (technique === 'segmented') {
+    let acc = 0;
+    const f = ['0% { transform: scale(0.6); }'];
+    acc += params.belly || 0; f.push(`${pct(acc)}% { transform: scale(1.0); }`);
+    acc += params.ribs || 0;  f.push(`${pct(acc)}% { transform: scale(1.3); }`);
+    acc += params.chest || 0; f.push(`${pct(acc)}% { transform: scale(1.7); }`);
+    f.push('100% { transform: scale(0.6); }');
+    frames = f.join(' ');
+  } else if (technique === 'recovery') {
+    let acc = 0;
+    const f = ['0% { transform: scale(0.6); }'];
+    acc += params.inhale || 0; f.push(`${pct(acc)}% { transform: scale(1.4); }`);
+    acc += params.holdIn || 0; f.push(`${pct(acc)}% { transform: scale(1.4); }`);
+    f.push('100% { transform: scale(0.6); }');
+    frames = f.join(' ');
+  } else if (technique === 'tidal') {
+    let acc = 0;
+    const f = ['0% { transform: scale(0.6); }'];
+    acc += params.inhale || 0; f.push(`${pct(acc)}% { transform: scale(1.5); }`);
+    acc += params.exhale || 0; f.push(`${pct(acc)}% { transform: scale(0.6); }`);
+    f.push('100% { transform: scale(0.6); }');
+    frames = f.join(' ');
+  } else {
+    // diaphragmatic, ujjayi, custom — 2-phase
+    let acc = 0;
+    const f = ['0% { transform: scale(0.6); }'];
+    acc += params.inhale || 0; f.push(`${pct(acc)}% { transform: scale(1.5); }`);
+    f.push('100% { transform: scale(0.6); }');
+    frames = f.join(' ');
+  }
+  // Inject (or replace) the keyframes via a dedicated <style> tag
+  const animName = `breath_${technique}_${cycleMs}`.replace(/[^a-zA-Z0-9_]/g, '_');
+  let styleEl = document.getElementById('dive-breath-kf');
+  if (!styleEl) {
+    styleEl = document.createElement('style');
+    styleEl.id = 'dive-breath-kf';
+    document.head.appendChild(styleEl);
+  }
+  styleEl.textContent = `@keyframes ${animName} { ${frames} }`;
+  // Force reflow so animation restarts cleanly when cycleMs changes
+  // (this also ensures wobble/jitter restart in sync with the breath cycle)
+  bubbleEl.style.animation = 'none';
+  // eslint-disable-next-line no-unused-expressions
+  void bubbleEl.offsetHeight;
+  bubbleEl.style.animation = `${animName} ${cycleMs}ms ease-in-out infinite, bubbleWobble 7s ease-in-out infinite, bubblePressure 3s ease-in-out infinite, bubbleJitter 11s ease-in-out infinite`;
+  // Light spot syncs to the SAME cycle duration
+  if (lightEl) {
+    lightEl.style.animation = 'none';
+    // eslint-disable-next-line no-unused-expressions
+    void lightEl.offsetHeight;
+    lightEl.style.animation = `lightShift ${cycleMs}ms ease-in-out infinite`;
+  }
+}
+
+// Stop breathing animation (text/bodyscan/visualization segments). Wobble continues.
+function stopBreathAnimation(bubbleEl, lightEl) {
+  if (bubbleEl) {
+    bubbleEl.style.animation = 'bubbleWobble 7s ease-in-out infinite, bubblePressure 3s ease-in-out infinite, bubbleJitter 11s ease-in-out infinite';
+    bubbleEl.style.transform = 'scale(1)';
+  }
+  if (lightEl) {
+    lightEl.style.animation = 'none';
+  }
+}
+
+// Backward-compat shim for old setBubblePhase callsites (cinematic)
 function setBubblePhase(el, phaseType, phaseDurationSec) {
-  if (!el) return;
-  // Two-state scale model: 1.15 for inhale/hold-after-inhale, 1.0 for exhale/hold-after-exhale
-  const isInhale = phaseType === 'inhale' || phaseType === 'inhale1' || phaseType === 'inhale2' ||
-                    phaseType === 'belly' || phaseType === 'ribs' || phaseType === 'chest';
-  const isExhale = phaseType === 'exhale';
-  const isHoldIn = phaseType === 'holdIn' || phaseType === 'hold';
-  const isHoldOut = phaseType === 'holdOut' || phaseType === 'pause';
-  let targetScale;
-  if (isInhale) targetScale = 1.15;
-  else if (isExhale) targetScale = 1.0;
-  else if (isHoldIn) targetScale = 1.15; // hold after inhale stays big
-  else if (isHoldOut) targetScale = 1.0; // hold after exhale stays small
-  else return; // unknown phase, do nothing
-  const dur = Math.max(0.1, phaseDurationSec || 4);
-  el.style.transition = `transform ${dur}s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.5s ease`;
-  el.style.transform = `scale(${targetScale})`;
+  // No-op: cinematic now uses applyBreathAnimation for sync.
+  // Kept as a stub so any stale references don't crash.
 }
 
 // PulsarObject removed (space world deleted)
@@ -2752,7 +2868,7 @@ class SessionEngine {
 }
 
 // ===== SESSION PLAYER (engine-driven) =====
-function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, ambientRef, currentLang }) {
+function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, ambientRef, currentLang, entryPoint }) {
   const engineRef = useRef(null);
   // Refs for 60fps direct DOM updates (no React re-render)
   const wrapperRef = useRef(null);
@@ -2898,27 +3014,18 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
     let lastPhaseForBubble = '';
 
     engine.onUpdate = (s) => {
-      // === UNIFIED BUBBLE: CSS transitions only. Set ONCE per phase. ===
+      // === BUBBLE: scale + light driven by CSS keyframes (set in onSegmentChange) ===
+      // === GLOW (box-shadow) updated per phase via subtle CSS transition (already on element) ===
       if (s.phase && s.phase !== lastPhaseForBubble) {
         lastPhaseForBubble = s.phase;
         if (glowTargetRef.current) {
-          // Scale: via CSS transition
-          setBubblePhase(glowTargetRef.current, s.phase, s.phaseDuration || 4);
-          // Glow (box-shadow)
           const p = s.phase;
           let blur, spread, alpha;
-          if (p==='inhale'||p==='inhale2'||p==='chest') { blur=50; spread=12; alpha=0.25; }
-          else if (p==='inhale1'||p==='belly'||p==='ribs') { blur=40; spread=10; alpha=0.20; }
-          else if (p==='holdIn'||p==='hold') { blur=50; spread=12; alpha=0.25; }
+          if (p==='inhale'||p==='inhale2'||p==='chest') { blur=60; spread=14; alpha=0.28; }
+          else if (p==='inhale1'||p==='belly'||p==='ribs') { blur=50; spread=12; alpha=0.22; }
+          else if (p==='holdIn'||p==='hold') { blur=60; spread=14; alpha=0.28; }
           else { blur=30; spread=8; alpha=0.15; } // exhale, holdOut, pause
-          // setBubblePhase sets transition; preserve box-shadow transition by writing boxShadow AFTER
           glowTargetRef.current.style.boxShadow = `0 ${spread}px ${blur}px rgba(94,170,168,${alpha})`;
-          // Inner light shift
-          const lightY = (p==='exhale'||p==='holdOut'||p==='pause') ? 65 : 35;
-          const lightEl = glowTargetRef.current.querySelector('.bubble-inner-light');
-          if (lightEl) {
-            lightEl.style.background = `radial-gradient(circle at 50% ${lightY}%, rgba(94,170,168,0.25) 0%, rgba(94,170,168,0.12) 35%, rgba(94,170,168,0.04) 60%, transparent 75%)`;
-          }
         }
       }
       // Phase label + sub (Zone 3) — crossfade on phase change
@@ -3060,12 +3167,19 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
       }
     };
 
-    // SEGMENT CHANGE: React state update (infrequent)
+    // SEGMENT CHANGE: React state update (infrequent) + bubble breath animation sync
     engine.onSegmentChange = (index, seg) => {
       setSegIndex(index);
       setSegType(seg.type);
       setCurrentSeg(seg);
       handleSegmentTransition(index, seg);
+      // Sync breath animation to this segment's cycle
+      const lightEl = glowTargetRef.current?.querySelector('.bubble-light-spot');
+      if (seg.type === 'breathing') {
+        applyBreathAnimation(glowTargetRef.current, lightEl, seg.technique, seg.params);
+      } else {
+        stopBreathAnimation(glowTargetRef.current, lightEl);
+      }
     };
     engine.onComplete = () => onComplete({ actualElapsed: Math.round(engine.actualElapsed), actualBreathCycles: engine.actualBreathCycles });
 
@@ -3073,6 +3187,11 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
     const firstSeg = segments[0];
     if (firstSeg && firstSeg.type !== 'breathing') {
       handleSegmentTransition(0, firstSeg);
+    }
+    // Apply breath animation to first segment if it's a breathing segment
+    if (firstSeg && firstSeg.type === 'breathing') {
+      const lightEl = glowTargetRef.current?.querySelector('.bubble-light-spot');
+      applyBreathAnimation(glowTargetRef.current, lightEl, firstSeg.technique, firstSeg.params);
     }
 
     // Initialize bubble at rest scale (CSS transition baseline)
@@ -3109,37 +3228,15 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
     }
   }, [paused]);
 
-  // Dive darkening background
-  // Technique-specific background colors
-  const TECH_BG = {
-    physiological_sigh:'linear-gradient(180deg, rgba(30,58,95,0.9), rgba(13,27,42,0.95))',
-    diaphragmatic:'linear-gradient(180deg, rgba(10,42,42,0.9), rgba(26,58,58,0.95))',
-    box:'linear-gradient(180deg, rgba(26,26,46,0.9), rgba(45,45,68,0.95))',
-    segmented:'linear-gradient(180deg, rgba(46,26,26,0.9), rgba(61,32,32,0.95))',
-    ujjayi:'linear-gradient(180deg, rgba(10,42,42,0.9), rgba(26,58,58,0.95))',
-    tidal:'linear-gradient(180deg, rgba(26,26,46,0.9), rgba(45,45,68,0.95))',
-    recovery:'linear-gradient(180deg, rgba(14,61,92,0.9), rgba(2,10,16,0.95))',
-  };
+  // Background: TWO modes only.
+  //   - 'technique' entry → purple gradient (#1A1A2E → #2D2D44)
+  //   - everything else (scenario/sos/program/custom) → standard blue #0D1B2A
   const bgStyle = useMemo(() => {
-    // Session arc: 0-50% darken 5%, 50-90% stay dark, 90-100% lighten 3-5%
-    const p = diveProgress; // 0..1
-    let arcDarken;
-    if (p <= 0.5) {
-      arcDarken = (p / 0.5) * 0.05; // 0 → 0.05
-    } else if (p <= 0.9) {
-      arcDarken = 0.05; // stay at 5% darker
-    } else {
-      const surfaceT = (p - 0.9) / 0.1; // 0→1
-      arcDarken = 0.05 - surfaceT * 0.05; // 0.05 → 0 (lighten back + slight extra)
+    if (entryPoint === 'technique') {
+      return { background: 'linear-gradient(180deg, #1A1A2E 0%, #2D2D44 100%)' };
     }
-    const mainTech = segments.find(s=>s.type==='breathing')?.technique;
-    const techBg = mainTech && TECH_BG[mainTech];
-    if (techBg) return { background: techBg };
-    if (world === 'ocean') {
-      return { background: `linear-gradient(180deg, rgba(${Math.round(14-arcDarken*80)},${Math.round(61-arcDarken*200)},${Math.round(92-arcDarken*300)},1) 0%, rgba(${Math.round(2-arcDarken*20)},${Math.round(10-arcDarken*60)},${Math.round(16-arcDarken*100)},1) 100%)` };
-    }
-    return { background: `rgba(13,11,26,${0.7+arcDarken*0.3})` };
-  }, [diveProgress, world, segments]);
+    return { background: '#0D1B2A' };
+  }, [entryPoint]);
 
   // techLabel is low-frequency (only changes on segment change)
   const techLabel = seg?.type === 'breathing' ? (t[TECHNIQUE_LANG_KEY[seg.technique]] || seg.technique) : '';
@@ -3201,8 +3298,8 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
     // All segments render bubble + controls as siblings, visibility via display:none.
     // This guarantees the bubble NEVER unmounts mid-session and text overlays correctly.
     return (
-      <div className="flex-1 flex flex-col items-center justify-center" style={{position:'relative', width:'100%', maxWidth:'100vw', overflow:'hidden', boxSizing:'border-box'}}>
-        {/* Bubble — ALWAYS mounted, always visible (opacity 1) */}
+      <div className="flex-1 flex flex-col items-center justify-center" style={{position:'relative', width:'100%', maxWidth:'100vw', overflow:'visible', boxSizing:'border-box'}}>
+        {/* Bubble wrapper — overflow visible so bubble can grow to scale 1.7 beyond 300px */}
         <div ref={wrapperRef} style={{
           position: 'fixed', top: '42%', left: '50%',
           width: 'min(75vw, 300px)', aspectRatio: '1',
@@ -3212,6 +3309,7 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
           zIndex: 1,
           opacity: 1,
           pointerEvents: 'none',
+          overflow: 'visible',
         }}>
           <OceanBubble ref={glowTargetRef} />
           {/* Countdown inside bubble — only visible during breathing */}
@@ -3280,7 +3378,7 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
   };
 
   return (
-    <div className="fixed inset-0 flex flex-col z-50" data-seg-type={segType} style={{...bgStyle, transition:'background 2s ease'}}
+    <div className="fixed inset-0 flex flex-col z-50" data-seg-type={segType} style={{...bgStyle, transition:'background 2s ease', overflow:'hidden'}}
       onTouchStart={() => { setControlOpacity(1); if (controlFadeRef.current) clearTimeout(controlFadeRef.current); if (segType === 'breathing' && !paused) controlFadeRef.current = setTimeout(() => setControlOpacity(0.15), 3000); }}
       onClick={() => { setControlOpacity(1); if (controlFadeRef.current) clearTimeout(controlFadeRef.current); if (segType === 'breathing' && !paused) controlFadeRef.current = setTimeout(() => setControlOpacity(0.15), 3000); }}>
       <Particles world={world} diveProgress={diveProgress} />
@@ -4874,7 +4972,7 @@ function App() {
 
   // Active session
   if (activeSession) {
-    return <SessionPlayer segments={activeSession.segments} world={world} onComplete={(actualData) => endSession(true, actualData)} onExit={() => endSession(false)} t={t} voiceEnabled={stats.voiceEnabled} ambientRef={ambientRef} currentLang={currentLang} />;
+    return <SessionPlayer segments={activeSession.segments} world={world} onComplete={(actualData) => endSession(true, actualData)} onExit={() => endSession(false)} t={t} voiceEnabled={stats.voiceEnabled} ambientRef={ambientRef} currentLang={currentLang} entryPoint={activeSession.meta?.entryPoint || 'scenario'} />;
   }
 
   // Surfacing transition
@@ -5415,7 +5513,7 @@ function App() {
                     const dur = stats.isPremium ? 300 : 120;
                     const params = TECHNIQUES[techId]?.defaults || {inhale:4,exhale:8};
                     const segs = [{type:'breathing',technique:techId,duration:dur,params}];
-                    startSession(segs, {scenario:'technique_'+techId,category:'breathe_now'});
+                    startSession(segs, {scenario:'technique_'+techId,category:'breathe_now',entryPoint:'technique'});
                   }}>
                   <div style={{width:32,height:32,borderRadius:8,background:`rgba(${accentRgb},0.08)`,display:'flex',alignItems:'center',justifyContent:'center'}}>
                     <span style={{fontSize:10,fontWeight:600,color:palette.accent,opacity:0.7}}>{cat}</span>
