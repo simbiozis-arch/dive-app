@@ -105,6 +105,17 @@ html,body,#root { width:100%; max-width:100vw; height:100%; overflow:hidden; ove
   50%  { top: 28%; left: 35%; opacity: 0.18; }
   100% { top: 55%; left: 42%; opacity: 0.08; }
 }
+/* Cinematic bubble: smooth grow from 30% → 70% viewport size on entry */
+@keyframes bubbleGrowIn {
+  0%   { width: 30vmin; height: 30vmin; opacity: 0; }
+  40%  { opacity: 1; }
+  100% { width: 70vmin; height: 70vmin; opacity: 1; }
+}
+/* Inner glow pulse — subtle radial gradient breathing independent of scale */
+@keyframes bubbleGlowPulse {
+  0%, 100% { background: radial-gradient(circle at 45% 45%, rgba(94,170,168,0.15) 0%, rgba(94,170,168,0.05) 60%, transparent 100%); }
+  50%      { background: radial-gradient(circle at 45% 45%, rgba(94,170,168,0.05) 0%, rgba(94,170,168,0.02) 60%, transparent 100%); }
+}
 @keyframes slowRotate { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
 @keyframes surfaceUp { 0%{transform:translateY(0);opacity:0.9} 60%{opacity:1} 100%{transform:translateY(-40px);opacity:0} }
 @keyframes pulse { 0%,100%{opacity:0.15;transform:scale(1)} 50%{opacity:0.4;transform:scale(1.5)} }
@@ -2363,9 +2374,9 @@ const OceanBubble = React.forwardRef((props, ref) => {
   return (
     <div ref={ref} style={{
       width: '100%', height: '100%',
-      // Default: just wobble + pressure + jitter. Breath animation gets prepended on segment start.
-      animation: 'bubbleWobble 7s ease-in-out infinite, bubblePressure 3s ease-in-out infinite, bubbleJitter 11s ease-in-out infinite',
-      background: 'radial-gradient(circle at 45% 45%, rgba(94,170,168,0.18) 0%, rgba(94,170,168,0.08) 40%, rgba(94,170,168,0.02) 70%, transparent 100%)',
+      // Default: wobble + pressure + jitter + glow pulse. Breath animation gets prepended on segment start.
+      animation: 'bubbleWobble 7s ease-in-out infinite, bubblePressure 3s ease-in-out infinite, bubbleJitter 11s ease-in-out infinite, bubbleGlowPulse 3s ease-in-out infinite',
+      background: 'radial-gradient(circle at 45% 45%, rgba(94,170,168,0.15) 0%, rgba(94,170,168,0.05) 60%, transparent 100%)',
       border: '1px solid rgba(94,170,168,0.12)',
       boxShadow: '0 8px 40px rgba(94,170,168,0.18)',
       position: 'relative',
@@ -2413,7 +2424,7 @@ function applyBreathAnimation(bubbleEl, lightEl, technique, params) {
   if (!bubbleEl) return;
   const total = params ? Object.values(params).reduce((a,b) => (typeof b === 'number' ? a + b : a), 0) : 0;
   if (total <= 0) {
-    bubbleEl.style.animation = 'bubbleWobble 7s ease-in-out infinite, bubblePressure 3s ease-in-out infinite, bubbleJitter 11s ease-in-out infinite';
+    bubbleEl.style.animation = 'bubbleWobble 7s ease-in-out infinite, bubblePressure 3s ease-in-out infinite, bubbleJitter 11s ease-in-out infinite, bubbleGlowPulse 3s ease-in-out infinite';
     if (lightEl) lightEl.style.animation = 'none';
     return;
   }
@@ -2480,7 +2491,7 @@ function applyBreathAnimation(bubbleEl, lightEl, technique, params) {
   bubbleEl.style.animation = 'none';
   // eslint-disable-next-line no-unused-expressions
   void bubbleEl.offsetHeight;
-  bubbleEl.style.animation = `${animName} ${cycleMs}ms ease-in-out infinite, bubbleWobble 7s ease-in-out infinite, bubblePressure 3s ease-in-out infinite, bubbleJitter 11s ease-in-out infinite`;
+  bubbleEl.style.animation = `${animName} ${cycleMs}ms ease-in-out infinite, bubbleWobble 7s ease-in-out infinite, bubblePressure 3s ease-in-out infinite, bubbleJitter 11s ease-in-out infinite, bubbleGlowPulse 3s ease-in-out infinite`;
   // Light spot syncs to the SAME cycle duration
   if (lightEl) {
     lightEl.style.animation = 'none';
@@ -2493,7 +2504,7 @@ function applyBreathAnimation(bubbleEl, lightEl, technique, params) {
 // Stop breathing animation (text/bodyscan/visualization segments). Wobble continues.
 function stopBreathAnimation(bubbleEl, lightEl) {
   if (bubbleEl) {
-    bubbleEl.style.animation = 'bubbleWobble 7s ease-in-out infinite, bubblePressure 3s ease-in-out infinite, bubbleJitter 11s ease-in-out infinite';
+    bubbleEl.style.animation = 'bubbleWobble 7s ease-in-out infinite, bubblePressure 3s ease-in-out infinite, bubbleJitter 11s ease-in-out infinite, bubbleGlowPulse 3s ease-in-out infinite';
     bubbleEl.style.transform = 'scale(1)';
   }
   if (lightEl) {
@@ -3378,7 +3389,7 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
   };
 
   return (
-    <div className="fixed inset-0 flex flex-col z-50" data-seg-type={segType} style={{...bgStyle, transition:'background 2s ease', overflow:'hidden'}}
+    <div className="fixed inset-0 flex flex-col z-50" data-seg-type={segType} style={{...bgStyle, transition:'background 2s ease', overflow:'hidden', animation:'fade-in 400ms ease-out'}}
       onTouchStart={() => { setControlOpacity(1); if (controlFadeRef.current) clearTimeout(controlFadeRef.current); if (segType === 'breathing' && !paused) controlFadeRef.current = setTimeout(() => setControlOpacity(0.15), 3000); }}
       onClick={() => { setControlOpacity(1); if (controlFadeRef.current) clearTimeout(controlFadeRef.current); if (segType === 'breathing' && !paused) controlFadeRef.current = setTimeout(() => setControlOpacity(0.15), 3000); }}>
       <Particles world={world} diveProgress={diveProgress} />
@@ -3895,7 +3906,7 @@ function FirstBreathScreen({ palette, accentRgb, t, onComplete, ambientRef, star
   return (
     <div style={{position:'fixed',inset:0,zIndex:60,background:cineBg,display:'flex',alignItems:'center',justifyContent:'center'}}>
       {showSkip && <button onClick={()=>{clearInterval(rafRef.current);if(introAmbientRef.current){introAmbientRef.current.pause();introAmbientRef.current=null;}try{ph('onboarding_cinematic_skipped',{});}catch(e){}setBreathPhase('done');}} style={{position:'fixed',top:'calc(16px + env(safe-area-inset-top, 0px))',right:16,zIndex:100,background:'none',border:'none',fontFamily:"'DM Sans',sans-serif",fontWeight:400,fontSize:14,color:'rgba(255,255,255,0.4)',padding:'8px 16px',cursor:'pointer'}}>Skip</button>}
-      {bubbleVisible && <div style={{position:'absolute',top:'42%',left:'50%',transform:'translate(-50%,-50%)',width:'min(75vw, 300px)',aspectRatio:'1',pointerEvents:'none',animation:'fade-in 500ms ease-out'}}><OceanBubble ref={bubbleGlowRef}/></div>}
+      {bubbleVisible && <div style={{position:'absolute',top:'42%',left:'50%',transform:'translate(-50%,-50%)',pointerEvents:'none',animation:'bubbleGrowIn 1500ms cubic-bezier(0.4, 0, 0.2, 1) forwards',width:'30vmin',height:'30vmin'}}><OceanBubble ref={bubbleGlowRef}/></div>}
       {wordByWord && <div style={{position:'absolute',top:'42%',left:'50%',transform:'translate(-50%,-50%)',fontFamily:"'DM Sans',sans-serif",fontWeight:'300',fontSize:20,color:'rgba(255,255,255,0.8)',textAlign:'center',zIndex:10,pointerEvents:'none',maxWidth:280,lineHeight:1.6}}>{wordByWord.map((w,i) => <span key={i} style={{opacity:w.opacity,transition:'opacity 0.15s ease'}}>{w.word} </span>)}</div>}
       {!wordByWord&&centerText&&centerOp>0.01 && <div style={{position:'absolute',top:'42%',left:'50%',transform:'translate(-50%,-50%)',fontFamily:"'DM Sans',sans-serif",fontWeight:centerWeight,fontSize:centerSize,color:centerColor,opacity:centerOp,textAlign:'center',zIndex:10,pointerEvents:'none',whiteSpace:centerWrap?'normal':'nowrap',maxWidth:centerWrap?280:'none'}}>{centerText}</div>}
       {phaseLabel && <div style={{position:'fixed',top:'calc(42% - min(37.5vw, 150px) - 36px)',left:0,right:0,textAlign:'center',zIndex:15,pointerEvents:'none'}}><div className="font-body" style={{fontWeight:600,fontSize:13,letterSpacing:'0.2em',textTransform:'uppercase',color:'rgba(220,225,235,0.55)'}}>{phaseLabel}</div></div>}
