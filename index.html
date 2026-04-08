@@ -372,7 +372,7 @@ const LANG = {
     buildHabit:'Build a daily habit?',habitMorning:'Morning reminder',habitEvening:'Evening reminder',habitNotNow:'Not now',
     paywallMonthly:'$5.99/mo',paywallYearly:'$39.99/yr',paywallYearlySave:'Save 44%',paywallTrialNote:"You won't be charged for 7 days. Cancel anytime.",paywallStartTrial:'Start free trial',
     holdTestTitle:"Let's find your starting depth",holdTestDesc:'Exhale fully. Then hold. Tap when you need to breathe.',holdTestStart:'Start',holdTestYourDepth:'Your starting depth',holdTestSwimmingPool:'A swimming pool',holdTestCoralReef:'A coral reef',holdTestShipwreck:'A shallow shipwreck',holdTestSunlightFades:'Where sunlight fades',holdTestTwilightZone:'The twilight zone',
-    howStressed:'How stressed are you right now?',andNow:'And now?',moodLow:'1 — calm',moodHigh:'5 — stressed',
+    howStressed:'How stressed are you right now?',andNow:'And now?',moodLow:'calm',moodMid:'neutral',moodHigh:'stressed',
     moodImprove:'{pre} \u2192 {post} \u00b7 \u2212{delta} points',moodSame:'Consistency builds resilience.',moodWorse:'Some sessions plant seeds for later.',
     techniques:'Techniques',masteryNone:'\u2014',masteryLearning:'Learning',masteryComfortable:'Comfortable',masteryMastered:'Mastered',
     goodMorning:'Good morning',goodAfternoon:'Good afternoon',goodEvening:'Good evening',goodNight:'Good night',
@@ -1589,6 +1589,22 @@ async function flushPendingSync(userId) {
   } catch {}
 }
 // Depth-based background — darkens as user accumulates total depth
+// Mood circle colors (1–10 scale, calm → stressed)
+function moodBorderColor(n) {
+  if (n <= 2) return 'rgba(94,170,168,0.4)';
+  if (n <= 4) return 'rgba(94,170,168,0.25)';
+  if (n <= 6) return 'rgba(150,150,150,0.25)';
+  if (n <= 8) return 'rgba(180,100,80,0.25)';
+  return 'rgba(192,48,48,0.25)';
+}
+function moodFillColor(n) {
+  if (n <= 2) return 'rgba(94,170,168,0.3)';
+  if (n <= 4) return 'rgba(94,170,168,0.2)';
+  if (n <= 6) return 'rgba(150,150,150,0.2)';
+  if (n <= 8) return 'rgba(180,100,80,0.2)';
+  return 'rgba(192,48,48,0.3)';
+}
+
 function getDepthBackground(totalDepth) {
   const p = Math.min(1, (totalDepth || 0) / 200);
   const sR = Math.round(14 - p*6), sG = Math.round(61 - p*25), sB = Math.round(92 - p*35);
@@ -1976,14 +1992,14 @@ function getDailyRecommendation(stats, t) {
   const timeSlot = getTimeSlot(hour);
   const slotLabel = TIME_SLOT_LABELS[timeSlot];
 
-  // 1. Mood override: avg of last 3 postMoods
+  // 1. Mood override: avg of last 3 postMoods (1–10 scale)
   const recentMoods = hist.filter(h => typeof h.postMood === 'number').slice(-3);
   if (recentMoods.length >= 3) {
     const avgMood = recentMoods.reduce((s,h) => s + h.postMood, 0) / recentMoods.length;
-    if (avgMood < 2.5) {
+    if (avgMood < 4) {
       return { scenario:'hard_day', duration:3, title:'Calm down', sub:'3 ' + t.min + ' \u00b7 Cyclic Sigh', technique:'physiological_sigh', isDailyDive:true };
     }
-    if (avgMood > 4.0 && timeSlot === 0) {
+    if (avgMood > 7 && timeSlot === 0) {
       return { scenario:'morning', duration:3, title:'Morning energy', sub:'3 ' + t.min + ' \u00b7 Segmented', technique:'segmented', isDailyDive:true };
     }
   }
@@ -4093,24 +4109,30 @@ function CustomPatternScreen({ onBack, onStart, onSave }) {
 
 // ===== MAIN APP =====
 // ===== MOOD SCALE COMPONENT =====
-function MoodScale({ label, onSelect, lowLabel, highLabel }) {
+function MoodScale({ label, onSelect, lowLabel, midLabel, highLabel }) {
+  const [selected, setSelected] = React.useState(null);
   return (
-    React.createElement('div', {style:{textAlign:'center'}},
+    React.createElement('div', {style:{textAlign:'center', width:'100%', maxWidth:440, margin:'0 auto', padding:'0 16px'}},
       React.createElement('div', {className:'font-body', style:{fontSize:16, fontWeight:300, color:'var(--text)', marginBottom:20}}, label),
-      React.createElement('div', {style:{display:'flex', gap:12, justifyContent:'center'}},
-        [1,2,3,4,5].map(n =>
-          React.createElement('button', {key:n, onClick:() => onSelect(n), style:{
-            width:44, height:44, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center',
-            background:'transparent', cursor:'pointer',
-            border: '1px solid rgba(255,255,255,0.08)',
+      React.createElement('div', {style:{display:'flex', gap:6, justifyContent:'center', alignItems:'center'}},
+        [1,2,3,4,5,6,7,8,9,10].map(n => {
+          const isSel = selected === n;
+          return React.createElement('button', {key:n, onClick:() => { setSelected(n); onSelect(n); }, style:{
+            width:32, height:32, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center',
+            background: isSel ? moodFillColor(n) : 'transparent',
+            cursor:'pointer', padding:0, flexShrink:0,
+            border: `1px solid ${moodBorderColor(n)}`,
+            transform: isSel ? 'scale(1.3)' : 'scale(1)',
+            transition:'transform 150ms ease, background 150ms ease',
           }},
-            React.createElement('span', {className:'font-mono', style:{fontSize:16, fontWeight:300, color:'var(--text)'}}, n)
-          )
-        )
+            React.createElement('span', {className:'font-mono', style:{fontSize:13, fontWeight:300, color:'rgba(220,225,235,0.7)'}}, n)
+          );
+        })
       ),
-      React.createElement('div', {style:{display:'flex', justifyContent:'space-between', maxWidth:260, margin:'8px auto 0'}},
-        React.createElement('span', {className:'font-body', style:{fontSize:13, fontWeight:300, color:'var(--text-3)'}}, lowLabel || 'low'),
-        React.createElement('span', {className:'font-body', style:{fontSize:13, fontWeight:300, color:'var(--text-3)'}}, highLabel || 'high')
+      React.createElement('div', {style:{display:'flex', justifyContent:'space-between', maxWidth:360, margin:'12px auto 0', padding:'0 8px'}},
+        React.createElement('span', {className:'font-body', style:{fontSize:11, fontWeight:300, color:'rgba(220,225,235,0.35)'}}, lowLabel || 'calm'),
+        React.createElement('span', {className:'font-body', style:{fontSize:11, fontWeight:300, color:'rgba(220,225,235,0.35)'}}, midLabel || 'neutral'),
+        React.createElement('span', {className:'font-body', style:{fontSize:11, fontWeight:300, color:'rgba(220,225,235,0.35)'}}, highLabel || 'stressed')
       )
     )
   );
@@ -4220,12 +4242,12 @@ class ErrorBoundary extends React.Component {
 }
 
 // ===== AUTH SCREEN (email + password) =====
-function AuthScreen({ onDemo }) {
+function AuthScreen({ onDemo, onClose, initialMode = 'login' }) {
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState('');
-  const [mode, setMode] = React.useState('login'); // 'login' | 'register' | 'forgot'
+  const [mode, setMode] = React.useState(initialMode); // 'login' | 'register' | 'forgot'
   const [resetSent, setResetSent] = React.useState(false);
 
   const inputStyle = {width:'100%',maxWidth:'300px',padding:'14px 16px',borderRadius:'12px',background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.06)',color:'rgba(220,225,235,0.85)',fontFamily:"'DM Sans',sans-serif",fontSize:'17px',outline:'none',marginBottom:'12px',boxSizing:'border-box'};
@@ -4298,7 +4320,11 @@ function AuthScreen({ onDemo }) {
         {mode === 'register' ? 'Already have an account? Log in' : "Don't have an account? Create one"}
       </button>
       <div style={{marginTop:'24px',borderTop:'1px solid rgba(255,255,255,0.04)',paddingTop:'20px',width:'100%',maxWidth:'300px',textAlign:'center'}}>
-        <button onClick={onDemo} style={{background:'none',border:'none',fontFamily:"'DM Sans',sans-serif",fontSize:'15px',color:'rgba(220,225,235,0.35)',cursor:'pointer'}}>Continue without account</button>
+        {onClose ? (
+          <button onClick={onClose} style={{background:'none',border:'none',fontFamily:"'DM Sans',sans-serif",fontSize:'15px',color:'rgba(220,225,235,0.35)',cursor:'pointer'}}>Cancel</button>
+        ) : (
+          <button onClick={onDemo} style={{background:'none',border:'none',fontFamily:"'DM Sans',sans-serif",fontSize:'15px',color:'rgba(220,225,235,0.35)',cursor:'pointer'}}>Continue without account</button>
+        )}
       </div>
     </div>
   );
@@ -4407,6 +4433,7 @@ function App() {
   const entranceTimerRef = useRef(false);
   // Hooks that must be declared before any conditional returns (Rules of Hooks)
   const [showPreMood, setShowPreMood] = useState(false);
+  const [showAuthOverlay, setShowAuthOverlay] = useState(false);
   const [pendingSessionData, setPendingSessionData] = useState(null);
   const preMoodTimerRef = useRef(null); // unused — kept for hook count stability
   const [onboardingPhase, setOnboardingPhase] = useState('cinematic');
@@ -4811,18 +4838,34 @@ function App() {
 
 
   // ===== AUTH GATE =====
-  // Auth is ONLY shown as step 7 of onboarding (soft_auth phase).
-  // No login gate at app level — cinematic starts immediately for fresh users.
-  // For returning onboarded users who lost their session, silently enter demo mode.
+  // Auth is shown via Settings "Log in" button or soft_auth during onboarding.
+  // For returning onboarded users who lost their session AND aren't explicitly logging in,
+  // silently enter demo mode so the app remains usable.
   useEffect(() => {
-    if (stats.onboarded && !authUser && !authLoading) {
+    if (stats.onboarded && !authUser && !authLoading && !showAuthOverlay) {
       localStorage.setItem('dive-anonymous-user', 'true');
       setAuthUser({ id: 'demo', isDemo: true });
     }
-  }, [stats.onboarded, authUser, authLoading]);
+  }, [stats.onboarded, authUser, authLoading, showAuthOverlay]);
+
+  // Auto-close auth overlay when real user authenticates
+  useEffect(() => {
+    if (showAuthOverlay && authUser && !isDemo(authUser)) {
+      setShowAuthOverlay(false);
+    }
+  }, [authUser, showAuthOverlay]);
 
   // ===== FIRST BREATH SCREEN =====
   // onboardingPhase, onboardingPostMood, onboardingGoal, softAuth* declared at top of App (Rules of Hooks)
+
+  // ===== AUTH OVERLAY (shown from Settings / soft_auth "Log in" link) =====
+  if (showAuthOverlay) {
+    return <AuthScreen
+      initialMode="login"
+      onClose={() => setShowAuthOverlay(false)}
+      onDemo={() => setShowAuthOverlay(false)}
+    />;
+  }
 
   // ===== PRE-MOOD OVERLAY (HIGHEST PRIORITY — must show before any session starts) =====
   console.log('[DIVE] App render: showPreMood=', showPreMood, 'pendingSessionData=', !!pendingSessionData, 'activeSession=', !!activeSession, 'screen=', screen);
@@ -4830,31 +4873,40 @@ function App() {
     console.log('[DIVE] >>> RENDERING PRE-MOOD (top-priority)');
     const bgEarly = getDepthBackground(stats.totalDepth);
     return (
-      <div className="fixed inset-0 flex flex-col items-center justify-center pre-mood-fade" style={{background:bgEarly, zIndex:9999, transition:'opacity 0.3s ease'}}>
+      <div className="fixed inset-0 flex flex-col items-center justify-center pre-mood-fade" style={{background:bgEarly, zIndex:9999, transition:'opacity 0.3s ease', padding:'0 16px'}}>
         <Particles world={world} />
-        <div className="z-10 text-center">
+        <div className="z-10" style={{width:'100%', maxWidth:440, textAlign:'center'}}>
           <p className="font-body" style={{fontWeight:300, fontSize:20, color:'var(--text)', marginBottom:32}}>How are you feeling?</p>
-          <div style={{display:'flex', gap:16, justifyContent:'center'}}>
-            {[1,2,3,4,5].map(n => (
-              <button key={n} onClick={() => {
-                console.log('[DIVE] pre-mood selected:', n);
-                setCurrentMood(m => ({...m, pre:n}));
-                const data = pendingSessionData;
-                setShowPreMood(false);
-                setPendingSessionData(null);
-                if (data) actuallyStartSession(data.segments, data.meta);
-              }} style={{
-                width:48, height:48, borderRadius:'50%',
-                border:'1px solid rgba(255,255,255,0.08)', background:'transparent',
-                fontFamily:"'JetBrains Mono',monospace", fontWeight:300, fontSize:18,
-                color:'var(--text-2)', display:'flex', alignItems:'center', justifyContent:'center',
-                cursor:'pointer',
-              }}>{n}</button>
-            ))}
+          <div style={{display:'flex', gap:6, justifyContent:'center', alignItems:'center'}}>
+            {[1,2,3,4,5,6,7,8,9,10].map(n => {
+              const borderC = moodBorderColor(n);
+              const selected = currentMood.pre === n;
+              return (
+                <button key={n} onClick={() => {
+                  console.log('[DIVE] pre-mood selected:', n);
+                  setCurrentMood(m => ({...m, pre:n}));
+                  const data = pendingSessionData;
+                  setShowPreMood(false);
+                  setPendingSessionData(null);
+                  if (data) actuallyStartSession(data.segments, data.meta);
+                }} style={{
+                  width:32, height:32, borderRadius:'50%',
+                  border:`1px solid ${borderC}`,
+                  background: selected ? moodFillColor(n) : 'transparent',
+                  fontFamily:"'JetBrains Mono',monospace", fontWeight:300, fontSize:13,
+                  color:'rgba(220,225,235,0.7)',
+                  display:'flex', alignItems:'center', justifyContent:'center',
+                  cursor:'pointer', padding:0, flexShrink:0,
+                  transform: selected ? 'scale(1.3)' : 'scale(1)',
+                  transition:'transform 150ms ease, background 150ms ease',
+                }}>{n}</button>
+              );
+            })}
           </div>
-          <div style={{display:'flex', justifyContent:'space-between', width:280, margin:'12px auto 0'}}>
-            <span style={{fontSize:13, color:'var(--text-3)'}}>calm</span>
-            <span style={{fontSize:13, color:'var(--text-3)'}}>stressed</span>
+          <div style={{display:'flex', justifyContent:'space-between', maxWidth:360, margin:'12px auto 0', padding:'0 8px'}}>
+            <span style={{fontSize:11, color:'rgba(220,225,235,0.35)'}}>{t.moodLow||'calm'}</span>
+            <span style={{fontSize:11, color:'rgba(220,225,235,0.35)'}}>{t.moodMid||'neutral'}</span>
+            <span style={{fontSize:11, color:'rgba(220,225,235,0.35)'}}>{t.moodHigh||'stressed'}</span>
           </div>
           <button onClick={() => {
             const data = pendingSessionData;
@@ -4970,7 +5022,12 @@ function App() {
                 }} style={{width:'100%',padding:'14px',borderRadius:12,background:'rgba(94,170,168,0.12)',border:'1px solid rgba(94,170,168,0.25)',color:'rgba(94,170,168,0.9)',fontFamily:"'DM Sans',sans-serif",fontSize:17,fontWeight:500,cursor:'pointer',opacity:softAuthLoading||!softAuthEmail||!softAuthPassword?0.4:1}}>
                   {softAuthLoading ? 'Creating...' : 'Create account'}
                 </button>
-                <button onClick={() => finishOnboarding('anonymous')} className="font-body" style={{marginTop:20,fontSize:15,color:'rgba(220,225,235,0.3)',background:'none',border:'none',cursor:'pointer',display:'block',width:'100%'}}>
+                <div className="font-body" style={{marginTop:12, fontSize:13, color:'rgba(220,225,235,0.4)', textAlign:'center'}}>
+                  Already have an account?{' '}
+                  <span onClick={() => { setShowAuthOverlay(true); }}
+                    style={{color:'rgba(94,170,168,0.8)', cursor:'pointer', textDecoration:'underline'}}>Log in</span>
+                </div>
+                <button onClick={() => finishOnboarding('anonymous')} className="font-body" style={{marginTop:16,fontSize:15,color:'rgba(220,225,235,0.3)',background:'none',border:'none',cursor:'pointer',display:'block',width:'100%'}}>
                   Skip for now
                 </button>
                 <p className="font-body" style={{fontSize:12,color:'rgba(220,225,235,0.25)',marginTop:20,textAlign:'center',lineHeight:1.5}}>
@@ -5180,7 +5237,7 @@ function App() {
           {/* Regular sessions: post-mood 1-5 */}
           {!isSOS && completionStep === 'stats' && !moodDelta && (
             <div className="screen-transition">
-              <MoodScale label={t.andNow || 'And now?'} lowLabel={t.moodLow} highLabel={t.moodHigh} onSelect={(n) => {
+              <MoodScale label={t.andNow || 'And now?'} lowLabel={t.moodLow} midLabel={t.moodMid} highLabel={t.moodHigh} onSelect={(n) => {
                 setCurrentMood(m => ({...m, post:n}));
                 const pre = currentMood.pre;
                 if (pre !== null && n !== null) {
@@ -5778,9 +5835,9 @@ function App() {
     // Mood chart data: sessions with preMood + postMood
     const moodSessions = (stats.history || []).filter(h => typeof h.preMood === 'number' && typeof h.postMood === 'number').slice(-7);
     const hasMoodChart = moodSessions.length >= 3;
-    // Stress relief rate: sessions where postMood > preMood
+    // Stress relief rate: sessions where postMood < preMood (less stressed after)
     const ratedSessions = (stats.history || []).filter(h => typeof h.preMood === 'number' && typeof h.postMood === 'number');
-    const relievedCount = ratedSessions.filter(h => h.postMood > h.preMood).length;
+    const relievedCount = ratedSessions.filter(h => h.postMood < h.preMood).length;
     const stressReliefRate = ratedSessions.length >= 3 ? Math.round((relievedCount / ratedSessions.length) * 100) : null;
     // Mood avg delta
     const moodAvgDelta = hasMoodChart ? (moodSessions.reduce((s,h) => s + (h.postMood - h.preMood), 0) / moodSessions.length).toFixed(1) : null;
@@ -6148,15 +6205,20 @@ function App() {
             {t.resetProgress}
           </button>
           {authUser && !isDemo(authUser) && (
-            <button className="w-full py-3 font-body rounded-full" style={{fontSize:15, fontWeight:400, color:'var(--text-3)', border:'1px solid rgba(255,255,255,0.05)', marginTop:12}}
-              onClick={async () => { if (supabaseClient) await supabaseClient.auth.signOut(); setAuthUser(null); }}>
-              Sign out
-            </button>
+            <>
+              <div className="font-body" style={{marginTop:16, fontSize:13, color:'rgba(220,225,235,0.5)', textAlign:'center'}}>
+                Signed in as {authUser.email || 'account'}
+              </div>
+              <button className="w-full py-3 font-body rounded-full" style={{fontSize:15, fontWeight:400, color:'var(--text-3)', border:'1px solid rgba(255,255,255,0.05)', marginTop:8}}
+                onClick={async () => { if (supabaseClient) await supabaseClient.auth.signOut(); localStorage.removeItem('dive-anonymous-user'); setAuthUser(null); setShowAuthOverlay(true); }}>
+                Sign out
+              </button>
+            </>
           )}
           {isDemo(authUser) && (
-            <button className="w-full py-3 font-body rounded-full" style={{fontSize:15, fontWeight:400, color:'rgba(94,170,168,0.6)', border:'1px solid rgba(94,170,168,0.15)', marginTop:12}}
-              onClick={() => setAuthUser(null)}>
-              Create account to sync data
+            <button className="w-full py-3 font-body rounded-full" style={{fontSize:15, fontWeight:500, color:'rgba(94,170,168,0.9)', border:'1px solid rgba(94,170,168,0.25)', background:'rgba(94,170,168,0.08)', marginTop:12}}
+              onClick={() => { localStorage.removeItem('dive-anonymous-user'); setShowAuthOverlay(true); }}>
+              Log in
             </button>
           )}
           {showResetConfirm && (
