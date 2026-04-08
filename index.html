@@ -105,6 +105,26 @@ html,body,#root { width:100%; max-width:100vw; height:100%; overflow:hidden; ove
   50%  { top: 28%; left: 35%; opacity: 0.18; }
   100% { top: 55%; left: 42%; opacity: 0.08; }
 }
+/* Clockwise path — ~20s loop */
+@keyframes lightSpotClockwise {
+  0%   { top: 25%; left: 55%; opacity: 0.10; }
+  25%  { top: 50%; left: 70%; opacity: 0.14; }
+  50%  { top: 70%; left: 50%; opacity: 0.12; }
+  75%  { top: 50%; left: 30%; opacity: 0.15; }
+  100% { top: 25%; left: 55%; opacity: 0.10; }
+}
+/* Figure-8 path — ~27s loop */
+@keyframes lightSpotFigure8 {
+  0%   { top: 40%; left: 30%; opacity: 0.08; }
+  12%  { top: 30%; left: 45%; opacity: 0.10; }
+  25%  { top: 50%; left: 60%; opacity: 0.13; }
+  37%  { top: 70%; left: 70%; opacity: 0.11; }
+  50%  { top: 60%; left: 55%; opacity: 0.15; }
+  62%  { top: 70%; left: 40%; opacity: 0.11; }
+  75%  { top: 50%; left: 25%; opacity: 0.13; }
+  87%  { top: 30%; left: 20%; opacity: 0.10; }
+  100% { top: 40%; left: 30%; opacity: 0.08; }
+}
 /* Cinematic bubble: smooth grow from 30% → 70% viewport size on entry */
 @keyframes bubbleGrowIn {
   0%   { width: 30vmin; height: 30vmin; opacity: 0; }
@@ -118,6 +138,14 @@ html,body,#root { width:100%; max-width:100vw; height:100%; overflow:hidden; ove
 }
 @keyframes slowRotate { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
 @keyframes surfaceUp { 0%{transform:translateY(0);opacity:0.9} 60%{opacity:1} 100%{transform:translateY(-40px);opacity:0} }
+@keyframes surfacingBubble {
+  0%   { transform: translate(-50%, -50%) scale(1);   opacity: 1; }
+  100% { transform: translate(-50%, -80%) scale(0.3); opacity: 0.4; }
+}
+@keyframes surfacingTextFadeIn {
+  0%, 25% { opacity: 0; transform: translateY(8px); }
+  100%    { opacity: 0.7; transform: translateY(0); }
+}
 @keyframes pulse { 0%,100%{opacity:0.15;transform:scale(1)} 50%{opacity:0.4;transform:scale(1.5)} }
 @keyframes surfaceBgDarken { 0%{background:linear-gradient(180deg,#0a1520 0%,#080e1a 100%)} 100%{background:linear-gradient(180deg,#040810 0%,#030608 100%)} }
 @keyframes completionFadeIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
@@ -2385,16 +2413,28 @@ const OceanBubble = React.forwardRef((props, ref) => {
       willChange: 'transform, box-shadow',
       opacity: 1,
     }}>
-      {/* Light spot — animated via CSS keyframes synced to breath cycle */}
+      {/* Two independent light spots — continuous paths (clockwise + figure-8) */}
       <div className="bubble-light-spot" style={{
         position: 'absolute',
-        width: '40%', height: '30%',
+        width: '35%', height: '28%',
         borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(220,225,235,0.18) 0%, rgba(220,225,235,0.06) 40%, transparent 70%)',
-        filter: 'blur(15px)',
-        top: '55%', left: '42%',
+        background: 'radial-gradient(circle, rgba(220,225,235,0.15) 0%, rgba(220,225,235,0.04) 50%, transparent 80%)',
+        filter: 'blur(40px)',
+        top: '25%', left: '55%',
         transform: 'translate(-50%, -50%)',
         pointerEvents: 'none',
+        animation: 'lightSpotClockwise 20s linear infinite',
+      }} />
+      <div className="bubble-light-spot-2" style={{
+        position: 'absolute',
+        width: '30%', height: '25%',
+        borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(220,225,235,0.12) 0%, rgba(220,225,235,0.03) 50%, transparent 80%)',
+        filter: 'blur(40px)',
+        top: '40%', left: '30%',
+        transform: 'translate(-50%, -50%)',
+        pointerEvents: 'none',
+        animation: 'lightSpotFigure8 27s linear infinite',
       }} />
       {/* Specular highlight (small static) */}
       <div style={{
@@ -2420,12 +2460,14 @@ const TECH_KEYFRAME_NAME = {
 
 // Apply breathing animation to bubble: ONE @keyframes animation synced to cycle duration.
 // Also restarts the wobble/pressure/jitter so they begin in sync.
-function applyBreathAnimation(bubbleEl, lightEl, technique, params) {
+function applyBreathAnimation(bubbleEl, _lightElIgnored, technique, params) {
   if (!bubbleEl) return;
   const total = params ? Object.values(params).reduce((a,b) => (typeof b === 'number' ? a + b : a), 0) : 0;
   if (total <= 0) {
-    bubbleEl.style.animation = 'bubbleWobble 7s ease-in-out infinite, bubblePressure 3s ease-in-out infinite, bubbleJitter 11s ease-in-out infinite, bubbleGlowPulse 3s ease-in-out infinite';
-    if (lightEl) lightEl.style.animation = 'none';
+    if (bubbleEl.dataset.breathAnim !== 'none') {
+      bubbleEl.dataset.breathAnim = 'none';
+      bubbleEl.style.animation = 'bubbleWobble 7s ease-in-out infinite, bubblePressure 3s ease-in-out infinite, bubbleJitter 11s ease-in-out infinite, bubbleGlowPulse 3s ease-in-out infinite';
+    }
     return;
   }
   const cycleMs = Math.round(total * 1000);
@@ -2485,31 +2527,26 @@ function applyBreathAnimation(bubbleEl, lightEl, technique, params) {
     styleEl.id = 'dive-breath-kf';
     document.head.appendChild(styleEl);
   }
+  // GUARD: if this exact animation is already applied, do NOTHING.
+  // Between cycles of the same breathing segment, CSS @keyframes loops naturally (infinite).
+  // Only restart when the segment (technique or params) actually changes.
+  if (bubbleEl.dataset.breathAnim === animName) return;
+  bubbleEl.dataset.breathAnim = animName;
   styleEl.textContent = `@keyframes ${animName} { ${frames} }`;
-  // Force reflow so animation restarts cleanly when cycleMs changes
-  // (this also ensures wobble/jitter restart in sync with the breath cycle)
-  bubbleEl.style.animation = 'none';
-  // eslint-disable-next-line no-unused-expressions
-  void bubbleEl.offsetHeight;
+  // Apply breath + wobble + pressure + jitter + glow pulse as ONE animation string
+  // No force-reflow — the guard above prevents redundant restarts
   bubbleEl.style.animation = `${animName} ${cycleMs}ms ease-in-out infinite, bubbleWobble 7s ease-in-out infinite, bubblePressure 3s ease-in-out infinite, bubbleJitter 11s ease-in-out infinite, bubbleGlowPulse 3s ease-in-out infinite`;
-  // Light spot syncs to the SAME cycle duration
-  if (lightEl) {
-    lightEl.style.animation = 'none';
-    // eslint-disable-next-line no-unused-expressions
-    void lightEl.offsetHeight;
-    lightEl.style.animation = `lightShift ${cycleMs}ms ease-in-out infinite`;
-  }
+  // Light spots have their own independent infinite animations (set on mount) — don't touch
 }
 
-// Stop breathing animation (text/bodyscan/visualization segments). Wobble continues.
+// Stop breathing animation (text/bodyscan/visualization segments). Wobble + light spots continue.
 function stopBreathAnimation(bubbleEl, lightEl) {
-  if (bubbleEl) {
+  if (bubbleEl && bubbleEl.dataset.breathAnim !== 'none') {
+    bubbleEl.dataset.breathAnim = 'none';
     bubbleEl.style.animation = 'bubbleWobble 7s ease-in-out infinite, bubblePressure 3s ease-in-out infinite, bubbleJitter 11s ease-in-out infinite, bubbleGlowPulse 3s ease-in-out infinite';
     bubbleEl.style.transform = 'scale(1)';
   }
-  if (lightEl) {
-    lightEl.style.animation = 'none';
-  }
+  // Light spots have their own independent loops — don't touch
 }
 
 // Backward-compat shim for old setBubblePhase callsites (cinematic)
@@ -3329,7 +3366,7 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
             transform:'translate(-50%,-50%)',
             fontFamily:"'JetBrains Mono',monospace",
             fontSize:80, fontWeight:200, fontVariantNumeric:'tabular-nums',
-            color:'rgba(220,225,235,0.5)',
+            color:'rgba(220,225,235,0.35)',
             pointerEvents:'none', userSelect:'none',
             display: isBreathing ? 'block' : 'none',
           }} />
@@ -3351,7 +3388,7 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
         }}>
           <div ref={phaseLabelRef} className="font-body" style={{
             fontWeight:600, fontSize:28, letterSpacing:'0.35em', textTransform:'uppercase',
-            color:'rgba(220,225,235,0.8)', minHeight:34,
+            color:'rgba(220,225,235,0.5)', minHeight:34,
             transition:'opacity 0.15s ease',
             overflowWrap:'break-word', wordWrap:'break-word',
           }} />
@@ -3377,7 +3414,7 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
             transition:'opacity 0.15s ease',
             overflowWrap:'break-word', wordWrap:'break-word',
           }} />
-          <div ref={cycleCounterRef} className="font-mono" style={{fontSize:14, color:'rgba(220,225,235,0.5)', marginTop:8, fontVariantNumeric:'tabular-nums'}} />
+          <div ref={cycleCounterRef} className="font-mono" style={{fontSize:14, color:'rgba(220,225,235,0.35)', marginTop:8, fontVariantNumeric:'tabular-nums'}} />
         </div>
 
         {/* Intro text (TEXT segment) — overlays on top of bubble, only during text segments */}
@@ -4979,13 +5016,27 @@ function App() {
     return <SessionPlayer segments={activeSession.segments} world={world} onComplete={(actualData) => endSession(true, actualData)} onExit={() => endSession(false)} t={t} voiceEnabled={stats.voiceEnabled} ambientRef={ambientRef} currentLang={currentLang} entryPoint={activeSession.meta?.entryPoint || 'scenario'} />;
   }
 
-  // Surfacing transition
+  // Surfacing transition: Abyss bg, bubble shrinks + rises, text fades in after 0.5s
   if (showSurfacing) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center" style={{background:'linear-gradient(180deg, #0e3d5c 0%, #082a42 100%)'}}>
+      <div className="fixed inset-0 flex items-center justify-center" style={{background:'#050A12', overflow:'hidden'}}>
         <Particles world={world} />
-        <div className="z-10 text-center">
-          <div className="font-body" style={{fontSize:18, fontWeight:200, color:'rgba(220,225,235,1)', opacity:0.25, letterSpacing:'0.15em', animation:'surfaceUp 2.2s ease-out forwards'}}>Surfacing</div>
+        {/* Bubble shrinks from 1 to 0.3 and rises from center to -30vh over 2s */}
+        <div style={{
+          position:'fixed', top:'50%', left:'50%',
+          width:'min(75vw, 300px)', aspectRatio:'1',
+          pointerEvents:'none',
+          animation:'surfacingBubble 2s cubic-bezier(0.4, 0, 0.2, 1) forwards',
+        }}>
+          <OceanBubble />
+        </div>
+        {/* "Surfacing" text fades in after 0.5s */}
+        <div className="z-10 text-center" style={{position:'relative'}}>
+          <div className="font-body" style={{
+            fontSize:20, fontWeight:200, color:'rgba(220,225,235,0.7)',
+            letterSpacing:'0.2em', textTransform:'uppercase',
+            opacity:0, animation:'surfacingTextFadeIn 1.5s ease-out 0.5s forwards',
+          }}>Surfacing</div>
         </div>
       </div>
     );
