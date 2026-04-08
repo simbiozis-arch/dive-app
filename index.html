@@ -3328,8 +3328,8 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
             position:'absolute', top:'50%', left:'50%',
             transform:'translate(-50%,-50%)',
             fontFamily:"'JetBrains Mono',monospace",
-            fontSize:48, fontWeight:200, fontVariantNumeric:'tabular-nums',
-            color:'rgba(220,225,235,0.20)',
+            fontSize:80, fontWeight:200, fontVariantNumeric:'tabular-nums',
+            color:'rgba(220,225,235,0.5)',
             pointerEvents:'none', userSelect:'none',
             display: isBreathing ? 'block' : 'none',
           }} />
@@ -3350,8 +3350,8 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
           overflow:'hidden',
         }}>
           <div ref={phaseLabelRef} className="font-body" style={{
-            fontWeight:600, fontSize:13, letterSpacing:'0.2em', textTransform:'uppercase',
-            color:'rgba(220,225,235,0.55)', minHeight:18,
+            fontWeight:600, fontSize:28, letterSpacing:'0.35em', textTransform:'uppercase',
+            color:'rgba(220,225,235,0.8)', minHeight:34,
             transition:'opacity 0.15s ease',
             overflowWrap:'break-word', wordWrap:'break-word',
           }} />
@@ -3377,7 +3377,7 @@ function SessionPlayer({ segments, world, onComplete, onExit, t, voiceEnabled, a
             transition:'opacity 0.15s ease',
             overflowWrap:'break-word', wordWrap:'break-word',
           }} />
-          <div ref={cycleCounterRef} className="font-mono" style={{fontSize:12, color:'rgba(220,225,235,0.15)', marginTop:8, fontVariantNumeric:'tabular-nums'}} />
+          <div ref={cycleCounterRef} className="font-mono" style={{fontSize:14, color:'rgba(220,225,235,0.5)', marginTop:8, fontVariantNumeric:'tabular-nums'}} />
         </div>
 
         {/* Intro text (TEXT segment) — overlays on top of bubble, only during text segments */}
